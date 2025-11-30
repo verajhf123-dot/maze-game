@@ -16,6 +16,7 @@ public class DesktopLauncher {
 	 *
 	 * @param arg Command line arguments (not used in this application)
 	 */
+
 	public static void main(String[] arg) {
 		// Configuration for the game window
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
