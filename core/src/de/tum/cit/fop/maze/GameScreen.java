@@ -20,6 +20,7 @@ public class GameScreen implements Screen {
     private final BitmapFont font;
 
 
+
     private float sinusInput = 0f;
 
     /**
