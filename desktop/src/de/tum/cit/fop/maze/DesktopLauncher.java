@@ -19,6 +19,7 @@ public class DesktopLauncher {
 	public static void main(String[] arg) {
 		// Configuration for the game window
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
+
 		config.setTitle("Maze Runner"); // Set the window title
 
 		// Get the display mode of the current monitor
