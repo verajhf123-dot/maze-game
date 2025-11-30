@@ -11,6 +11,7 @@ import games.spooky.gdx.nativefilechooser.desktop.DesktopFileChooser;
  */
 public class DesktopLauncher {
 	/**
+     * *
 	 * The main method sets up the configuration for the game window and starts the application.
 	 *
 	 * @param arg Command line arguments (not used in this application)
