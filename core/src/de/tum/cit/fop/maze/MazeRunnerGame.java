@@ -27,6 +27,8 @@ public class MazeRunnerGame extends Game {
     // UI Skin
     private Skin skin;
 
+
+
     // Character animation downwards
     private Animation<TextureRegion> characterDownAnimation;
 
