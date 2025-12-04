@@ -20,6 +20,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 public class MenuScreen implements Screen {
 
     private final Stage stage;
+    private final MazeRunnerGame game;
 
     /**
      * Constructor for MenuScreen. Sets up the camera, viewport, stage, and UI elements.
@@ -27,6 +28,7 @@ public class MenuScreen implements Screen {
      * @param game The main game class, used to access global resources and methods.
      */
     public MenuScreen(MazeRunnerGame game) {
+        this.game = game;
         var camera = new OrthographicCamera();
         camera.zoom = 1.5f; // Set camera zoom for a closer view
 
@@ -38,15 +40,63 @@ public class MenuScreen implements Screen {
         stage.addActor(table); // Add the table to the stage
 
         // Add a label as a title
-        table.add(new Label("Hello World from the Menu!", game.getSkin(), "title")).padBottom(80).row();
+        table.add(new Label("Maze Runner", game.getSkin(), "title")).padBottom(80).row();
 
         // Create and add a button to go to the game screen
         TextButton goToGameButton = new TextButton("Go To Game", game.getSkin());
         table.add(goToGameButton).width(300).row();
         goToGameButton.addListener(new ChangeListener() {
+
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 game.goToGame(); // Change to the game screen when button is pressed
+            }
+        });
+
+        TextButton loadGameButton = new TextButton("Load Map (map1.txt)", game.getSkin());
+        table.add(loadGameButton).width(300).padTop(10).row();
+        loadGameButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.log("MenuScreen", "Load Map (map1.txt)");
+
+            }
+        });
+        TextButton settingButton = new TextButton("Settings", game.getSkin());
+        table.add(settingButton).width(300).padTop(10).row();
+        settingButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+
+                Gdx.app.log("MenuScreen", "Settings");
+
+            }
+        });
+
+
+        TextButton highScoresButton = new TextButton("High Scores", game.getSkin());
+        table.add(highScoresButton).width(300).padTop(10).row();
+        highScoresButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.log("MenuScreen", "High Scores");
+            }
+        });
+        TextButton HelpButton = new TextButton("Help", game.getSkin());
+        table.add(HelpButton).width(300).padTop(10).row();
+        HelpButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.log("MenuScreen", "Help");
+            }
+        });
+
+        TextButton exitButton = new TextButton("Exit", game.getSkin());
+        table.add(exitButton).width(300).padTop(10).row();
+        exitButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                Gdx.app.exit();
             }
         });
     }
