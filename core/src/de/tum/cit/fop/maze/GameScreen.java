@@ -5,7 +5,11 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
+
+import java.util.List;
+import com.badlogic.gdx.graphics.Color;
 
 /**
  * The GameScreen class is responsible for rendering the gameplay screen.
@@ -16,6 +20,8 @@ public class GameScreen implements Screen {
     private final MazeRunnerGame game;
     private final OrthographicCamera camera;
     private final BitmapFont font;
+    private List<Wall> walls;
+    private ShapeRenderer shapeRenderer;
 
     private float sinusInput = 0f;
 
@@ -30,6 +36,7 @@ public class GameScreen implements Screen {
         // Create and configure the camera for the game view
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
+        camera.position.set(240,160,0);
         camera.zoom = 0.75f;
 
         // Get the font from the game's skin
@@ -72,11 +79,34 @@ public class GameScreen implements Screen {
         );
 
         game.getSpriteBatch().end(); // Important to call this after drawing everything
+
+    if (walls!= null && !walls.isEmpty()) {
+        // 让 shapeRenderer 使用和 camera 一样的视图矩阵
+        shapeRenderer.setProjectionMatrix(camera.combined);
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(Color.GRAY);
+
+        for (Wall wall : walls) {
+            shapeRenderer.rect(
+                    wall.worldX,
+                    wall.worldY,
+                    Wall.TILE_SIZE,
+                    Wall.TILE_SIZE
+            );
+        }
+
+        shapeRenderer.end();
     }
+    }
+    // ===== 画墙结束 =====
+
+
 
     @Override
     public void resize(int width, int height) {
-        camera.setToOrtho(false);
+        camera.setToOrtho(false,width,height);
+        camera.position.set(240,160,0);
     }
 
     @Override
@@ -89,6 +119,11 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        MapLoader loader = new MapLoader();
+        walls = loader.loadWalls("maps/level-1.properties");
+        System.out.println("Loaded walls: " + walls.size());
+
+        shapeRenderer = new ShapeRenderer();
 
     }
 
