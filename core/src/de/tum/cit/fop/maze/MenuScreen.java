@@ -46,6 +46,7 @@ public class MenuScreen implements Screen {
         TextButton goToGameButton = new TextButton("Go To Game", game.getSkin());
         table.add(goToGameButton).width(300).row();
         goToGameButton.addListener(new ChangeListener() {
+
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 game.goToGame(); // Change to the game screen when button is pressed
@@ -66,6 +67,7 @@ public class MenuScreen implements Screen {
         settingButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+
                 Gdx.app.log("MenuScreen", "Settings");
 
             }
