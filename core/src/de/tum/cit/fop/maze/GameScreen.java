@@ -114,7 +114,12 @@ public class GameScreen implements Screen {
         TextButton quitButton = new TextButton("Exit to Menu", game.getSkin());
         quitButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
+                Music music = game.getBackgroundMusic();
+                if(music != null && music.isPlaying()) {
+                    music.play();
+                }
                 game.goToMenu();
+
             }
         });
         pauseMenuTable.add(quitButton).width(250).row();
@@ -362,6 +367,16 @@ public class GameScreen implements Screen {
         initPlayer();
         buildWalkableGrid();
         // =====================================
+        //remark code (store the original code)
+        currentState = GameState.RUNNING;
+        Gdx.input.setInputProcessor(null);
+
+        Music music =game.getBackgroundMusic();
+        if (music != null && !music.isPlaying()) {
+            music.play();
+            music.setLooping(true);
+
+        }
     }
 
     // ========== 新增：初始化方法 ==========
