@@ -305,6 +305,7 @@ public class GameScreen implements Screen {
         // 由组员2实现
         if (player != null) {
             player.render(batch);
+
         }
     }
 
