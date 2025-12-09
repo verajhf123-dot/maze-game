@@ -28,6 +28,8 @@ public class MazeRunnerGame extends Game {
 
     // Character animation downwards
     private Animation<TextureRegion> characterDownAnimation;
+    // update background Music
+    private Music backgroundMusic;
 
     /**
      * Constructor for MazeRunnerGame.
@@ -49,11 +51,15 @@ public class MazeRunnerGame extends Game {
 
         // Play some background music
         // Background sound
-        Music backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.play();
 
         goToMenu(); // Navigate to the menu screen
+    }
+    // to update Music;
+    public Music getBackgroundMusic() {
+        return backgroundMusic;
     }
 
     /**
