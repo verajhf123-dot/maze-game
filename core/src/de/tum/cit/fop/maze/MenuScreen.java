@@ -127,7 +127,7 @@ public class MenuScreen implements Screen {
     private void showLevelSelection(int maxNumber) {
         table.clear();
         table.add(new Label(" Select Level " ,game.getSkin(),"title")).padBottom(40).row();
-        for(int i = 1; i < maxNumber; i++) {
+        for(int i = 1; i <= maxNumber; i++) {
             final int level = i;
             TextButton levelButton = new TextButton("Level " + level, game.getSkin());
             table.add(levelButton).width(300).padTop(10).row();

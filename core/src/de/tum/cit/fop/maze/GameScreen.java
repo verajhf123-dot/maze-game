@@ -47,7 +47,7 @@ public class GameScreen implements Screen {
     // ==== 新添加的敌人相关变量 ====
     private Array<Enemy> enemies;
     private Player player; // 假设组员2会创建Player类
-    private boolean[][] walkableGrid; // A*寻路需要的地图网格
+    private boolean[][] walkableGrid;// A*寻路需要的地图网格
     // according to my enum;
     private GameState currentState;
     private Stage uiStage;//  stage to put the pauseSetting
@@ -57,6 +57,7 @@ public class GameScreen implements Screen {
     private float gameTime = 0f;
     private  int levelNumber;
     private String currentMapPath;
+    private InputController controller;
 
 
 
@@ -73,7 +74,7 @@ public class GameScreen implements Screen {
     public GameScreen(MazeRunnerGame game, int levelNumber) {
         this.game = game;
         this.levelNumber = levelNumber;
-        this.currentMapPath = "map/level-" + levelNumber + ".map";
+        this.currentMapPath = "maps/level-" + levelNumber + ".properties";
         initCommon();
     }
 
@@ -82,9 +83,10 @@ public class GameScreen implements Screen {
         camera.setToOrtho(false);
         camera.position.set(240,160,0);
         camera.zoom = 0.75f;
+        font = new BitmapFont();
+        font.getData().setScale(1f);
 
-        font = game.getSkin().getFont("font");
-
+        controller = new InputController();
         enemies = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
@@ -179,6 +181,9 @@ public class GameScreen implements Screen {
         }
         //only under running that can update the game logic;
         if(currentState==GameState.RUNNING) {
+           //关键：每帧更新控制器状态
+            controller.update();
+
             // 更新游戏时间
             gameTime += delta;
             // 更新敌人
@@ -190,44 +195,46 @@ public class GameScreen implements Screen {
 
             updateCameraFollowPlayer();
             camera.update();
-
-            sinusInput +=delta;
         }
         //draw the game picture;
 
         ScreenUtils.clear(0,0,0,1);
-        // 设置投影矩阵
-        game.getSpriteBatch().setProjectionMatrix(camera.combined);
-        game.getSpriteBatch().begin();
-        //draw the text
 
-        float textX =(float) (camera.position.x + Math.sin(sinusInput) * 100);
-        float textY = (float) (camera.position.y + Math.cos(sinusInput) * 100);
-        font.draw(game.getSpriteBatch(),"Press ESC To Pause",textX,textY);
-
-//draw the character Animation examples
-        game.getSpriteBatch().draw(
-                game.getCharacterDownAnimation().getKeyFrame(sinusInput,true),
-                textX - 96,textY - 64 ,64,128
-
-        );
-        //draw game element;
-        drawEnemies(game.getSpriteBatch());
-        drawPlayer(game.getSpriteBatch());
-        drawHUD(game.getSpriteBatch());
-        game.getSpriteBatch().end();
-        // draw the walls
         if(walls!=null&& !walls.isEmpty()) {
             shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(Color.GREEN);
+            shapeRenderer.setColor(Color.GRAY);
             for (Wall wall : walls) {
                 shapeRenderer.rect(wall.worldX,wall.worldY, Wall.TILE_SIZE, Wall.TILE_SIZE);
             }
             shapeRenderer.end();
         }
+        if (player != null) {
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(Color.RED); // 显眼的红色
+            // 使用 32x32 的大小，方便看
+            shapeRenderer.rect(player.getPosition().x, player.getPosition().y, 32, 32);
+            shapeRenderer.end();
+        }//用这个表示就是player。 把他画出来。
 
-        drawDebugInfo();
+        // 设置投影矩阵
+        game.getSpriteBatch().setProjectionMatrix(camera.combined);
+        game.getSpriteBatch().begin();
+        //draw the text
+
+
+        //draw game element;
+        drawEnemies(game.getSpriteBatch());
+        game.getSpriteBatch().end();
+
+        game.getSpriteBatch().setProjectionMatrix(uiStage.getCamera().combined);
+        game.getSpriteBatch().begin();
+        drawHUD(game.getSpriteBatch());
+        game.getSpriteBatch().end();
+
+
+        //drawDebugInfo();
 
         if(currentState==GameState.PAUSED) {
             Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
@@ -320,13 +327,20 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
-        boolean up = controller.up();
-        boolean down = controller.down();
-        boolean left = controller.left();
-        boolean right = controller.right();
-        boolean run = controller.run();
-        // 使用当前位置更新逻辑
-        player.update(delta, up, down, left, right, run);
+       if (player != null && controller!=null) {
+           boolean up = controller.up;
+           boolean down = controller.down;
+           boolean left = controller.left;
+           boolean right = controller.right;
+           boolean run = controller.run;
+
+           player.update(delta, up, down, left, right, run);
+
+
+       }
+
+
+
     }
 
 
@@ -339,6 +353,8 @@ public class GameScreen implements Screen {
     }
 
     private void drawHUD(SpriteBatch batch) {
+        float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
         // 绘制敌人数量
         font.draw(batch, "Enemies: " + enemies.size, 10, camera.viewportHeight - 10);
 
@@ -371,8 +387,10 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        camera.setToOrtho(false, width, height);
-        uiStage.getViewport().update(width, height, true);
+       camera.viewportWidth = width;
+       camera.viewportHeight = height;
+       camera.update();
+       uiStage.getViewport().update(width, height, true);
         // 不要在这里固定 camera.position
     }
 
@@ -387,8 +405,8 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         MapLoader loader = new MapLoader();
-        String path = "maps/level-" + levelNumber + ".properties";
-        walls = loader.loadWalls(path);
+        System.out.println("Loading Map from: " + currentMapPath);
+        walls = loader.loadWalls(currentMapPath);
         int maxX = 0, maxY = 0;
         for (Wall w : walls) {
             if (w.gridX > maxX) maxX = w.gridX;
