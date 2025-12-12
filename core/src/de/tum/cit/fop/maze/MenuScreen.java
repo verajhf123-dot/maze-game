@@ -49,7 +49,7 @@ public class MenuScreen implements Screen {
 
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                game.goToGame(); // Change to the game screen when button is pressed
+                game.goToGame(2); // Change to the game screen when button is pressed
             }
         });
 
@@ -100,6 +100,7 @@ public class MenuScreen implements Screen {
             }
         });
     }
+
 
     @Override
     public void render(float delta) {

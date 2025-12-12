@@ -28,6 +28,8 @@ public class MazeRunnerGame extends Game {
 
     // Character animation downwards
     private Animation<TextureRegion> characterDownAnimation;
+    // update background Music
+    private Music backgroundMusic;
 
     /**
      * Constructor for MazeRunnerGame.
@@ -49,11 +51,15 @@ public class MazeRunnerGame extends Game {
 
         // Play some background music
         // Background sound
-        Music backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.play();
 
         goToMenu(); // Navigate to the menu screen
+    }
+    // to update Music;
+    public Music getBackgroundMusic() {
+        return backgroundMusic;
     }
 
     /**
@@ -70,13 +76,6 @@ public class MazeRunnerGame extends Game {
     /**
      * Switches to the game screen.
      */
-    public void goToGame() {
-        this.setScreen(new GameScreen(this)); // Set the current screen to GameScreen
-        if (menuScreen != null) {
-            menuScreen.dispose(); // Dispose the menu screen if it exists
-            menuScreen = null;
-        }
-    }
 
 
     /**
@@ -110,6 +109,20 @@ public class MazeRunnerGame extends Game {
         spriteBatch.dispose(); // Dispose the spriteBatch
         skin.dispose(); // Dispose the skin
     }
+    public void goToGame() {
+        goToGame(1);
+    }
+
+    public void goToGame(int levelNumber) {
+        this.setScreen(new GameScreen(this, levelNumber));
+
+        if (menuScreen != null) {
+            menuScreen.dispose();
+            menuScreen = null;
+        }
+    }
+
+
 
     // Getter methods
     public Skin getSkin() {
