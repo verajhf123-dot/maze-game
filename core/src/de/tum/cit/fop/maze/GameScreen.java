@@ -303,10 +303,13 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
-
-        if (player != null) {
-            player.update(delta);
-        }
+        boolean up = controller.up();
+        boolean down = controller.down();
+        boolean left = controller.left();
+        boolean right = controller.right();
+        boolean run = controller.run();
+        // 使用当前位置更新逻辑
+        player.update(delta, up, down, left, right, run);
     }
 
     private void drawPlayer(SpriteBatch batch) {
