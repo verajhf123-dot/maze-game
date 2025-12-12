@@ -33,6 +33,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
  * It handles the game logic and rendering of the game elements.
  */
 public class GameScreen implements Screen {
+    private float mapPixelWidth;
+    private float mapPixelHeight;
 
     private final MazeRunnerGame game;
     private final OrthographicCamera camera;
@@ -52,6 +54,8 @@ public class GameScreen implements Screen {
 
     // ==== 其他变量 ====
     private float gameTime = 0f;
+    private final int levelNumber;
+
 
     /**
      * Constructor for GameScreen. Sets up the camera and font.
@@ -59,25 +63,26 @@ public class GameScreen implements Screen {
      * @param game The main game class, used to access global resources and methods.
      */
     public GameScreen(MazeRunnerGame game) {
-        this.game = game;
+        this(game, 1); // 默认进 Level 1
+    }
 
-        // Create and configure the camera for the game view
+    public GameScreen(MazeRunnerGame game, int levelNumber) {
+        this.game = game;
+        this.levelNumber = levelNumber;
+
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
         camera.position.set(240,160,0);
         camera.zoom = 0.75f;
-// Get the font from the game's skin
+
         font = game.getSkin().getFont("font");
 
-        // 初始化敌人列表
         enemies = new Array<>();
-
-        uiStage = new Stage(new ScreenViewport(),game.getSpriteBatch());//initial the ui stage;
-        currentState=GameState.RUNNING;//default the Stage is running;
+        uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
+        currentState = GameState.RUNNING;
         createPauseMenu();
-
-
     }
+
     // creat pauseSetting
     private void createPauseMenu() {
         pauseMenuTable = new Table();
@@ -168,7 +173,9 @@ public class GameScreen implements Screen {
             // 碰撞检测
             checkCollisions();
 
+            updateCameraFollowPlayer();
             camera.update();
+
             sinusInput +=delta;
         }
         //draw the game picture;
@@ -296,13 +303,14 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
+
         if (player != null) {
             player.update(delta);
         }
     }
 
     private void drawPlayer(SpriteBatch batch) {
-        // 由组员2实现
+        // 由组员2实现\
         if (player != null) {
             player.render(batch);
 
@@ -358,7 +366,19 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         MapLoader loader = new MapLoader();
-        walls = loader.loadWalls("maps/level-1.properties");
+        String path = "maps/level-" + levelNumber + ".properties";
+        walls = loader.loadWalls(path);
+        int maxX = 0, maxY = 0;
+        for (Wall w : walls) {
+            if (w.gridX > maxX) maxX = w.gridX;
+            if (w.gridY > maxY) maxY = w.gridY;
+        }
+// +1 因为 grid 从 0 开始
+        mapPixelWidth  = (maxX + 1) * Wall.TILE_SIZE;
+        mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
+
+        System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
+
         System.out.println("Loaded walls: " + walls.size());
 
         shapeRenderer = new ShapeRenderer();
@@ -428,6 +448,22 @@ public class GameScreen implements Screen {
     public Array<Enemy> getEnemies() {
         return enemies;
     }
+    private void updateCameraFollowPlayer() {
+        if (player == null) return;
+
+        float targetX = player.getPosition().x;
+        float targetY = player.getPosition().y;
+
+        float halfW = camera.viewportWidth * 0.5f * camera.zoom;
+        float halfH = camera.viewportHeight * 0.5f * camera.zoom;
+
+        // clamp：相机不能看到地图外面（黑边）
+        float clampedX = Math.max(halfW, Math.min(targetX, mapPixelWidth - halfW));
+        float clampedY = Math.max(halfH, Math.min(targetY, mapPixelHeight - halfH));
+
+        camera.position.set(clampedX, clampedY, 0);
+    }
+
 
     // Additional methods and logic can be added as needed for the game screen
 }
