@@ -309,7 +309,7 @@ public class GameScreen implements Screen {
     }
 
     private void drawPlayer(SpriteBatch batch) {
-        // 由组员2实现
+        // 由组员2实现\
         if (player != null) {
             player.render(batch);
 
