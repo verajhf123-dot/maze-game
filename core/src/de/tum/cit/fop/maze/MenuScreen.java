@@ -1,7 +1,9 @@
 package de.tum.cit.fop.maze;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -12,6 +14,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import games.spooky.gdx.nativefilechooser.NativeFileChooser;
+import games.spooky.gdx.nativefilechooser.NativeFileChooserCallback;
+import games.spooky.gdx.nativefilechooser.NativeFileChooserConfiguration;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.util.logging.FileHandler;
 
 /**
  * The MenuScreen class is responsible for displaying the main menu of the game.
@@ -21,6 +30,8 @@ public class MenuScreen implements Screen {
 
     private final Stage stage;
     private final MazeRunnerGame game;
+    private final Table table;
+
 
     /**
      * Constructor for MenuScreen. Sets up the camera, viewport, stage, and UI elements.
@@ -35,10 +46,13 @@ public class MenuScreen implements Screen {
         Viewport viewport = new ScreenViewport(camera); // Create a viewport with the camera
         stage = new Stage(viewport, game.getSpriteBatch()); // Create a stage for UI elements
 
-        Table table = new Table(); // Create a table for layout
+        this.table = new Table(); // Create a table for layout
         table.setFillParent(true); // Make the table fill the stage
-        stage.addActor(table); // Add the table to the stage
-
+        stage.addActor(table);// Add the table to the stage
+        showMainMenu();
+    }
+    private void showMainMenu() {
+        table.clear();
         // Add a label as a title
         table.add(new Label("Maze Runner", game.getSkin(), "title")).padBottom(80).row();
 
@@ -49,16 +63,25 @@ public class MenuScreen implements Screen {
 
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                game.goToGame(2); // Change to the game screen when button is pressed
-            }
+                Preferences prefs = Gdx.app.getPreferences("MazeRunnerGame");
+                int maxLevel = prefs.getInteger("maxLevel", 1);
+                if(maxLevel == 1) {
+                    game.goToGame(1);
+
+                }else {
+                   showLevelSelection(maxLevel);
+                }
+
+            }// 如果只有第一关，直接开始，如果解锁很多关，显示选择页面。
         });
 
-        TextButton loadGameButton = new TextButton("Load Map (map1.txt)", game.getSkin());
+        TextButton loadGameButton = new TextButton("Load Map ", game.getSkin());
         table.add(loadGameButton).width(300).padTop(10).row();
         loadGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.app.log("MenuScreen", "Load Map (map1.txt)");
+                showLevelSelection(5);
+
 
             }
         });
@@ -97,6 +120,62 @@ public class MenuScreen implements Screen {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 Gdx.app.exit();
+            }
+        });
+    }
+
+    private void showLevelSelection(int maxNumber) {
+        table.clear();
+        table.add(new Label(" Select Level " ,game.getSkin(),"title")).padBottom(40).row();
+        for(int i = 1; i < maxNumber; i++) {
+            final int level = i;
+            TextButton levelButton = new TextButton("Level " + level, game.getSkin());
+            table.add(levelButton).width(300).padTop(10).row();
+            levelButton.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, Actor actor) {
+                    game.goToGame(level);
+                }
+            });
+        }
+
+        TextButton backButton = new TextButton("Back", game.getSkin());
+        table.add(backButton).width(300).padTop(20).row();
+        backButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                showMainMenu();
+            }
+        });
+    }
+
+    private void chooseMapFile() {
+        var fileChooser = game.getFileChooser();
+        NativeFileChooserConfiguration config = new NativeFileChooserConfiguration();
+
+        config.directory = Gdx.files.absolute(System.getProperty("user.home"));
+
+        config.nameFilter = new  FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.endsWith(".map") || name.endsWith(".properties");
+            }
+        };
+
+        config.title = "Select Map";
+        fileChooser.chooseFile(config, new NativeFileChooserCallback() {
+
+            public void onFileChosen(FileHandle  file) {
+                Gdx.app.log("MenuScreen", "File chosen: " + file.path());
+                game.goToGame(file.path());
+            }
+
+            public void onCancellation() {
+                Gdx.app.log("MenuScreen", "Cancelled");
+            }
+
+            public void onError(Exception e) {
+                Gdx.app.log("MenuScreen", "Error choosing map " + e.getMessage());
             }
         });
     }

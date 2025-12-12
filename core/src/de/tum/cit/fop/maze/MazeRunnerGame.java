@@ -31,6 +31,9 @@ public class MazeRunnerGame extends Game {
     // update background Music
     private Music backgroundMusic;
 
+    // 保存文件选择器；
+    private NativeFileChooser fileChooser;
+
     /**
      * Constructor for MazeRunnerGame.
      *
@@ -38,6 +41,7 @@ public class MazeRunnerGame extends Game {
      */
     public MazeRunnerGame(NativeFileChooser fileChooser) {
         super();
+        this.fileChooser = fileChooser;
     }
 
     /**
@@ -57,6 +61,7 @@ public class MazeRunnerGame extends Game {
 
         goToMenu(); // Navigate to the menu screen
     }
+
     // to update Music;
     public Music getBackgroundMusic() {
         return backgroundMusic;
@@ -72,6 +77,8 @@ public class MazeRunnerGame extends Game {
             gameScreen = null;
         }
     }
+
+
 
     /**
      * Switches to the game screen.
@@ -122,6 +129,14 @@ public class MazeRunnerGame extends Game {
         }
     }
 
+    public void goToGame(String mapFilePath){
+        this.setScreen(new GameScreen(this,mapFilePath));
+        if (menuScreen != null) {
+            menuScreen.dispose();
+            menuScreen = null;
+        }
+    }
+
 
 
     // Getter methods
@@ -135,5 +150,9 @@ public class MazeRunnerGame extends Game {
 
     public SpriteBatch getSpriteBatch() {
         return spriteBatch;
+    }
+
+    public NativeFileChooser getFileChooser() {
+        return fileChooser;
     }
 }
