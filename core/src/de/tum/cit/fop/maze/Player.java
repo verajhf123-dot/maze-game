@@ -74,6 +74,11 @@ public class Player {
         return stats;
     }
 
+
+    public com.badlogic.gdx.math.Vector2 getPosition() {
+        return position;
+    }
+
     public void dispose() {
         texture.dispose();
         hurtTexture.dispose();
