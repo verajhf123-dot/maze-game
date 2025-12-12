@@ -303,6 +303,7 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
+
         if (player != null) {
             player.update(delta);
         }
