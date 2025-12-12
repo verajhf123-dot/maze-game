@@ -35,12 +35,11 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 public class GameScreen implements Screen {
     private float mapPixelWidth;
     private float mapPixelHeight;
-    private final int levelNumber;
 
 
     private final MazeRunnerGame game;
-    private final OrthographicCamera camera;
-    private final BitmapFont font;
+    private  OrthographicCamera camera;
+    private  BitmapFont font;
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
     private float sinusInput = 0f;
@@ -56,6 +55,8 @@ public class GameScreen implements Screen {
 
     // ==== 其他变量 ====
     private float gameTime = 0f;
+    private  int levelNumber;
+    private String currentMapPath;
 
 
 
@@ -64,12 +65,19 @@ public class GameScreen implements Screen {
      *
      * @param game The main game class, used to access global resources and methods.
      */
+    public GameScreen(MazeRunnerGame game) {
+        this(game,1);// 默认进 Level 1
+    }
 
 
     public GameScreen(MazeRunnerGame game, int levelNumber) {
         this.game = game;
         this.levelNumber = levelNumber;
+        this.currentMapPath = "map/level-" + levelNumber + ".map";
+        initCommon();
+    }
 
+    private void initCommon() {
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
         camera.position.set(240,160,0);
@@ -81,6 +89,15 @@ public class GameScreen implements Screen {
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
         createPauseMenu();
+
+    }
+
+    public GameScreen(MazeRunnerGame game,String mapFilePath) {
+        this.game = game;
+        this.levelNumber = 0;
+        this.currentMapPath = mapFilePath;
+        initCommon();
+
     }
 
     // creat pauseSetting
@@ -458,11 +475,24 @@ public class GameScreen implements Screen {
         float halfW = camera.viewportWidth * 0.5f * camera.zoom;
         float halfH = camera.viewportHeight * 0.5f * camera.zoom;
 
-        // clamp：相机不能看到地图外面（黑边）
-        float clampedX = Math.max(halfW, Math.min(targetX, mapPixelWidth - halfW));
-        float clampedY = Math.max(halfH, Math.min(targetY, mapPixelHeight - halfH));
+        float newX;
+        if (mapPixelWidth < camera.viewportWidth * camera.zoom) {
 
-        camera.position.set(clampedX, clampedY, 0);
+            newX = mapPixelWidth / 2f;
+        } else {
+            newX = Math.max(halfW, Math.min(targetX, mapPixelWidth - halfW));
+        }
+
+        // 4. 计算 Y 轴位置 (同理)
+        float newY;
+        if (mapPixelHeight < camera.viewportHeight * camera.zoom) {
+            newY = mapPixelHeight / 2f;
+        } else {
+            newY = Math.max(halfH, Math.min(targetY, mapPixelHeight - halfH));
+        }
+        // 5. 应用新位置
+        camera.position.set(newX, newY, 0);
+
     }
 
 
