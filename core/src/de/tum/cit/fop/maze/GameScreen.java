@@ -36,6 +36,7 @@ public class GameScreen implements Screen {
     private float mapPixelWidth;
     private float mapPixelHeight;
 
+
     private final MazeRunnerGame game;
     private  OrthographicCamera camera;
     private  BitmapFont font;
@@ -58,6 +59,7 @@ public class GameScreen implements Screen {
     private String currentMapPath;
 
 
+
     /**
      * Constructor for GameScreen. Sets up the camera and font.
      *
@@ -66,6 +68,7 @@ public class GameScreen implements Screen {
     public GameScreen(MazeRunnerGame game) {
         this(game,1);// 默认进 Level 1
     }
+
 
     public GameScreen(MazeRunnerGame game, int levelNumber) {
         this.game = game;
@@ -92,7 +95,7 @@ public class GameScreen implements Screen {
     public GameScreen(MazeRunnerGame game,String mapFilePath) {
         this.game = game;
         this.levelNumber = 0;
-        this.currentMapPath = currentMapPath;
+        this.currentMapPath = mapFilePath;
         initCommon();
 
     }
@@ -119,13 +122,11 @@ public class GameScreen implements Screen {
         musicButton.addListener(new   ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
                 Music music = game.getBackgroundMusic();
-                if(music != null) {
-                    if(music.isPlaying()) {
-                        music.pause();
-                    }
-                }else {
-                    music.play();
+                if (music != null) {
+                    if (music.isPlaying()) music.pause();
+                    else music.play();
                 }
+
             }
         });
         pauseMenuTable.add(musicButton).width(250).padBottom(15).row();
@@ -277,18 +278,20 @@ public class GameScreen implements Screen {
     private void checkCollisions() {
         if (player != null) {
             for (Enemy enemy : enemies) {
-                if (enemy.isAlive() && enemy.getBounds().overlaps(player.getBounds())) {
+                if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
                     enemy.attack(player);
                 }
             }
         }
     }
 
+
     private void buildWalkableGrid() {
         // 从地图数据构建可行走网格
         // 假设地图尺寸为 20x20 个瓦片
-        int gridWidth = 20;
-        int gridHeight = 20;
+        int gridWidth  = (int)(mapPixelWidth / Wall.TILE_SIZE);
+        int gridHeight = (int)(mapPixelHeight / Wall.TILE_SIZE);
+
 
         walkableGrid = new boolean[gridWidth][gridHeight];
 
@@ -317,11 +320,15 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
-
-        if (player != null) {
-            player.update(delta);
-        }
+        boolean up = controller.up();
+        boolean down = controller.down();
+        boolean left = controller.left();
+        boolean right = controller.right();
+        boolean run = controller.run();
+        // 使用当前位置更新逻辑
+        player.update(delta, up, down, left, right, run);
     }
+
 
     private void drawPlayer(SpriteBatch batch) {
         // 由组员2实现\
@@ -364,9 +371,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        camera.setToOrtho(false,width,height);
-        camera.position.set(240,160,0);
+        camera.setToOrtho(false, width, height);
         uiStage.getViewport().update(width, height, true);
+        // 不要在这里固定 camera.position
     }
 
     @Override
@@ -416,21 +423,18 @@ public class GameScreen implements Screen {
 
     // ========== 新增：初始化方法 ==========
     private void initEnemies() {
-        // 先创建测试敌人（后期改为从地图加载）
-        //enemies.add(new NineTailedFox(150, 100));
-        //enemies.add(new QiongQi(200, 150));
-        //enemies.add(new ZhuLong(250, 200));
-        //具体的怪物
+        enemies.add(new NineTailedFox(150, 100));
+        enemies.add(new QiongQi(200, 150));
+        enemies.add(new ZhuLong(250, 200));
 
         System.out.println("Initialized " + enemies.size + " enemies");
     }
 
     private void initPlayer() {
-        player = new Player(100, 100);
-        System.out.println("Dummy player initialized for testing!");
-
-        // 由组员2实现
-        // player = new Player(startX, startY);
+        if (player == null) {
+            player = new Player(100, 100); // 仅测试用
+            System.out.println("Dummy player initialized for testing!");
+        }
     }
     // =====================================
 
