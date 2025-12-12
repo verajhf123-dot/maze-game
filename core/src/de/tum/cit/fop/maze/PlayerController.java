@@ -10,6 +10,7 @@ public class PlayerController {
         this.settings = sm;
     }
 
+
     public boolean up() {
         return Gdx.input.isKeyPressed(settings.getKey("move_up"));
     }
