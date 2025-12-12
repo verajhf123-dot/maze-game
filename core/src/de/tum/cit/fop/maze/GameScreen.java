@@ -268,7 +268,6 @@ public class GameScreen implements Screen {
         }
     }
 
-
     private void buildWalkableGrid() {
         // 从地图数据构建可行走网格
         // 假设地图尺寸为 20x20 个瓦片
