@@ -302,17 +302,15 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
-
-        if (player != null) {
-            boolean up = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
-            boolean down = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
-            boolean left = Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT);
-            boolean right = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
-            boolean run = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT); // 假设 Shift 是跑动键
-
-            player.update(delta, up, down, left, right, run);
-        }
+        boolean up = controller.up();
+        boolean down = controller.down();
+        boolean left = controller.left();
+        boolean right = controller.right();
+        boolean run = controller.run();
+        // 使用当前位置更新逻辑
+        player.update(delta, up, down, left, right, run);
     }
+
 
     private void drawPlayer(SpriteBatch batch) {
         // 由组员2实现\
