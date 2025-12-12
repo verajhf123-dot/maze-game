@@ -2,13 +2,14 @@ package de.tum.cit.fop.maze;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 public class Player {
 
     private Texture texture;
-    private Texture hurtTexture;
+    private TextureRegion currentFrame;
 
     private Vector2 position;
     private Vector2 velocity;
@@ -24,14 +25,13 @@ public class Player {
     private PlayerStats stats;
 
     public Player(float x, float y) {
-        this.texture = new Texture("player.png");
-        this.hurtTexture = new Texture("player_hurt.png");
+        this.texture = new Texture("character.png");
+        this.currentFrame = new TextureRegion(texture,0,0,16,32);//等待后面我们有人物图像再去显示，这个暂时不用
 
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0,0);
-
         this.stats = new PlayerStats();
-        this.hitbox = new Rectangle(x, y, 16, 16);
+        this.hitbox = new Rectangle(x, y, 32, 32);
     }
 
     public void update(float dt, boolean up, boolean down, boolean left, boolean right, boolean run) {
@@ -57,7 +57,9 @@ public class Player {
     }
 
     public void render(SpriteBatch batch) {
-        batch.draw(isHurt ? hurtTexture : texture, position.x, position.y);
+        if(currentFrame != null) {
+            batch.draw(currentFrame, position.x, position.y,64,128);
+        }
     }
 
     public void takeDamage(int dmg) {
@@ -81,6 +83,6 @@ public class Player {
 
     public void dispose() {
         texture.dispose();
-        hurtTexture.dispose();
     }
+
 }
