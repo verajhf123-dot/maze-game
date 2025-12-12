@@ -312,6 +312,7 @@ public class GameScreen implements Screen {
         player.update(delta, up, down, left, right, run);
     }
 
+
     private void drawPlayer(SpriteBatch batch) {
         // 由组员2实现\
         if (player != null) {
