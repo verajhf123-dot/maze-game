@@ -263,7 +263,7 @@ public class GameScreen implements Screen {
     private void checkCollisions() {
         if (player != null) {
             for (Enemy enemy : enemies) {
-                if (enemy.isAlive() && enemy.getBounds().overlaps(player.getBounds())) {
+                if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
                     enemy.attack(player);
                 }
             }
@@ -305,7 +305,13 @@ public class GameScreen implements Screen {
         // 由组员2实现
 
         if (player != null) {
-            player.update(delta);
+            boolean up = Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP);
+            boolean down = Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN);
+            boolean left = Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT);
+            boolean right = Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT);
+            boolean run = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT); // 假设 Shift 是跑动键
+
+            player.update(delta, up, down, left, right, run);
         }
     }
 
@@ -402,11 +408,9 @@ public class GameScreen implements Screen {
 
     // ========== 新增：初始化方法 ==========
     private void initEnemies() {
-        // 先创建测试敌人（后期改为从地图加载）
-        //enemies.add(new NineTailedFox(150, 100));
-        //enemies.add(new QiongQi(200, 150));
-        //enemies.add(new ZhuLong(250, 200));
-        //具体的怪物
+        enemies.add(new NineTailedFox(150, 100));
+        enemies.add(new QiongQi(200, 150));
+        enemies.add(new ZhuLong(250, 200));
 
         System.out.println("Initialized " + enemies.size + " enemies");
     }
