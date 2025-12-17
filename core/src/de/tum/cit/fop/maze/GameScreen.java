@@ -23,6 +23,8 @@ public class GameScreen implements Screen {
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
 
+
+
     private float sinusInput = 0f;
 
     /**
