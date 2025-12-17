@@ -171,7 +171,6 @@ public class GameScreen implements Screen {
         }
     }
 
-
     // Screen interface methods with necessary functionality
     @Override
 
