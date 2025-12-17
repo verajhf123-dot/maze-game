@@ -323,6 +323,7 @@ public class GameScreen implements Screen {
         for (Enemy enemy : enemies) {
             enemy.setWalkableGrid(walkableGrid);
         }
+
     }
 
     private void updatePlayer(float delta) {
