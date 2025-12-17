@@ -133,6 +133,7 @@ public class GameScreen implements Screen {
         });
         pauseMenuTable.add(musicButton).width(250).padBottom(15).row();
 
+
         TextButton quitButton = new TextButton("Exit to Menu", game.getSkin());
         quitButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
