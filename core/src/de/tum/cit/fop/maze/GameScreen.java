@@ -222,16 +222,19 @@ public class GameScreen implements Screen {
         game.getSpriteBatch().setProjectionMatrix(camera.combined);
         game.getSpriteBatch().begin();
         //draw the text
-
-
         //draw game element;
         drawEnemies(game.getSpriteBatch());
         game.getSpriteBatch().end();
+
+
+        drawHealthBar(20, uiStage.getHeight() - 40, 200, 20);
 
         game.getSpriteBatch().setProjectionMatrix(uiStage.getCamera().combined);
         game.getSpriteBatch().begin();
         drawHUD(game.getSpriteBatch());
         game.getSpriteBatch().end();
+
+
 
 
         //drawDebugInfo();
@@ -247,6 +250,8 @@ public class GameScreen implements Screen {
             // draw the button
             uiStage.act(delta);
             uiStage.draw();
+
+
         }
 
     }
@@ -352,15 +357,64 @@ public class GameScreen implements Screen {
         }
     }
 
+    // a method to draw the HealthBar
+    private void drawHealthBar(float x,float y,float width,float height) {
+        if(player == null) {
+            return;
+        }
+        shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        shapeRenderer.setColor(Color.DARK_GRAY);
+        shapeRenderer.rect(x, y, width, height);
+
+        float percent = (float) player.getStats().getHealth() / player.getStats().getMaxHealth();
+
+        if (percent > 0.5f) {
+            shapeRenderer.setColor(Color.GREEN);
+        } else if (percent > 0.2f) {
+            shapeRenderer.setColor(Color.YELLOW);
+        } else {
+            shapeRenderer.setColor(Color.RED);
+        }
+
+        shapeRenderer.rect(x, y, width * percent, height);
+        shapeRenderer.end();
+
+
+
+    }
+
+
+
+
+
+
+
+
+
     private void drawHUD(SpriteBatch batch) {
-        float screenWidth = Gdx.graphics.getWidth();
-        float screenHeight = Gdx.graphics.getHeight();
+        if(player==null || font ==null) return;
+
+        // catch the latest status;
+       boolean exitKey = player.getStats().hasKey();
+       int bonusKeys = player.getStats().getBonusKey();
+
+        float uiWidth = Gdx.graphics.getWidth();
+        float uiHeight = Gdx.graphics.getHeight();
+
+
         // 绘制敌人数量
-        font.draw(batch, "Enemies: " + enemies.size, 10, camera.viewportHeight - 10);
+        font.setColor(Color.GOLD);
+        font.draw(batch,"EXIT KEY: " + (exitKey ? "[FOUND]" : "[NOT FOUND]"),20,uiHeight-60);
+        font.setColor(Color.CORAL);
+        font.draw(batch,"BONUS KEYS: " + bonusKeys + " / 2",20,uiHeight-90);
+        font.draw(batch,"ENEMIES: " + enemies.size, uiWidth-150,uiHeight-50);
 
         // 绘制游戏时间
         font.draw(batch, String.format("Time: %.1f", gameTime),
-                camera.viewportWidth - 100, camera.viewportHeight - 10);
+                uiWidth-150,uiHeight-20);
     }
 
     private void drawDebugInfo() {
