@@ -57,8 +57,8 @@ public class GameScreen implements Screen {
     private float gameTime = 0f;
     private  int levelNumber;
     private String currentMapPath;
-    private InputController controller;
-
+    private PlayerController controller;
+    private SettingsManager settingsManager;
 
 
     /**
@@ -86,7 +86,7 @@ public class GameScreen implements Screen {
         font = new BitmapFont();
         font.getData().setScale(1f);
 
-        controller = new InputController();
+        controller = new PlayerController(settingsManager);
         enemies = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
@@ -182,7 +182,6 @@ public class GameScreen implements Screen {
         //only under running that can update the game logic;
         if(currentState==GameState.RUNNING) {
            //关键：每帧更新控制器状态
-            controller.update();
 
             // 更新游戏时间
             gameTime += delta;
@@ -325,22 +324,18 @@ public class GameScreen implements Screen {
         }
     }
 
+
     private void updatePlayer(float delta) {
-        // 由组员2实现
-       if (player != null && controller!=null) {
-           boolean up = controller.up;
-           boolean down = controller.down;
-           boolean left = controller.left;
-           boolean right = controller.right;
-           boolean run = controller.run;
+        if (player != null && controller != null) {
 
-           player.update(delta, up, down, left, right, run);
+            boolean up = controller.up();
+            boolean down = controller.down();
+            boolean left = controller.left();
+            boolean right = controller.right();
+            boolean run = controller.run();
 
-
-       }
-
-
-
+            player.update(delta, up, down, left, right, run);
+        }
     }
 
 
