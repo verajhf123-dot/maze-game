@@ -27,6 +27,12 @@ import java.util.List;
 import com.badlogic.gdx.graphics.Color;
 
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import de.tum.cit.fop.maze.ai.AStarPathFinder;
+import de.tum.cit.fop.maze.traps.Trap;
+import de.tum.cit.fop.maze.traps.Fog;
+import de.tum.cit.fop.maze.traps.MechanismTrap;
+import java.util.ArrayList;
+import com.badlogic.gdx.utils.Array;
 
 /**
  * The GameScreen class is responsible for rendering the gameplay screen.
@@ -43,6 +49,10 @@ public class GameScreen implements Screen {
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
     private float sinusInput = 0f;
+    // ==== 新增：路径寻找和陷阱系统 ====
+    private AStarPathFinder pathFinder;
+    private Array<Trap> traps;
+    private int[][] collisionMap; // 用于A*寻路的碰撞地图
 
     // ==== 新添加的敌人相关变量 ====
     private Array<Enemy> enemies;
@@ -57,8 +67,8 @@ public class GameScreen implements Screen {
     private float gameTime = 0f;
     private  int levelNumber;
     private String currentMapPath;
-    private PlayerController controller;
-    private SettingsManager settingsManager;
+    private InputController controller;
+
 
 
     /**
@@ -80,22 +90,16 @@ public class GameScreen implements Screen {
 
     private void initCommon() {
         camera = new OrthographicCamera();
-        camera.setToOrtho(false,
-                Gdx.graphics.getWidth(),
-                Gdx.graphics.getHeight());
+        camera.setToOrtho(false);
+        camera.position.set(240,160,0);
         camera.zoom = 0.75f;
-        camera.update();
-
         font = new BitmapFont();
         font.getData().setScale(1f);
 
-        settingsManager = new SettingsManager();
-        controller = new PlayerController(settingsManager);
-
+        controller = new InputController();
         enemies = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
-
         createPauseMenu();
 
     }
@@ -139,7 +143,6 @@ public class GameScreen implements Screen {
         });
         pauseMenuTable.add(musicButton).width(250).padBottom(15).row();
 
-
         TextButton quitButton = new TextButton("Exit to Menu", game.getSkin());
         quitButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
@@ -177,6 +180,7 @@ public class GameScreen implements Screen {
         }
     }
 
+
     // Screen interface methods with necessary functionality
     @Override
 
@@ -187,22 +191,37 @@ public class GameScreen implements Screen {
         }
         //only under running that can update the game logic;
         if (currentState == GameState.RUNNING) {
-            gameTime += delta;
+    // 关键：每帧更新控制器状态
+    controller.update();
 
-            updateEnemies(delta);
-            updatePlayer(delta);
-            checkCollisions();
+    // 更新游戏时间
+    gameTime += delta;
 
-            // 让玩家永远在屏幕正中间
-            updateCameraFollowPlayer();
-            // 这里不需要再 camera.update()，除非你在 updateCameraFollowPlayer 里没 update
-        }
+    // 更新陷阱
+    updateTraps(delta);
+
+    // 更新敌人
+    updateEnemies(delta);
+
+    // 更新玩家
+    updatePlayer(delta);
+
+    // 碰撞检测
+    checkCollisions();
+
+    // 陷阱激活检测
+    checkTrapActivation();
+
+    // 让玩家永远在屏幕正中间（你的镜头跟随逻辑）
+    updateCameraFollowPlayer();
+    camera.update();
+}
 
         //draw the game picture;
 
         ScreenUtils.clear(0,0,0,1);
 
-        if (shapeRenderer != null && walls != null){
+        if(walls!=null&& !walls.isEmpty()) {
             shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(Color.GRAY);
@@ -224,19 +243,16 @@ public class GameScreen implements Screen {
         game.getSpriteBatch().setProjectionMatrix(camera.combined);
         game.getSpriteBatch().begin();
         //draw the text
+
+
         //draw game element;
         drawEnemies(game.getSpriteBatch());
         game.getSpriteBatch().end();
-
-
-        drawHealthBar(20, uiStage.getHeight() - 40, 200, 20);
 
         game.getSpriteBatch().setProjectionMatrix(uiStage.getCamera().combined);
         game.getSpriteBatch().begin();
         drawHUD(game.getSpriteBatch());
         game.getSpriteBatch().end();
-
-
 
 
         //drawDebugInfo();
@@ -252,8 +268,6 @@ public class GameScreen implements Screen {
             // draw the button
             uiStage.act(delta);
             uiStage.draw();
-
-
         }
 
     }
@@ -263,9 +277,24 @@ public class GameScreen implements Screen {
         for (Enemy enemy : enemies) {
             if (enemy.isAlive()) {
                 enemy.update(delta);
-                // 传递玩家位置给敌人用于AI决策
-                if (player != null) {
-                    enemy.setTargetPosition(player.getPosition());
+
+                // 如果敌人有PathFinder，让它寻找路径到玩家位置
+                if (player != null && pathFinder != null) {
+                    // 检查玩家是否在检测范围内
+                    float distance = enemy.getPosition().dst(player.getPosition());
+
+                    if (distance <= enemy.getDetectionRange()) {
+                        // 玩家在检测范围内，开始寻路追击
+                        enemy.findPathTo(player.getPosition());
+
+                        // 如果玩家在攻击范围内，攻击
+                        if (distance <= enemy.getAttackRange()) {
+                            enemy.attack(player);
+                        }
+                    } else {
+                        // 玩家不在检测范围，清空路径
+                        enemy.clearPath();
+                    }
                 }
             }
         }
@@ -318,11 +347,10 @@ public class GameScreen implements Screen {
 
         // 将墙壁位置标记为不可行走
         for (Wall wall : walls) {
-            int gridX = wall.gridX;
-            int gridY = wall.gridY;
+            int gridX = (int)(wall.worldX / Wall.TILE_SIZE);
+            int gridY = (int)(wall.worldY / Wall.TILE_SIZE);
 
-            if (gridX >= 0 && gridX < gridWidth &&
-                    gridY >= 0 && gridY < gridHeight) {
+            if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
                 walkableGrid[gridX][gridY] = false;
             }
         }
@@ -333,18 +361,22 @@ public class GameScreen implements Screen {
         }
     }
 
-
     private void updatePlayer(float delta) {
-        if (player != null && controller != null) {
+        // 由组员2实现
+       if (player != null && controller!=null) {
+           boolean up = controller.up;
+           boolean down = controller.down;
+           boolean left = controller.left;
+           boolean right = controller.right;
+           boolean run = controller.run;
 
-            boolean up = controller.up();
-            boolean down = controller.down();
-            boolean left = controller.left();
-            boolean right = controller.right();
-            boolean run = controller.run();
+           player.update(delta, up, down, left, right, run);
 
-            player.update(delta, up, down, left, right, run);
-        }
+
+       }
+
+
+
     }
 
 
@@ -356,64 +388,40 @@ public class GameScreen implements Screen {
         }
     }
 
-    // a method to draw the HealthBar
-    private void drawHealthBar(float x,float y,float width,float height) {
-        if(player == null) {
-            return;
-        }
-        shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        shapeRenderer.setColor(Color.DARK_GRAY);
-        shapeRenderer.rect(x, y, width, height);
-
-        float percent = (float) player.getStats().getHealth() / player.getStats().getMaxHealth();
-
-        if (percent > 0.5f) {
-            shapeRenderer.setColor(Color.GREEN);
-        } else if (percent > 0.2f) {
-            shapeRenderer.setColor(Color.YELLOW);
-        } else {
-            shapeRenderer.setColor(Color.RED);
-        }
-
-        shapeRenderer.rect(x, y, width * percent, height);
-        shapeRenderer.end();
-
-
-
-    }
-
-
-
-
-
-
-
-
-
     private void drawHUD(SpriteBatch batch) {
-        if(player==null || font ==null) return;
-
-        // catch the latest status;
-       boolean exitKey = player.getStats().hasKey();
-       int bonusKeys = player.getStats().getBonusKey();
-
-        float uiWidth = Gdx.graphics.getWidth();
-        float uiHeight = Gdx.graphics.getHeight();
-
+        float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
 
         // 绘制敌人数量
-        font.setColor(Color.GOLD);
-        font.draw(batch,"EXIT KEY: " + (exitKey ? "[FOUND]" : "[NOT FOUND]"),20,uiHeight-60);
-        font.setColor(Color.CORAL);
-        font.draw(batch,"BONUS KEYS: " + bonusKeys + " / 2",20,uiHeight-90);
-        font.draw(batch,"ENEMIES: " + enemies.size, uiWidth-150,uiHeight-50);
+        font.draw(batch, "Enemies: " + enemies.size, 10, camera.viewportHeight - 10);
 
         // 绘制游戏时间
         font.draw(batch, String.format("Time: %.1f", gameTime),
-                uiWidth-150,uiHeight-20);
+                camera.viewportWidth - 100, camera.viewportHeight - 10);
+
+        // ========== 新增：绘制陷阱数量 ==========
+        if (traps != null) {
+            font.draw(batch, "Traps: " + traps.size,
+                    camera.viewportWidth - 200, camera.viewportHeight - 10);
+        }
+
+        // ========== 新增：绘制玩家状态 ==========
+        if (player != null) {
+            font.draw(batch, "HP: " + (int)player.getHealth() + "/" + (int)player.getMaxHealth(),
+                    10, camera.viewportHeight - 40);
+
+            // 如果玩家在迷雾中，显示提示
+            for (Trap trap : traps) {
+                if (trap instanceof Fog) {
+                    Fog fogTrap = (Fog) trap;
+                    if (fogTrap.isPlayerInFog(player)) {
+                        font.draw(batch, "FOG AFFECTED! Visibility Reduced",
+                                camera.viewportWidth / 2 - 100, 30);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     private void drawDebugInfo() {
@@ -435,6 +443,32 @@ public class GameScreen implements Screen {
             }
 
             shapeRenderer.end();
+        }
+    }
+    // ========== 新增：更新陷阱 ==========
+    private void updateTraps(float delta) {
+        if (traps != null) {
+            for (Trap trap : traps) {
+                trap.update(delta);
+            }
+        }
+    }
+
+    // ========== 新增：检查陷阱激活 ==========
+    private void checkTrapActivation() {
+        if (player != null && traps != null) {
+            for (Trap trap : traps) {
+                trap.checkActivation(player);
+            }
+        }
+    }
+
+    // ========== 新增：渲染陷阱 ==========
+    private void drawTraps(SpriteBatch batch) {
+        if (traps != null) {
+            for (Trap trap : traps) {
+                trap.render(batch);
+            }
         }
     }
 
@@ -460,9 +494,6 @@ public class GameScreen implements Screen {
         MapLoader loader = new MapLoader();
         System.out.println("Loading Map from: " + currentMapPath);
         walls = loader.loadWalls(currentMapPath);
-        if (walls == null) {
-            throw new RuntimeException("Failed to load map: " + currentMapPath);
-        }
         int maxX = 0, maxY = 0;
         for (Wall w : walls) {
             if (w.gridX > maxX) maxX = w.gridX;
@@ -477,6 +508,12 @@ public class GameScreen implements Screen {
         System.out.println("Loaded walls: " + walls.size());
 
         shapeRenderer = new ShapeRenderer();
+        // ========== 新增：初始化碰撞地图 ==========
+        buildCollisionMap(maxX + 1, maxY + 1);
+        // ========== 新增：初始化PathFinder ==========
+        initPathFinder();
+        // ========== 新增：初始化陷阱 ==========
+        initTraps();
 
         // ========== 新增：初始化敌人和玩家 ==========
         initEnemies();
@@ -484,6 +521,10 @@ public class GameScreen implements Screen {
         buildWalkableGrid();
         // =====================================
         //remark code (store the original code)
+        // ========== 为敌人设置PathFinder ==========
+        for (Enemy enemy : enemies) {
+            enemy.setPathFinder(pathFinder);
+        }
         currentState = GameState.RUNNING;
         Gdx.input.setInputProcessor(null);
 
@@ -518,12 +559,28 @@ public class GameScreen implements Screen {
 
     @Override
     public void dispose() {
-        // ========== 新增：清理资源 ==========
+        // ========== 清理资源 ==========
         if (shapeRenderer != null) {
             shapeRenderer.dispose();
         }
-        // =====================================
+
+        // ========== 新增：清理陷阱资源 ==========
+        if (traps != null) {
+            for (Trap trap : traps) {
+                if (trap instanceof Fog) {
+                    ((Fog) trap).dispose();
+                } else if (trap instanceof MechanismTrap) {
+                    ((MechanismTrap) trap).dispose();
+                }
+            }
+        }
+
+        // ========== 清理UI ==========
+        if (uiStage != null) {
+            uiStage.dispose();
+        }
     }
+
     // ========== 新增：Getter方法 ==========
     public List<Wall> getWalls() {
         return walls;
@@ -540,6 +597,17 @@ public class GameScreen implements Screen {
     public Array<Enemy> getEnemies() {
         return enemies;
     }
+    public AStarPathFinder getPathFinder() {
+        return pathFinder;
+    }
+
+    public Array<Trap> getTraps() {
+        return traps;
+    }
+
+    public int[][] getCollisionMap() {
+        return collisionMap;
+    }
     private void updateCameraFollowPlayer() {
         if (player == null) return;
 
@@ -548,6 +616,91 @@ public class GameScreen implements Screen {
 
         camera.position.set(cx, cy, 0f);
         camera.update();
+    }
+    // ========== 新增：构建碰撞地图 ==========
+    private void buildCollisionMap(int width, int height) {
+        collisionMap = new int[height][width];
+
+        // 初始化所有格子为可通行（0）
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                collisionMap[y][x] = 0;
+            }
+        }
+
+        // 将墙壁标记为障碍（1）
+        for (Wall wall : walls) {
+            if (wall.gridX >= 0 && wall.gridX < width && wall.gridY >= 0 && wall.gridY < height) {
+                collisionMap[wall.gridY][wall.gridX] = 1;
+            }
+        }
+
+        System.out.println("Collision map built: " + width + "x" + height);
+    }
+
+    // ========== 新增：初始化PathFinder ==========
+    private void initPathFinder() {
+        if (collisionMap != null) {
+            pathFinder = new AStarPathFinder(collisionMap);
+            System.out.println("AStarPathFinder initialized");
+        } else {
+            System.out.println("Warning: Collision map not built, PathFinder not initialized");
+        }
+    }
+
+    // ========== 新增：初始化陷阱 ==========
+    private void initTraps() {
+        traps = new Array<>();
+
+        // 在随机位置生成陷阱（避开玩家起始位置）
+        int trapCount = 3 + levelNumber; // 随关卡增加陷阱数量
+
+        for (int i = 0; i < trapCount; i++) {
+            // 随机位置，但确保不在墙上
+            float x, y;
+            boolean validPosition;
+            int attempts = 0;
+
+            do {
+                validPosition = true;
+                x = (float) (Math.random() * (mapPixelWidth - 64));
+                y = (float) (Math.random() * (mapPixelHeight - 64));
+
+                // 检查是否在墙上
+                int gridX = (int)(x / Wall.TILE_SIZE);
+                int gridY = (int)(y / Wall.TILE_SIZE);
+
+                if (collisionMap != null && gridY < collisionMap.length && gridX < collisionMap[0].length) {
+                    if (collisionMap[gridY][gridX] == 1) {
+                        validPosition = false;
+                    }
+                }
+
+                // 检查是否太靠近玩家起始位置
+                if (player != null) {
+                    float distance = (float) Math.sqrt(
+                            Math.pow(x - player.getPosition().x, 2) +
+                                    Math.pow(y - player.getPosition().y, 2)
+                    );
+                    if (distance < 100) {
+                        validPosition = false;
+                    }
+                }
+
+                attempts++;
+            } while (!validPosition && attempts < 100);
+
+            if (validPosition) {
+                // 随机选择陷阱类型
+                if (Math.random() > 0.5) {
+                    traps.add(new MechanismTrap(x, y));
+                } else {
+                    traps.add(new Fog(x, y));
+                }
+            }
+        }
+
+        System.out.println("Initialized " + traps.size + " traps");
     }
 
 

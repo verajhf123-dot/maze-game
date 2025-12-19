@@ -67,6 +67,22 @@ public class Player {
         isHurt = true;
         hurtTimer = 0.25f;
     }
+    // 添加 float 版本（重载方法）
+    public void takeDamage(float dmg) {
+        // 将 float 转换为 int（四舍五入）
+        int damageInt = Math.round(dmg);
+        stats.takeDamage(damageInt);
+        isHurt = true;
+        hurtTimer = 0.25f;
+    }
+    // 添加 getHealth 和 getMaxHealth 方法（GameScreen 需要这些）
+    public float getHealth() {
+        return stats.getHealth();
+    }
+
+    public float getMaxHealth() {
+        return stats.getMaxHealth();
+    }
 
     public Rectangle getHitbox() {
         return hitbox;

@@ -33,7 +33,6 @@ public class MenuScreen implements Screen {
     private final Table table;
 
 
-
     /**
      * Constructor for MenuScreen. Sets up the camera, viewport, stage, and UI elements.
      *

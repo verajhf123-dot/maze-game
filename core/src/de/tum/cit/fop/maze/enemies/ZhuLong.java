@@ -1,43 +1,70 @@
 package de.tum.cit.fop.maze.enemies;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 
 public class ZhuLong extends Enemy {
     private boolean eyesOpen = true; // 睁眼状态
     private float dayNightTimer = 0f;
-
-    protected float health;
-    protected float maxHealth;
-    protected float speed;
-    protected boolean isAlive = true;
+    private ShapeRenderer shapeRenderer;
+    private Texture texture; // 可选的纹理
+    private Vector2 targetPosition; // 添加目标位置变量
 
     public ZhuLong(float x, float y) {
         super(x, y, 32, 32);
-        this.health = 150;
-        this.maxHealth = 150;
-        this.speed = 40f; // 比普通敌人慢
+
+        // 初始化 Enemy 基类的属性
+        this.health = 150f;
+        this.maxHealth = 150f;
+        this.speed = 40f;
+        this.attackDamage = 25f;
+        this.attackRange = 60f;
+        this.detectionRange = 180f;
+
+        this.shapeRenderer = new ShapeRenderer();
+
+        // 可选：加载纹理
+        try {
+            texture = new Texture(Gdx.files.internal("enemies/zhulong.png"));
+        } catch (Exception e) {
+            // 如果纹理不存在，使用形状渲染器
+            texture = null;
+        }
     }
 
     @Override
     public void update(float delta) {
-        if (!isAlive) return;
+        if (!isAlive()) return;
 
         // 更新昼夜计时器
         updateDayNightCycle(delta);
 
-        // 根据睁眼状态调整行为
-        if (eyesOpen) {
-            // 睁眼：正常移动和攻击
-            if (targetPosition != null) {
-                position.x += (targetPosition.x - position.x) * 0.3f * delta;
-                position.y += (targetPosition.y - position.y) * 0.3f * delta;
+        // 根据睁眼状态调整速度
+        float currentSpeed = eyesOpen ? speed : speed * 0.5f;
+
+        // 如果设置了目标位置，向目标移动
+        if (targetPosition != null) {
+            Vector2 direction = new Vector2(
+                    targetPosition.x - position.x,
+                    targetPosition.y - position.y
+            );
+
+            float distance = direction.len();
+            if (distance > 1f) {
+                direction.nor();
+                velocity.set(direction.x * currentSpeed, direction.y * currentSpeed);
+            } else {
+                velocity.set(0, 0);
             }
-        } else {
-            // 闭眼：移动变慢或停止
-            speed = 20f;
         }
 
+        // 调用父类的更新逻辑
+        super.update(delta);
     }
 
     private void updateDayNightCycle(float delta) {
@@ -53,26 +80,83 @@ public class ZhuLong extends Enemy {
 
     @Override
     public void render(SpriteBatch batch) {
-        if (!isAlive) return;
+        if (!isAlive()) return;
 
-        // 使用shapeRenderer绘制（临时方案）
-        // 睁眼：黄色，闭眼：深黄色
-        com.badlogic.gdx.graphics.glutils.ShapeRenderer sr = new com.badlogic.gdx.graphics.glutils.ShapeRenderer();
-        sr.setProjectionMatrix(batch.getProjectionMatrix());
-        sr.begin(com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType.Filled);
-        sr.setColor(eyesOpen ? Color.YELLOW : Color.ORANGE);
-        sr.rect(position.x, position.y, 32, 32);
+        // 如果有纹理，使用纹理渲染
+        if (texture != null) {
+            batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
+        } else {
+            // 否则使用形状渲染器（调试用）
+            batch.end(); // 结束 SpriteBatch
 
-        // 绘制眼睛状态指示器
-        sr.setColor(eyesOpen ? Color.WHITE : Color.DARK_GRAY);
-        sr.circle(position.x + 10, position.y + 22, 4);
-        sr.circle(position.x + 22, position.y + 22, 4);
+            shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        sr.end();
+            // 身体颜色：睁眼黄色，闭眼橙色
+            shapeRenderer.setColor(eyesOpen ? Color.YELLOW : Color.ORANGE);
+            shapeRenderer.rect(position.x, position.y, bounds.width, bounds.height);
+
+            // 眼睛：睁眼白色，闭眼深灰色
+            shapeRenderer.setColor(eyesOpen ? Color.WHITE : Color.DARK_GRAY);
+            shapeRenderer.circle(position.x + 10, position.y + 22, 4);
+            shapeRenderer.circle(position.x + 22, position.y + 22, 4);
+
+            shapeRenderer.end();
+
+            batch.begin(); // 重新开始 SpriteBatch
+        }
+    }
+
+    // ========== 实现抽象方法 ==========
+
+    @Override
+    public void attack() {
+        // 烛龙的攻击逻辑
+        // 睁眼时攻击力更强
+        float damageMultiplier = eyesOpen ? 1.5f : 0.8f;
+        float actualDamage = attackDamage * damageMultiplier;
+
+        System.out.println("ZhuLong attacks! Damage: " + actualDamage +
+                " (Eyes: " + (eyesOpen ? "OPEN" : "CLOSED") + ")");
+    }
+
+    @Override
+    protected void onDeath() {
+        System.out.println("ZhuLong has been defeated!");
+        // 可以在这里添加死亡效果、掉落物品等
+    }
+
+    // ========== 新增方法 ==========
+
+    public void setTargetPosition(Vector2 target) {
+        this.targetPosition = target;
+    }
+
+    public Vector2 getTargetPosition() {
+        return targetPosition;
     }
 
     // 特殊方法：获取当前状态
     public boolean isEyesOpen() {
         return eyesOpen;
+    }
+
+    public float getDayNightTimer() {
+        return dayNightTimer;
+    }
+
+    public void setEyesOpen(boolean open) {
+        this.eyesOpen = open;
+        dayNightTimer = 0f; // 重置计时器
+    }
+
+    // 清理资源
+    public void dispose() {
+        if (shapeRenderer != null) {
+            shapeRenderer.dispose();
+        }
+        if (texture != null) {
+            texture.dispose();
+        }
     }
 }
