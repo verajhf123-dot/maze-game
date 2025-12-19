@@ -36,6 +36,11 @@ import de.tum.cit.fop.maze.traps.Fog;
 import de.tum.cit.fop.maze.traps.MechanismTrap;
 import java.util.ArrayList;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Rectangle;
+
+
 
 /**
  * The GameScreen class is responsible for rendering the gameplay screen.
@@ -390,19 +395,72 @@ public class GameScreen implements Screen {
     }
 
     private void updatePlayer(float delta) {
-        // 由组员2实现
-       if (player != null && controller!=null) {
-           boolean up = controller.up;
-           boolean down = controller.down;
-           boolean left = controller.left;
-           boolean right = controller.right;
-           boolean run = controller.run;
+        if (player == null || controller == null) return;
 
-           player.update(delta, up, down, left, right, run);
+        controller.update(); // 每帧刷新按键状态
 
-       }
+        player.update(delta,
+                controller.up,
+                controller.down,
+                controller.left,
+                controller.right,
+                controller.run
+        );
 
+        // 用速度算本帧要走多少
+        float dx = player.getVelocity().x * delta;
+        float dy = player.getVelocity().y * delta;
+
+        moveEntityWithWallCollision(player, dx, dy);
     }
+    private void moveEntityWithWallCollision(CollidableEntity entity, float dx, float dy) {
+        Rectangle hb = entity.getHitbox();
+
+        hb.x += dx;
+        if (collidesWithAnyWall(hb)) hb.x -= dx;
+
+        hb.y += dy;
+        if (collidesWithAnyWall(hb)) hb.y -= dy;
+
+        entity.syncPositionToHitbox();
+    }
+
+
+
+
+    private void movePlayerWithWallCollision(float dx, float dy) {
+        Rectangle hb = player.getHitbox();
+
+        // X
+        hb.x += dx;
+        if (collidesWithAnyWall(hb)) {
+            hb.x -= dx;
+        }
+
+        // Y
+        hb.y += dy;
+        if (collidesWithAnyWall(hb)) {
+            hb.y -= dy;
+        }
+
+        // 同步 position
+        player.syncPositionToHitbox();
+    }
+    private boolean collidesWithAnyWall(Rectangle hb) {
+        if (walls == null) return false;
+
+        for (Wall wall : walls) {
+            if (hb.overlaps(wall.getBounds())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
+
+
 
 
     private void drawPlayer(SpriteBatch batch) {
@@ -748,6 +806,8 @@ public class GameScreen implements Screen {
 
         System.out.println("Initialized " + traps.size + " traps");
     }
+
+
 
 
 
