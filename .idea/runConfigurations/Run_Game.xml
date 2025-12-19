@@ -4,6 +4,7 @@
 <module name="maze-game.desktop.main" />
 <module name="fopws2526projectfop-ive.desktop.main" />
 <option name="VM_PARAMETERS" value="-XstartOnFirstThread" />
+    <option name="VM_PARAMETERS" value="-XstartOnFirstThread" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="de.tum.cit.ase.maze.*" />

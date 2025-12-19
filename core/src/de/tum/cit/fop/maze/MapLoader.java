@@ -1,22 +1,21 @@
 package de.tum.cit.fop.maze;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 public class MapLoader {
 
-    public List<Wall> loadWalls(String filePath) {
+    public List<Wall> loadWalls(String internalPath) {
         List<Wall> walls = new ArrayList<>();
-
         Properties props = new Properties();
 
-        // 这里用 FileInputStream，直接从项目工作目录读取 "maps/level-1.properties"
-        try (InputStream input = new FileInputStream(filePath)) {
-            props.load(input);
+        try {
+            FileHandle file = Gdx.files.local(internalPath);
+            props.load(file.read());
 
             for (String key : props.stringPropertyNames()) {
                 String value = props.getProperty(key).trim();
@@ -31,8 +30,8 @@ public class MapLoader {
                     walls.add(new Wall(x, y));
                 }
             }
-        } catch (IOException e) {
-            System.out.println("Error loading map file: " + filePath);
+        } catch (Exception e) {
+            System.out.println("Error loading map file: " + internalPath);
             e.printStackTrace();
         }
 

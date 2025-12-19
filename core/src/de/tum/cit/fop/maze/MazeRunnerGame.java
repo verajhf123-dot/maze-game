@@ -31,6 +31,11 @@ public class MazeRunnerGame extends Game {
 
     // Character animation downwards
     private Animation<TextureRegion> characterDownAnimation;
+    // update background Music
+    private Music backgroundMusic;
+
+    // 保存文件选择器；
+    private NativeFileChooser fileChooser;
 
     /**
      * Constructor for MazeRunnerGame.
@@ -39,6 +44,7 @@ public class MazeRunnerGame extends Game {
      */
     public MazeRunnerGame(NativeFileChooser fileChooser) {
         super();
+        this.fileChooser = fileChooser;
     }
 
     /**
@@ -52,11 +58,16 @@ public class MazeRunnerGame extends Game {
 
         // Play some background music
         // Background sound
-        Music backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
+        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
         backgroundMusic.setLooping(true);
         backgroundMusic.play();
 
         goToMenu(); // Navigate to the menu screen
+    }
+
+    // to update Music;
+    public Music getBackgroundMusic() {
+        return backgroundMusic;
     }
 
     /**
@@ -70,22 +81,16 @@ public class MazeRunnerGame extends Game {
         }
     }
 
+
+
     /**
      * Switches to the game screen.
      */
-    public void goToGame() {
-        this.setScreen(new GameScreen(this)); // Set the current screen to GameScreen
-        if (menuScreen != null) {
-            menuScreen.dispose(); // Dispose the menu screen if it exists
-            menuScreen = null;
-        }
-    }
 
 
     /**
      * Loads the character animation from the character.png file.
-     */
-    private void loadCharacterAnimation() {
+     */private void loadCharacterAnimation() {
         Texture walkSheet = new Texture(Gdx.files.internal("character.png"));
 
         int frameWidth = 16;
@@ -113,6 +118,28 @@ public class MazeRunnerGame extends Game {
         spriteBatch.dispose(); // Dispose the spriteBatch
         skin.dispose(); // Dispose the skin
     }
+    public void goToGame() {
+        goToGame(1);
+    }
+
+    public void goToGame(int levelNumber) {
+        this.setScreen(new GameScreen(this, levelNumber));
+
+        if (menuScreen != null) {
+            menuScreen.dispose();
+            menuScreen = null;
+        }
+    }
+
+    public void goToGame(String mapFilePath){
+        this.setScreen(new GameScreen(this,mapFilePath));
+        if (menuScreen != null) {
+            menuScreen.dispose();
+            menuScreen = null;
+        }
+    }
+
+
 
     // Getter methods
     public Skin getSkin() {
@@ -125,5 +152,9 @@ public class MazeRunnerGame extends Game {
 
     public SpriteBatch getSpriteBatch() {
         return spriteBatch;
+    }
+
+    public NativeFileChooser getFileChooser() {
+        return fileChooser;
     }
 }
