@@ -186,21 +186,18 @@ public class GameScreen implements Screen {
             togglePause();
         }
         //only under running that can update the game logic;
-        if(currentState==GameState.RUNNING) {
-           //关键：每帧更新控制器状态
-
-            // 更新游戏时间
+        if (currentState == GameState.RUNNING) {
             gameTime += delta;
-            // 更新敌人
+
             updateEnemies(delta);
-            // 更新玩家（由组员2实现）
             updatePlayer(delta);
-            // 碰撞检测
             checkCollisions();
 
+            // 让玩家永远在屏幕正中间
             updateCameraFollowPlayer();
-            camera.update();
+            // 这里不需要再 camera.update()，除非你在 updateCameraFollowPlayer 里没 update
         }
+
         //draw the game picture;
 
         ScreenUtils.clear(0,0,0,1);
@@ -546,31 +543,13 @@ public class GameScreen implements Screen {
     private void updateCameraFollowPlayer() {
         if (player == null) return;
 
-        float targetX = player.getPosition().x;
-        float targetY = player.getPosition().y;
+        float cx = player.getPosition().x + 16f;
+        float cy = player.getPosition().y + 16f;
 
-        float halfW = camera.viewportWidth * 0.5f * camera.zoom;
-        float halfH = camera.viewportHeight * 0.5f * camera.zoom;
-
-        float newX;
-        if (mapPixelWidth < camera.viewportWidth * camera.zoom) {
-
-            newX = mapPixelWidth / 2f;
-        } else {
-            newX = Math.max(halfW, Math.min(targetX, mapPixelWidth - halfW));
-        }
-
-        // 4. 计算 Y 轴位置 (同理)
-        float newY;
-        if (mapPixelHeight < camera.viewportHeight * camera.zoom) {
-            newY = mapPixelHeight / 2f;
-        } else {
-            newY = Math.max(halfH, Math.min(targetY, mapPixelHeight - halfH));
-        }
-        // 5. 应用新位置
-        camera.position.set(newX, newY, 0);
-
+        camera.position.set(cx, cy, 0f);
+        camera.update();
     }
+
 
 
     // Additional methods and logic can be added as needed for the game screen
