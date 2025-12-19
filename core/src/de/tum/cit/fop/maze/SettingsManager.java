@@ -1,49 +1,67 @@
 package de.tum.cit.fop.maze;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class SettingsManager {
 
-    private HashMap<String, Integer> keyMap;
-    private final String SETTINGS_PATH = "config/settings.json";
+    private static final String PREF_NAME = "MazeRunnerSettings";
+    private final Preferences prefs;
+
+    // action -> keycode
+    private final Map<String, Integer> keyBindings = new HashMap<>();
 
     public SettingsManager() {
-        load();
+        prefs = Gdx.app.getPreferences(PREF_NAME);
+        loadDefaults();
+        loadFromPreferences();
     }
 
-    public void load() {
-        Json json = new Json();
-        FileHandle file = Gdx.files.local(SETTINGS_PATH);
+    /** 默认按键绑定 */
+    private void loadDefaults() {
+        keyBindings.put("move_up", Input.Keys.W);
+        keyBindings.put("move_down", Input.Keys.S);
+        keyBindings.put("move_left", Input.Keys.A);
+        keyBindings.put("move_right", Input.Keys.D);
+        keyBindings.put("run", Input.Keys.SHIFT_LEFT);
+    }
 
-        if(file.exists()) {
-            keyMap = json.fromJson(HashMap.class, file.readString());
-        } else {
-            keyMap = getDefaultKeys();
-            save();
+    /** 从 Preferences 读取（覆盖默认值） */
+    private void loadFromPreferences() {
+        for (String action : keyBindings.keySet()) {
+            if (prefs.contains(action)) {
+                keyBindings.put(action, prefs.getInteger(action));
+            }
         }
     }
 
-    public void save() {
-        Json json = new Json();
-        FileHandle file = Gdx.files.local(SETTINGS_PATH);
-        file.writeString(json.prettyPrint(keyMap), false);
+    /** 给 PlayerController 用：返回 keycode */
+    public int getKeyCode(String action) {
+        Integer key = keyBindings.get(action);
+        if (key == null) {
+            // 防止 NPE，兜底
+            return Input.Keys.UNKNOWN;
+        }
+        return key;
     }
 
-    public int getKey(String action) {
-        return keyMap.get(action);
+    /** 给 SettingsScreen 用：返回可读的按键名字 */
+    public String getKey(String action) {
+        Integer key = keyBindings.get(action);
+        if (key == null) {
+            return "UNBOUND";
+        }
+        return Input.Keys.toString(key);
     }
 
-    private HashMap<String, Integer> getDefaultKeys() {
-        HashMap<String, Integer> map = new HashMap<>();
-        map.put("move_up", com.badlogic.gdx.Input.Keys.W);
-        map.put("move_down", com.badlogic.gdx.Input.Keys.S);
-        map.put("move_left", com.badlogic.gdx.Input.Keys.A);
-        map.put("move_right", com.badlogic.gdx.Input.Keys.D);
-        map.put("run", com.badlogic.gdx.Input.Keys.SHIFT_LEFT);
-        return map;
+    /** 修改按键绑定（以后设置界面用） */
+    public void setKey(String action, int keycode) {
+        keyBindings.put(action, keycode);
+        prefs.putInteger(action, keycode);
+        prefs.flush();
     }
 }

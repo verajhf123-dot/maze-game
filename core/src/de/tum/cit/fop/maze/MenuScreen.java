@@ -31,15 +31,17 @@ public class MenuScreen implements Screen {
     private final Stage stage;
     private final MazeRunnerGame game;
     private final Table table;
-
+    private final SettingsManager settingsManager;
 
     /**
      * Constructor for MenuScreen. Sets up the camera, viewport, stage, and UI elements.
      *
      * @param game The main game class, used to access global resources and methods.
      */
-    public MenuScreen(MazeRunnerGame game) {
+    public MenuScreen(MazeRunnerGame game,SettingsManager settingsManager) {
         this.game = game;
+        this.settingsManager = settingsManager;
+
         var camera = new OrthographicCamera();
         camera.zoom = 1.5f; // Set camera zoom for a closer view
 
@@ -85,17 +87,16 @@ public class MenuScreen implements Screen {
 
             }
         });
-        TextButton settingButton = new TextButton("Settings", game.getSkin());
-        table.add(settingButton).width(300).padTop(10).row();
-        settingButton.addListener(new ChangeListener() {
+
+        TextButton settingsButton = new TextButton("Settings", game.getSkin());
+        table.add(settingsButton).width(300).padTop(10).row();
+
+        settingsButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-
-                Gdx.app.log("MenuScreen", "Settings");
-
+                game.setScreen(new SettingsScreen(game, settingsManager));
             }
         });
-
 
         TextButton highScoresButton = new TextButton("High Scores", game.getSkin());
         table.add(highScoresButton).width(300).padTop(10).row();
