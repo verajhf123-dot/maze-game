@@ -21,9 +21,9 @@ public class MazeRunnerGame extends Game {
     private GameScreen gameScreen;
 
 
+    private SettingsManager settingsManager;
     // Sprite Batch for rendering
     private SpriteBatch spriteBatch;
-
     // UI Skin
     private Skin skin;
 
@@ -52,8 +52,13 @@ public class MazeRunnerGame extends Game {
      */
     @Override
     public void create() {
+
         spriteBatch = new SpriteBatch(); // Create SpriteBatch
-        skin = new Skin(Gdx.files.internal("craft/craftacular-ui.json")); // Load UI skin
+        skin = new Skin(Gdx.files.internal("craft/craftacular-ui.json"));
+        settingsManager = new SettingsManager();
+
+
+
         this.loadCharacterAnimation(); // Load character animation
 
         // Play some background music
@@ -74,9 +79,10 @@ public class MazeRunnerGame extends Game {
      * Switches to the menu screen.
      */
     public void goToMenu() {
-        this.setScreen(new MenuScreen(this)); // Set the current screen to MenuScreen
+        this.setScreen(new MenuScreen(this, settingsManager));
+
         if (gameScreen != null) {
-            gameScreen.dispose(); // Dispose the game screen if it exists
+            gameScreen.dispose();
             gameScreen = null;
         }
     }
