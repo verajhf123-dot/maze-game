@@ -80,16 +80,22 @@ public class GameScreen implements Screen {
 
     private void initCommon() {
         camera = new OrthographicCamera();
-        camera.setToOrtho(false);
-        camera.position.set(240,160,0);
+        camera.setToOrtho(false,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight());
         camera.zoom = 0.75f;
+        camera.update();
+
         font = new BitmapFont();
         font.getData().setScale(1f);
 
+        settingsManager = new SettingsManager();
         controller = new PlayerController(settingsManager);
+
         enemies = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
+
         createPauseMenu();
 
     }
@@ -183,7 +189,6 @@ public class GameScreen implements Screen {
         if(currentState==GameState.RUNNING) {
            //关键：每帧更新控制器状态
 
-
             // 更新游戏时间
             gameTime += delta;
             // 更新敌人
@@ -200,7 +205,7 @@ public class GameScreen implements Screen {
 
         ScreenUtils.clear(0,0,0,1);
 
-        if(walls!=null&& !walls.isEmpty()) {
+        if (shapeRenderer != null && walls != null){
             shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(Color.GRAY);
@@ -316,10 +321,11 @@ public class GameScreen implements Screen {
 
         // 将墙壁位置标记为不可行走
         for (Wall wall : walls) {
-            int gridX = (int)(wall.worldX / Wall.TILE_SIZE);
-            int gridY = (int)(wall.worldY / Wall.TILE_SIZE);
+            int gridX = wall.gridX;
+            int gridY = wall.gridY;
 
-            if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
+            if (gridX >= 0 && gridX < gridWidth &&
+                    gridY >= 0 && gridY < gridHeight) {
                 walkableGrid[gridX][gridY] = false;
             }
         }
@@ -457,6 +463,9 @@ public class GameScreen implements Screen {
         MapLoader loader = new MapLoader();
         System.out.println("Loading Map from: " + currentMapPath);
         walls = loader.loadWalls(currentMapPath);
+        if (walls == null) {
+            throw new RuntimeException("Failed to load map: " + currentMapPath);
+        }
         int maxX = 0, maxY = 0;
         for (Wall w : walls) {
             if (w.gridX > maxX) maxX = w.gridX;
