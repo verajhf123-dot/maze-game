@@ -6,10 +6,13 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
-public class Player {
+
+
+public class Player implements CollidableEntity{
 
     private Texture texture;
     private TextureRegion currentFrame;
+
 
     private Vector2 position;
     private Vector2 velocity;
@@ -31,30 +34,32 @@ public class Player {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0,0);
         this.stats = new PlayerStats();
-        this.hitbox = new Rectangle(x, y, 32, 32);
+        this.hitbox = new Rectangle(x, y, 64, 128);
     }
 
     public void update(float dt, boolean up, boolean down, boolean left, boolean right, boolean run) {
 
-        float currentSpeed = speed * (run ? runMultiplier : 1);
+        float currentSpeed = speed * (run ? runMultiplier : 1f);
 
-        velocity.set(0,0);
-        if(up) velocity.y = currentSpeed;
-        if(down) velocity.y = -currentSpeed;
-        if(left) velocity.x = -currentSpeed;
-        if(right) velocity.x = currentSpeed;
+        velocity.set(0, 0);
 
-        position.add(velocity.x * dt, velocity.y * dt);
+        if (up)    velocity.y = currentSpeed;
+        if (down)  velocity.y = -currentSpeed;
+        if (left)  velocity.x = -currentSpeed;
+        if (right) velocity.x = currentSpeed;
 
-        hitbox.setPosition(position.x, position.y);
+        // ✅ 注意：这里不要 position.add(...)
+        // ✅ 注意：这里不要 hitbox.setPosition(...)
 
-        if(isHurt) {
+        if (isHurt) {
             hurtTimer -= dt;
-            if(hurtTimer <= 0) {
+            if (hurtTimer <= 0) {
                 isHurt = false;
             }
         }
     }
+
+
 
     public void render(SpriteBatch batch) {
         if(currentFrame != null) {
@@ -83,6 +88,18 @@ public class Player {
     public float getMaxHealth() {
         return stats.getMaxHealth();
     }
+    public Vector2 getVelocity() {
+        return velocity;
+    }
+
+    public void syncPositionToHitbox() {
+        this.position.set(hitbox.x, hitbox.y);
+    }
+
+
+
+
+
 
     public Rectangle getHitbox() {
         return hitbox;
