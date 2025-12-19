@@ -56,6 +56,9 @@ public class GameScreen implements Screen {
     private  BitmapFont font;
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
+
+
+
     private float sinusInput = 0f;
     // ==== 新增：路径寻找和陷阱系统 ====
     private AStarPathFinder pathFinder;
