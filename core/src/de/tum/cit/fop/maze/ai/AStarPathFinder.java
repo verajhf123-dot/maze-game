@@ -27,7 +27,21 @@ public class AStarPathFinder {
         }
     }
 
+    private void resetNodes() {
+        for (int y = 0; y < gridHeight; y++) {
+            for (int x = 0; x < gridWidth; x++) {
+                Node node = grid[y][x];
+                node.gCost = Float.MAX_VALUE;
+                node.hCost = 0;
+                node.fCost = 0;
+                node.parent = null;
+            }
+        }
+    }
+
     public List<Vector2> findPath(Vector2 startWorldPos, Vector2 targetWorldPos) {
+        resetNodes();
+
         Node startNode = worldToNode(startWorldPos);
         Node targetNode = worldToNode(targetWorldPos);
 
@@ -38,9 +52,22 @@ public class AStarPathFinder {
         PriorityQueue<Node> openSet = new PriorityQueue<>();
         Set<Node> closedSet = new HashSet<>();
 
+        startNode.gCost = 0;
+        startNode.hCost = 0;
+
         openSet.add(startNode);
 
+        int loopCount = 0;
+        int maxSteps =1000;
+
         while (!openSet.isEmpty()) {
+            // 安全检查：如果算太久了，强制停止
+            loopCount++;
+            if (loopCount > maxSteps) {
+                // System.out.println("⚠️ 寻路超时，放弃计算");
+                return new ArrayList<>(); // 强制返回空，防止游戏卡死
+            }
+
             Node currentNode = openSet.poll();
 
             if (currentNode.equals(targetNode)) {
@@ -56,7 +83,7 @@ public class AStarPathFinder {
 
                 float newCostToNeighbor = currentNode.gCost + getDistance(currentNode, neighbor);
 
-                if (newCostToNeighbor < neighbor.gCost || !openSet.contains(neighbor)) {
+                if (newCostToNeighbor < neighbor.gCost) {
                     neighbor.gCost = newCostToNeighbor;
                     neighbor.hCost = getDistance(neighbor, targetNode);
                     neighbor.fCost = neighbor.gCost + neighbor.hCost;
@@ -89,8 +116,8 @@ public class AStarPathFinder {
     }
 
     private float getDistance(Node a, Node b) {
-        int dstX = Math.abs(a.gridX - b.gridX);
-        int dstY = Math.abs(a.gridY - b.gridY);
+        float dstX = Math.abs(a.gridX - b.gridX);
+        float dstY = Math.abs(a.gridY - b.gridY);
         return dstX + dstY;
     }
 

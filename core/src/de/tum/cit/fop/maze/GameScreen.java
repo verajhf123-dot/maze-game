@@ -5,9 +5,12 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -68,7 +71,10 @@ public class GameScreen implements Screen {
     private  int levelNumber;
     private String currentMapPath;
     private InputController controller;
-
+    private Vector2 exitPosition;
+    private Texture arrowTexture;
+    private TextureRegion arrowRegion;
+    private float aiTimer = 0f;
 
 
     /**
@@ -98,6 +104,7 @@ public class GameScreen implements Screen {
 
         controller = new InputController();
         enemies = new Array<>();
+        traps = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
         createPauseMenu();
@@ -180,6 +187,33 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void drawHealthBar(){
+        if (player == null) return;
+
+
+        shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        float barX = 10;
+        float barY = camera.viewportHeight - 60;
+        float barWidth = 200;
+        float barHeight = 20;
+
+        shapeRenderer.setColor(Color.RED);
+        shapeRenderer.rect(barX, barY, barWidth, barHeight);
+        if (player.getMaxHealth() > 0) {
+            float hpPercent = player.getHealth() / player.getMaxHealth();
+            if (hpPercent < 0) hpPercent = 0;
+            if (hpPercent > 1) hpPercent = 1;
+
+            shapeRenderer.setColor(Color.GREEN);
+            shapeRenderer.rect(barX, barY, barWidth * hpPercent, barHeight);
+        }
+
+        shapeRenderer.end();
+
+    }
+
 
     // Screen interface methods with necessary functionality
     @Override
@@ -193,28 +227,22 @@ public class GameScreen implements Screen {
         if (currentState == GameState.RUNNING) {
     // 关键：每帧更新控制器状态
     controller.update();
-
     // 更新游戏时间
     gameTime += delta;
 
-    // 更新陷阱
     updateTraps(delta);
-
     // 更新敌人
     updateEnemies(delta);
-
     // 更新玩家
     updatePlayer(delta);
-
     // 碰撞检测
     checkCollisions();
-
     // 陷阱激活检测
     checkTrapActivation();
-
     // 让玩家永远在屏幕正中间（你的镜头跟随逻辑）
     updateCameraFollowPlayer();
     camera.update();
+
 }
 
         //draw the game picture;
@@ -230,23 +258,17 @@ public class GameScreen implements Screen {
             }
             shapeRenderer.end();
         }
-        if (player != null) {
-            shapeRenderer.setProjectionMatrix(camera.combined);
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(Color.RED); // 显眼的红色
-            // 使用 32x32 的大小，方便看
-            shapeRenderer.rect(player.getPosition().x, player.getPosition().y, 32, 32);
-            shapeRenderer.end();
-        }//用这个表示就是player。 把他画出来。
+        drawHealthBar();
 
         // 设置投影矩阵
         game.getSpriteBatch().setProjectionMatrix(camera.combined);
         game.getSpriteBatch().begin();
         //draw the text
 
-
+        drawTraps(game.getSpriteBatch());
         //draw game element;
         drawEnemies(game.getSpriteBatch());
+        drawPlayer(game.getSpriteBatch());
         game.getSpriteBatch().end();
 
         game.getSpriteBatch().setProjectionMatrix(uiStage.getCamera().combined);
@@ -273,34 +295,7 @@ public class GameScreen implements Screen {
     }
     // ===== 画墙结束 =====
     // ========== 新增：敌人相关方法 =========
-    private void updateEnemies(float delta) {
-        for (Enemy enemy : enemies) {
-            if (enemy.isAlive()) {
-                enemy.update(delta);
 
-                // 如果敌人有PathFinder，让它寻找路径到玩家位置
-                if (player != null && pathFinder != null) {
-                    // 检查玩家是否在检测范围内
-                    float distance = enemy.getPosition().dst(player.getPosition());
-
-                    if (distance <= enemy.getDetectionRange()) {
-                        // 玩家在检测范围内，开始寻路追击
-                        enemy.findPathTo(player.getPosition());
-
-                        // 如果玩家在攻击范围内，攻击
-                        if (distance <= enemy.getAttackRange()) {
-                            enemy.attack(player);
-                        }
-                    } else {
-                        // 玩家不在检测范围，清空路径
-                        enemy.clearPath();
-                    }
-                }
-            }
-        }
-        // 移除死亡的敌人
-        removeDeadEnemies();
-    }
 
     private void drawEnemies(SpriteBatch batch) {
         for (Enemy enemy : enemies) {
@@ -361,6 +356,39 @@ public class GameScreen implements Screen {
         }
     }
 
+
+    private void updateEnemies(float delta) {
+        aiTimer += delta;
+        boolean shouldRecalculatePath = false;
+
+        if (aiTimer >= 0.5f) {
+            shouldRecalculatePath = true;
+            aiTimer = 0f; // 重置计时器
+        }
+
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive()) {
+                enemy.update(delta);
+                if (shouldRecalculatePath && player != null && pathFinder != null) {
+
+                    float distance = enemy.getPosition().dst(player.getPosition());
+
+                    if (distance <= enemy.getDetectionRange()) {
+                        enemy.findPathTo(player.getPosition());
+                        if (distance <= enemy.getAttackRange()) {
+                            enemy.attack(player);
+                        }
+                    } else {
+                        enemy.clearPath();
+                    }
+                }
+            }
+        }
+
+        // 移除死亡的敌人
+        removeDeadEnemies();
+    }
+
     private void updatePlayer(float delta) {
         // 由组员2实现
        if (player != null && controller!=null) {
@@ -372,10 +400,7 @@ public class GameScreen implements Screen {
 
            player.update(delta, up, down, left, right, run);
 
-
        }
-
-
 
     }
 
@@ -493,7 +518,32 @@ public class GameScreen implements Screen {
     public void show() {
         MapLoader loader = new MapLoader();
         System.out.println("Loading Map from: " + currentMapPath);
-        walls = loader.loadWalls(currentMapPath);
+
+        MapLoader.LevelData data = loader.loadLevel(currentMapPath);
+
+        this.walls = data.walls;
+        this.exitPosition = data.exitPosition;
+
+        this.enemies.clear();
+        int maxEnemies = levelNumber+1;
+        int currentEnemies = 0;
+        for(Enemy e : data.enemies) {
+            if(currentEnemies < maxEnemies) {
+                this.enemies.add(e);
+                currentEnemies++;
+            }
+        }
+        System.out.println("Loaded " + currentEnemies + " enemies");
+
+        this.traps.clear();
+        int maxTraps = levelNumber+2;
+        int currentTraps = 0;
+        for(Trap t : data.traps) {
+            if(currentTraps < maxTraps) {
+                this.traps.add(t);
+                currentTraps++;
+            }
+        }
         int maxX = 0, maxY = 0;
         for (Wall w : walls) {
             if (w.gridX > maxX) maxX = w.gridX;
@@ -503,30 +553,24 @@ public class GameScreen implements Screen {
         mapPixelWidth  = (maxX + 1) * Wall.TILE_SIZE;
         mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
 
-        System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
-
-        System.out.println("Loaded walls: " + walls.size());
-
+        try {
+            arrowTexture = new Texture(Gdx.files.internal("arrow.png"));
+            arrowRegion = new TextureRegion(arrowTexture);
+        } catch(Exception e) {
+            System.out.println("No arrow.png found, arrow will not show.");
+        }
         shapeRenderer = new ShapeRenderer();
-        // ========== 新增：初始化碰撞地图 ==========
         buildCollisionMap(maxX + 1, maxY + 1);
-        // ========== 新增：初始化PathFinder ==========
         initPathFinder();
-        // ========== 新增：初始化陷阱 ==========
-        initTraps();
 
-        // ========== 新增：初始化敌人和玩家 ==========
-        initEnemies();
         initPlayer();
         buildWalkableGrid();
-        // =====================================
-        //remark code (store the original code)
-        // ========== 为敌人设置PathFinder ==========
         for (Enemy enemy : enemies) {
             enemy.setPathFinder(pathFinder);
         }
         currentState = GameState.RUNNING;
-        Gdx.input.setInputProcessor(null);
+
+       Gdx.input.setInputProcessor(null);
 
         Music music =game.getBackgroundMusic();
         if (music != null && !music.isPlaying()) {
@@ -547,7 +591,9 @@ public class GameScreen implements Screen {
 
     private void initPlayer() {
         if (player == null) {
-            player = new Player(100, 100); // 仅测试用
+            player = new Player(50, 50);
+            player.getStats().heal(100);
+            // 仅测试用
             System.out.println("Dummy player initialized for testing!");
         }
     }
