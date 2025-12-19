@@ -333,22 +333,19 @@ public class GameScreen implements Screen {
 
 
     private void buildWalkableGrid() {
-        // 从地图数据构建可行走网格
-        // 假设地图尺寸为 20x20 个瓦片
         int gridWidth  = (int)(mapPixelWidth / Wall.TILE_SIZE);
         int gridHeight = (int)(mapPixelHeight / Wall.TILE_SIZE);
 
 
         walkableGrid = new boolean[gridWidth][gridHeight];
 
-        // 初始化所有格子为可行走
+
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
                 walkableGrid[x][y] = true;
             }
         }
 
-        // 将墙壁位置标记为不可行走
         for (Wall wall : walls) {
             int gridX = (int)(wall.worldX / Wall.TILE_SIZE);
             int gridY = (int)(wall.worldY / Wall.TILE_SIZE);
@@ -358,7 +355,6 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 将walkableGrid传递给所有敌人
         for (Enemy enemy : enemies) {
             enemy.setWalkableGrid(walkableGrid);
         }
