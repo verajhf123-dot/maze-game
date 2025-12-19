@@ -1,6 +1,7 @@
 package de.tum.cit.fop.maze.enemies;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -13,10 +14,12 @@ public class ZhuLong extends Enemy {
     private float dayNightTimer = 0f;
     private ShapeRenderer shapeRenderer;
     private Texture texture; // 可选的纹理
-    private Vector2 targetPosition; // 添加目标位置变量
+    private Vector2 targetPosition;
+    private static Texture fallbackTexture;
+    // 添加目标位置变量
 
     public ZhuLong(float x, float y) {
-        super(x, y, 32, 32);
+        super(x, y, 16, 16);
 
         // 初始化 Enemy 基类的属性
         this.health = 150f;
@@ -26,15 +29,20 @@ public class ZhuLong extends Enemy {
         this.attackRange = 60f;
         this.detectionRange = 180f;
 
-        this.shapeRenderer = new ShapeRenderer();
-
-        // 可选：加载纹理
         try {
             texture = new Texture(Gdx.files.internal("enemies/zhulong.png"));
         } catch (Exception e) {
-            // 如果纹理不存在，使用形状渲染器
-            texture = null;
+            System.out.println("ZhuLong texture missing. Using Yellow Box.");
         }
+        if (fallbackTexture == null) {
+            Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+            p.setColor(Color.WHITE);
+            p.fill();
+            fallbackTexture = new Texture(p);
+            p.dispose();
+        }
+
+
     }
 
     @Override
@@ -86,24 +94,9 @@ public class ZhuLong extends Enemy {
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
         } else {
-            // 否则使用形状渲染器（调试用）
-            batch.end(); // 结束 SpriteBatch
-
-            shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-            // 身体颜色：睁眼黄色，闭眼橙色
-            shapeRenderer.setColor(eyesOpen ? Color.YELLOW : Color.ORANGE);
-            shapeRenderer.rect(position.x, position.y, bounds.width, bounds.height);
-
-            // 眼睛：睁眼白色，闭眼深灰色
-            shapeRenderer.setColor(eyesOpen ? Color.WHITE : Color.DARK_GRAY);
-            shapeRenderer.circle(position.x + 10, position.y + 22, 4);
-            shapeRenderer.circle(position.x + 22, position.y + 22, 4);
-
-            shapeRenderer.end();
-
-            batch.begin(); // 重新开始 SpriteBatch
+            batch.setColor(eyesOpen ? Color.YELLOW : Color.DARK_GRAY);
+            batch.draw(fallbackTexture, position.x, position.y, bounds.width, bounds.height);
+            batch.setColor(Color.WHITE);
         }
     }
 
