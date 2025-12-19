@@ -183,6 +183,7 @@ public class GameScreen implements Screen {
         if(currentState==GameState.RUNNING) {
            //关键：每帧更新控制器状态
 
+
             // 更新游戏时间
             gameTime += delta;
             // 更新敌人
