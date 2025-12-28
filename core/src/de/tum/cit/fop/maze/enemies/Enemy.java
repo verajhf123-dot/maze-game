@@ -153,4 +153,11 @@ public abstract class Enemy {
     public float getAttackRange() { return attackRange; }
     public float getDetectionRange() { return detectionRange; }
     public void setVelocity(float x, float y) { velocity.set(x, y); }
+
+    public float getMaxHealth() {
+        return maxHealth;
+    }
+    public Vector2 getVelocity() {
+        return velocity;
+    }
 }
