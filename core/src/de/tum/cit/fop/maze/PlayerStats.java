@@ -148,8 +148,20 @@ public class PlayerStats {
         return health <= 0;
     }
 
-    public boolean hasKey() { return hasKey; }
-    public void setHasKey(boolean hasKey) { this.hasKey = hasKey; }
+    private boolean hasKey = false;
+
+    public boolean hasKey() {
+        return hasKey;
+    }
+
+    public void obtainKey() {
+        this.hasKey = true;
+    }
+    public void useKey(){
+        if(hasKey){
+            hasKey = false;
+        }
+    }
 
     public int getBonusKey() { return bonusKey; }
     public void setBonusKey(int bonusKey) { this.bonusKey = bonusKey; }
