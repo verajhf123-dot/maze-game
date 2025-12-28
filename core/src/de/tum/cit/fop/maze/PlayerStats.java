@@ -20,4 +20,18 @@ public class PlayerStats {
     public boolean isDead() {
         return health <= 0;
     }
+    private boolean hasKey = false;
+
+    public boolean hasKey() {
+        return hasKey;
+    }
+
+    public void obtainKey() {
+        this.hasKey = true;
+    }
+    public void useKey(){
+        if(hasKey){
+            hasKey = false;
+        }
+    }
 }
