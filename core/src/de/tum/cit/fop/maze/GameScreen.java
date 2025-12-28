@@ -19,7 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.Color;
-
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.enemies.Enemy;
 import de.tum.cit.fop.maze.enemies.NineTailedFox;
@@ -28,9 +28,10 @@ import de.tum.cit.fop.maze.enemies.ZhuLong;
 
 import java.util.List;
 import com.badlogic.gdx.graphics.Color;
-
+import de.tum.cit.fop.maze.Exit;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import de.tum.cit.fop.maze.ai.AStarPathFinder;
+import de.tum.cit.fop.maze.items.Key;
 import de.tum.cit.fop.maze.traps.Trap;
 import de.tum.cit.fop.maze.traps.Fog;
 import de.tum.cit.fop.maze.traps.MechanismTrap;
@@ -42,6 +43,8 @@ import com.badlogic.gdx.math.Rectangle;
 
 
 
+import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
+
 /**
  * The GameScreen class is responsible for rendering the gameplay screen.
  * It handles the game logic and rendering of the game elements.
@@ -49,8 +52,8 @@ import com.badlogic.gdx.math.Rectangle;
 public class GameScreen implements Screen {
     private float mapPixelWidth;
     private float mapPixelHeight;
-
-
+    private boolean gameWon = false;
+    private Key key;
     private final MazeRunnerGame game;
     private  OrthographicCamera camera;
     private  BitmapFont font;
@@ -64,7 +67,7 @@ public class GameScreen implements Screen {
     private AStarPathFinder pathFinder;
     private Array<Trap> traps;
     private int[][] collisionMap; // 用于A*寻路的碰撞地图
-
+    private Rectangle exitArea;
     // ==== 新添加的敌人相关变量 ====
     private Array<Enemy> enemies;
     private Player player; // 假设组员2会创建Player类
@@ -79,6 +82,7 @@ public class GameScreen implements Screen {
     private  int levelNumber;
     private String currentMapPath;
     private InputController controller;
+    private Exit exit;
     private Vector2 exitPosition;
     private Texture arrowTexture;
     private TextureRegion arrowRegion;
@@ -223,6 +227,7 @@ public class GameScreen implements Screen {
     }
 
 
+
     // Screen interface methods with necessary functionality
     @Override
 
@@ -254,7 +259,9 @@ public class GameScreen implements Screen {
 }
 
         //draw the game picture;
-
+        if (key != null && !key.isCollected()) {
+            key.checkPickup(player);
+        }
         ScreenUtils.clear(0,0,0,1);
 
         if(walls!=null&& !walls.isEmpty()) {
@@ -299,8 +306,33 @@ public class GameScreen implements Screen {
             uiStage.act(delta);
             uiStage.draw();
         }
-
     }
+
+
+
+
+
+
+
+
+    //这个写在这里是测试用的，等到结束屏幕做完了之后把这个删掉-----王思衡
+    private void winGame(){
+        gameWon = true;
+        System.out.println("Game won!");
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
     // ===== 画墙结束 =====
     // ========== 新增：敌人相关方法 =========
 
@@ -322,6 +354,12 @@ public class GameScreen implements Screen {
     }
 
     private void checkCollisions() {
+        if(player.getHitbox().overlaps(exitArea)){
+            exit.onPlayerReach();
+        }
+        if(exit.isReached()) {
+            winGame();
+        }
         if (player != null) {
             for (Enemy enemy : enemies) {
                 if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
@@ -574,6 +612,7 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         MapLoader loader = new MapLoader();
+        key = new Key(300, 200);
         System.out.println("Loading Map from: " + currentMapPath);
 
         MapLoader.LevelData data = loader.loadLevel(currentMapPath);
