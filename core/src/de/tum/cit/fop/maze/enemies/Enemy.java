@@ -23,6 +23,9 @@ public abstract class Enemy {
     protected AStarPathFinder pathFinder;
     protected List<Vector2> currentPath;
     protected int currentPathIndex;
+    protected float attackCooldown = 0.5f;  // 0.5秒打一次
+    protected float attackTimer = 0f;
+
 
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
@@ -49,12 +52,13 @@ public abstract class Enemy {
     // 注意：这里有两个不同的 attack 方法
     // 1. 这个接收 Player 参数
     public void attack(Player player) {
-        if (player != null) {
-            // 检查 Player 类是否有 takeDamage 方法
-            // 如果没有，你需要创建它
-            player.takeDamage(attackDamage);
-        }
+        if (player == null) return;
+        if (attackTimer > 0f) return;
+
+        player.takeDamage(attackDamage);
+        attackTimer = attackCooldown;
     }
+
 
     // 2. 这个是抽象方法，由子类实现
     public abstract void attack();
@@ -72,7 +76,11 @@ public abstract class Enemy {
         findPathTo(target);
     }
 
+
+
     public void update(float delta) {
+        attackTimer = Math.max(0f, attackTimer - delta);
+
         if (!isAlive()) return;
 
         // 更新位置
