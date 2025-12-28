@@ -21,6 +21,7 @@ public class AStarPathFinder {
         for (int y = 0; y < gridHeight; y++) {
             for (int x = 0; x < gridWidth; x++) {
                 boolean walkable = collisionMap[y][x] == 0;
+
                 Vector2 worldPos = new Vector2(x * cellSize + cellSize/2, y * cellSize + cellSize/2);
                 grid[y][x] = new Node(x, y, worldPos, walkable);
             }

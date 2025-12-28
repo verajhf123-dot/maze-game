@@ -20,6 +20,8 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
+
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.enemies.Enemy;
 import de.tum.cit.fop.maze.enemies.NineTailedFox;
@@ -87,6 +89,9 @@ public class GameScreen implements Screen {
     private Texture arrowTexture;
     private TextureRegion arrowRegion;
     private float aiTimer = 0f;
+    private float spawnInvulnTimer = 0f; // 出生无敌计时器
+    private static final float SPAWN_INVULN_DURATION = 1.0f; // 1秒
+
 
 
     /**
@@ -242,8 +247,12 @@ public class GameScreen implements Screen {
     controller.update();
     // 更新游戏时间
     gameTime += delta;
+            if (spawnInvulnTimer > 0f) {
+                spawnInvulnTimer -= delta;
+            }
 
-    updateTraps(delta);
+
+            updateTraps(delta);
     // 更新敌人
     updateEnemies(delta);
     // 更新玩家
@@ -354,20 +363,32 @@ public class GameScreen implements Screen {
     }
 
     private void checkCollisions() {
-        if(player.getHitbox().overlaps(exitArea)){
-            exit.onPlayerReach();
+private void checkCollisions() {
+    if (player == null) return;
+
+    // 1) Exit / win logic (from develop)
+    if (player.getHitbox().overlaps(exitArea)) {
+        exit.onPlayerReach();
+    }
+    if (exit.isReached()) {
+        winGame();
+    }
+
+    // 2) Enemy collision damage (from feature/initPlayer-jiao)
+    // 出生无敌期间：不吃敌人碰撞伤害（但仍然允许触发出口胜利）
+    if (spawnInvulnTimer > 0f) return;
+
+    for (Enemy enemy : enemies) {
+        if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
+            enemy.attack(player);
         }
-        if(exit.isReached()) {
-            winGame();
-        }
-        if (player != null) {
-            for (Enemy enemy : enemies) {
-                if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
-                    enemy.attack(player);
-                }
+    }
+}
+
             }
         }
     }
+
 
 
     private void buildWalkableGrid() {
@@ -686,14 +707,78 @@ public class GameScreen implements Screen {
     }
 
     private void initPlayer() {
-        if (player == null) {
+        if (player != null) return;
+
+        float hbW = 24f;
+        float hbH = 24f;
+
+        if (collisionMap == null) {
             player = new Player(50, 50);
+            spawnInvulnTimer = SPAWN_INVULN_DURATION;
+
             player.getStats().heal(100);
-            // 仅测试用
-            System.out.println("Dummy player initialized for testing!");
+            System.out.println("Warning: collisionMap null, fallback spawn");
+            return;
         }
+
+        int margin = 6; // 不在最外圈出生
+
+        float px = 0;
+        float py = 0;
+        int x = 0;
+        int y;
+        for (y = margin; y < collisionMap.length - margin; y++) {
+            for (x = margin; x < collisionMap[0].length - margin; x++) {
+                if (collisionMap[y][x] == 0) {
+
+                    px = x * Wall.TILE_SIZE + (Wall.TILE_SIZE - hbW) / 2f;
+                    py = y * Wall.TILE_SIZE + (Wall.TILE_SIZE - hbH) / 2f;
+
+                    float minDist = 6f * Wall.TILE_SIZE;     // 至少离敌人2格
+                    if (!farFromEnemies(px, py, minDist)) {  // 不满足就继续找
+                        continue;
+                    }
+
+                    player = new Player(px, py);
+                    player.getStats().heal(100);
+                    player.syncPositionToHitbox();
+
+                    System.out.println(
+                            "Player spawned at tile (" + x + "," + y + ") -> (" + px + "," + py + ")"
+                    );
+                    return;
+                }
+            }
+
+        }
+
+        // 兜底
+        player = new Player(px, py);
+        player.getStats().heal(100);
+        player.syncPositionToHitbox();
+
+        System.out.println(
+                "Player spawned at tile (" + x + "," + y + ") -> (" + px + "," + py + ")"
+        );
+        System.out.println("Spawn HP = " + player.getHealth() + " / " + player.getMaxHealth());
+        return;
+
+
     }
-    // =====================================
+
+    private boolean farFromEnemies(float px, float py, float minDist) {
+        if (enemies == null) return true;
+
+        Vector2 p = new Vector2(px, py);
+        for (Enemy e : enemies) {
+            if (e != null && e.isAlive()) {
+                if (e.getPosition().dst(p) < minDist) return false;
+            }
+        }
+        return true;
+    }
+
+
 
     @Override
     public void hide() {
