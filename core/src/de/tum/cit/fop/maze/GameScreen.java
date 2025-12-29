@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -16,7 +17,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
+
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.enemies.Enemy;
 import de.tum.cit.fop.maze.enemies.NineTailedFox;
@@ -79,6 +81,16 @@ public class GameScreen implements Screen {
     private Exit exit;
     private Key key;
     private Door door;
+    private Vector2 exitPosition;
+    private Texture arrowTexture;
+    private TextureRegion arrowRegion;
+    private float aiTimer = 0f;
+    private float spawnInvulnTimer = 0f; // 出生无敌计时器
+    private static final float SPAWN_INVULN_DURATION = 1.0f; // 1秒
+    private com.badlogic.gdx.graphics.g2d.GlyphLayout layout;
+
+
+
     /**
      * Constructor for GameScreen. Sets up the camera and font.
      *
@@ -100,15 +112,17 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
         camera.position.set(240,160,0);
-        camera.zoom = 0.75f;
+        camera.zoom = 0.45f;
         font = new BitmapFont();
         font.getData().setScale(1f);
+        font =  new BitmapFont();
 
         controller = new InputController();
         enemies = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
         createPauseMenu();
+        layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
 
     }
 
@@ -202,10 +216,20 @@ public class GameScreen implements Screen {
         if (currentState == GameState.RUNNING) {
             controller.update();
             gameTime += delta;
+            if (spawnInvulnTimer > 0f) {
+                spawnInvulnTimer -= delta;
+            }
+          
             updateTraps(delta);
             updateEnemies(delta);
             updatePlayer(delta);
-
+          
+            checkCollisions();
+            checkTrapActivation();
+          
+          
+            updateCameraFollowPlayer();
+            camera.update();
             if(key != null && player != null) {
                 key.checkPickup(player);
             }
@@ -315,7 +339,15 @@ public class GameScreen implements Screen {
         drawHUD(batch);
         batch.end();
 
-        if (currentState == GameState.PAUSED) {
+        if(currentState==GameState.PAUSED) {
+            Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
+            shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0, 0, 0, 0.5f);
+            shapeRenderer.rect(0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+            shapeRenderer.end();
+            Gdx.gl.glDisable(Gdx.gl.GL_BLEND);
+            // draw the button
             uiStage.act(delta);
             uiStage.draw();
         }
@@ -335,20 +367,20 @@ public class GameScreen implements Screen {
 
 
 
-    //这个写在这里是测试用的，等到结束屏幕做完了之后把这个删掉-----王思衡
-    private void winGame(){
-        gameWon = true;
-        System.out.println("Game won!");
-    }
+
+    private void winGame() {
+            // 1. 防止重复触发 (比如一帧内多次碰撞)
+            if (gameWon) return;
+            gameWon = true;
+
+            int nextLevel = levelNumber + 1;
+            SaveManager.saveGame(nextLevel, 100f, false);
+            System.out.println("Saving Progress: Unlocked Level " + nextLevel);
+
+            int score = (int) (gameTime * 10);
 
 
-
-
-
-
-
-
-
+            game.setScreen(new ResultScreen(game, true, levelNumber, score));
 
 
 
@@ -357,7 +389,9 @@ public class GameScreen implements Screen {
     // ========== 新增：敌人相关方法 =========
     private void updateEnemies(float delta) {
         for (Enemy enemy : enemies) {
-            if (enemy.isAlive()) {
+            if (！enemy.isAlive()) {
+              continue;
+            }
                 enemy.update(delta);
 
                 // 如果敌人有PathFinder，让它寻找路径到玩家位置
@@ -401,20 +435,48 @@ public class GameScreen implements Screen {
     }
 
     private void checkCollisions() {
-        if(player.getHitbox().overlaps(exitArea)){
-            exit.onPlayerReach();
-        }
-        if(exit.isReached()) {
-            winGame();
-        }
-        if (player != null) {
-            for (Enemy enemy : enemies) {
-                if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
-                    enemy.attack(player);
+    if (player == null) return;
+
+        if (exitArea != null && player.getHitbox().overlaps(exitArea)) {
+            // to see if player has a key
+            if (player.getStats().hasKey()) {
+                exit.onPlayerReach();
+                if (exit.isReached()) {
+                    winGame();
                 }
+            } else {
+                float delta = Gdx.graphics.getDeltaTime();
+                // 获取玩家当前的速度
+                com.badlogic.gdx.math.Vector2 velocity = player.getVelocity();
+
+                // 将玩家的 hitbox 坐标往回拉（抵消本帧的移动）
+                player.getHitbox().x -= velocity.x * delta;
+                player.getHitbox().y -= velocity.y * delta;
+
+                // 同步玩家的逻辑坐标到 hitbox
+                player.syncPositionToHitbox();
+
             }
         }
-    }
+
+        // 2) 敌人碰撞伤害
+        if (spawnInvulnTimer > 0f) return;
+
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
+                enemy.attack(player);
+                player.triggerDamageVFX();
+
+            }
+        }
+
+        if(player.getHealth() <= 0) {
+            game.setScreen(new ResultScreen(game, false, levelNumber, 0));
+        }
+}
+
+
+
 
 
     private void buildWalkableGrid() {
@@ -463,9 +525,35 @@ public class GameScreen implements Screen {
 
        }
 
+        float oldX = hb.x;
+        hb.x += dx;
+        if (collidesWithAnyWall(hb)|| hb.x < 0 || hb.x + hb.width > mapPixelWidth) {
+            hb.x = oldX;
+        }
 
+        // 尝试 Y 轴移动
+        float oldY = hb.y;
+        hb.y += dy;
+        if (collidesWithAnyWall(hb)|| hb.y < 0 || hb.y + hb.height > mapPixelHeight) {
+            hb.y = oldY;
+        }
 
     }
+
+
+
+    private boolean collidesWithAnyWall(Rectangle hb) {
+        if (walls == null) return false;
+
+        for (Wall wall : walls) {
+            if (hb.overlaps(wall.getBounds())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 
 
     private void drawPlayer(SpriteBatch batch) {
@@ -477,41 +565,53 @@ public class GameScreen implements Screen {
     }
 
     private void drawHUD(SpriteBatch batch) {
-        float screenWidth = Gdx.graphics.getWidth();
-        float screenHeight = Gdx.graphics.getHeight();
+        batch.setColor(Color.WHITE); // 重置颜色状态 [cite: 157]
 
-        // 绘制敌人数量
-        font.draw(batch, "Enemies: " + enemies.size, 10, camera.viewportHeight - 10);
+        // 使用 UI 视口的高度，确保 UI 不随相机缩放而变小 [cite: 114]
+        float uiH = uiStage.getViewport().getWorldHeight();
+        float uiW = uiStage.getViewport().getWorldWidth();
 
-        // 绘制游戏时间
-        font.draw(batch, String.format("Time: %.1f", gameTime),
-                camera.viewportWidth - 100, camera.viewportHeight - 10);
+        font.getData().setScale(1.5f); // 保持字体清晰
 
-        // ========== 新增：绘制陷阱数量 ==========
-        if (traps != null) {
-            font.draw(batch, "Traps: " + traps.size,
-                    camera.viewportWidth - 200, camera.viewportHeight - 10);
-        }
+        // 1. 绘制生命值 (Lives) [cite: 45, 46]
+        font.draw(batch, "HP: " + (int)player.getHealth(), 20, uiH - 40);
 
-        // ========== 新增：绘制玩家状态 ==========
-        if (player != null) {
-            font.draw(batch, "HP: " + (int)player.getHealth() + "/" + (int)player.getMaxHealth(),
-                    10, camera.viewportHeight - 40);
+        // 2. 绘制钥匙状态 [cite: 45, 47]
+        String keyLabel = player.getStats().hasKey() ? "KEY: FOUND" : "KEY: MISSING";
+        font.setColor(player.getStats().hasKey() ? Color.GOLD : Color.FIREBRICK);
+        font.draw(batch, keyLabel, 20, uiH - 90);
 
-            // 如果玩家在迷雾中，显示提示
-            for (Trap trap : traps) {
-                if (trap instanceof Fog) {
-                    Fog fogTrap = (Fog) trap;
-                    if (fogTrap.isPlayerInFog(player)) {
-                        font.draw(batch, "FOG AFFECTED! Visibility Reduced",
-                                camera.viewportWidth / 2 - 100, 30);
-                        break;
-                    }
-                }
-            }
+        font.setColor(Color.WHITE);
+        String levelText = "LEVEL " + levelNumber;
+        layout.setText(font, levelText);
+        float levelTextWidth = layout.width;
+
+        font.draw(batch, levelText, uiW - levelTextWidth - 20, uiH - 20);
+        String timeText = "TIME: " + (int)gameTime + "s";
+        layout.setText(font, timeText);
+        float timeTextWidth = layout.width;
+        font.draw(batch, timeText, uiW - timeTextWidth - 20, uiH - 50);
+        if (exitPosition != null && arrowRegion != null) {
+
+            float tx = exitPosition.x * Wall.TILE_SIZE;
+            float ty = exitPosition.y * Wall.TILE_SIZE;
+            float dx = tx - player.getPosition().x;
+            float dy = ty - player.getPosition().y;
+
+            // 使用 MathUtils 计算角度（弧度转角度）
+            float currentAngle = MathUtils.atan2(dy, dx) * MathUtils.radDeg;
+
+            // 在屏幕右下角绘制旋转箭头
+            batch.draw(arrowRegion,
+                    uiW - 100, 100,           // 屏幕位置
+                    16, 16,                   // 旋转中心 (Region中心)
+                    32, 32,                   // 渲染尺寸
+                    1.2f, 1.2f,               // 缩放
+                    currentAngle              // 计算出的实时角度
+            );
+            font.draw(batch, "EXIT", uiW - 110, 60);
         }
     }
-
     private void drawDebugInfo() {
         // 使用ShapeRenderer绘制敌人碰撞框（调试用）
         if (shapeRenderer != null) {
@@ -574,6 +674,32 @@ public class GameScreen implements Screen {
     public void show() {
         MapLoader loader = new MapLoader();
         shapeRenderer = new ShapeRenderer();
+        key = new Key(300, 200);
+        System.out.println("Loading Map from: " + currentMapPath);
+
+        MapLoader.LevelData data = loader.loadLevel(currentMapPath);
+
+        this.walls = data.walls;
+        this.exitPosition = data.exitPosition;
+
+        if (this.exitPosition != null) {
+            this.exit = new Exit();
+            this.exitArea = new Rectangle(exitPosition.x, exitPosition.y, Wall.TILE_SIZE, Wall.TILE_SIZE);
+
+        } else {
+            System.out.println("Warning: No exit position found in map file!");
+        }
+
+        this.enemies.clear();
+        int maxEnemies = levelNumber+1;
+        int currentEnemies = 0;
+        for(Enemy e : data.enemies) {
+            if(currentEnemies < maxEnemies) {
+                this.enemies.add(e);
+                currentEnemies++;
+            }
+        }
+        System.out.println("Loaded " + currentEnemies + " enemies");
 
         System.out.println("Loading Map from: " + currentMapPath);
         walls = loader.loadWalls(currentMapPath);
@@ -602,6 +728,19 @@ public class GameScreen implements Screen {
 
         System.out.println("Loaded walls: " + walls.size());
 
+        try {
+            arrowTexture = new Texture(Gdx.files.internal("arrow.png"));
+            arrowRegion = new TextureRegion(arrowTexture);
+        } catch(Exception e) {
+            System.out.println("No arrow.png found, arrow will not show.");
+            com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+            pixmap.setColor(Color.RED);
+            pixmap.fillTriangle(0, 0, 0, 32, 32, 16);
+            arrowTexture = new Texture(pixmap);
+            arrowRegion = new TextureRegion(arrowTexture);
+            pixmap.dispose();
+
+        }
         shapeRenderer = new ShapeRenderer();
         // ========== 新增：初始化碰撞地图 ==========
         buildCollisionMap(maxX + 1, maxY + 1);
@@ -698,12 +837,78 @@ public class GameScreen implements Screen {
     }
 
     private void initPlayer() {
-        if (player == null) {
-            player = new Player(100, 100); // 仅测试用
-            System.out.println("Dummy player initialized for testing!");
+        if (player != null) return;
+
+        float hbW = 24f;
+        float hbH = 24f;
+
+        if (collisionMap == null) {
+            player = new Player(50, 50);
+            spawnInvulnTimer = SPAWN_INVULN_DURATION;
+
+            player.getStats().heal(100);
+            System.out.println("Warning: collisionMap null, fallback spawn");
+            return;
         }
+
+        int margin = 6;
+
+        float px = 0;
+        float py = 0;
+        int x = 0;
+        int y;
+        for (y = margin; y < collisionMap.length - margin; y++) {
+            for (x = margin; x < collisionMap[0].length - margin; x++) {
+                if (collisionMap[y][x] == 0) {
+
+                    px = x * Wall.TILE_SIZE + (Wall.TILE_SIZE - hbW) / 2f;
+                    py = y * Wall.TILE_SIZE + (Wall.TILE_SIZE - hbH) / 2f;
+
+                    float minDist = 6f * Wall.TILE_SIZE;     // 至少离敌人2格
+                    if (!farFromEnemies(px, py, minDist)) {  // 不满足就继续找
+                        continue;
+                    }
+
+                    player = new Player(px, py);
+                    player.getStats().heal(100);
+                    player.syncPositionToHitbox();
+
+                    System.out.println(
+                            "Player spawned at tile (" + x + "," + y + ") -> (" + px + "," + py + ")"
+                    );
+                    return;
+                }
+            }
+
+        }
+
+        // 兜底
+        player = new Player(px, py);
+        player.getStats().heal(100);
+        player.syncPositionToHitbox();
+
+        System.out.println(
+                "Player spawned at tile (" + x + "," + y + ") -> (" + px + "," + py + ")"
+        );
+        System.out.println("Spawn HP = " + player.getHealth() + " / " + player.getMaxHealth());
+        return;
+
+
     }
-    // =====================================
+
+    private boolean farFromEnemies(float px, float py, float minDist) {
+        if (enemies == null) return true;
+
+        Vector2 p = new Vector2(px, py);
+        for (Enemy e : enemies) {
+            if (e != null && e.isAlive()) {
+                if (e.getPosition().dst(p) < minDist) return false;
+            }
+        }
+        return true;
+    }
+
+
 
     @Override
     public void hide() {

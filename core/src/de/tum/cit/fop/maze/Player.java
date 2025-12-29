@@ -1,5 +1,6 @@
 package de.tum.cit.fop.maze;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -31,6 +32,12 @@ public class Player implements CollidableEntity {
     private Rectangle hitbox;
 
     private PlayerStats stats;
+    private float damageCooldownTimer = 0f;
+    private static final float DAMAGE_COOLDOWN = 0.5f; // 0.5秒内只吃一次伤害
+    private float damageColorTimer = 0f;
+
+
+
 
     public Player(float x, float y) {
         this.texture = new Texture("character.png");
@@ -56,10 +63,18 @@ public class Player implements CollidableEntity {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
         this.stats = new PlayerStats();
-        this.hitbox = new Rectangle(x, y, 24, 24);
+        this.hitbox = new Rectangle(x, y, 14, 14);
     }
 
-    public void update(float dt, boolean up, boolean down, boolean left, boolean right, boolean run) {
+
+
+    public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run) {
+        if (damageColorTimer > 0) {
+            damageColorTimer -= delta;
+        }
+        damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
+
+
         float currentSpeed = speed * (run ? runMultiplier : 1f);
 
         // 1. 重置速度
@@ -82,44 +97,86 @@ public class Player implements CollidableEntity {
             velocity.x = currentSpeed;
             currentFrame = rightFrame;
         }
+        damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
+
+
 
         if (isHurt) {
-            hurtTimer -= dt;
+            hurtTimer -= delta;
             if (hurtTimer <= 0) {
                 isHurt = false;
             }
         }
+
+
+    }
+
+    public void triggerDamageVFX() {
+        this.damageColorTimer = 1.0f; // 设置特效持续时间为1秒
     }
 
 
     public void render(SpriteBatch batch) {
-        if (currentFrame != null) {
-           float drawWidth = 32f;
-           float drawHeight = 64f;
-           float hitboxWidth = 24f;
-           float hitboxHeight = 24f;
+        if (currentFrame == null) return;
 
-           float offsetX = (drawWidth - hitboxWidth) / 2f;
-           float drawX =position.x - offsetX;
-           float drawY = position.y;
-            batch.draw(currentFrame, drawX, drawY, drawWidth, drawHeight);
+        if (damageColorTimer > 0) {
+            batch.setColor(Color.RED);
+        } else {
+            batch.setColor(Color.WHITE); // 确保非受伤状态是正常的 [cite: 27]
         }
+
+
+
+        float drawWidth = 32f;
+        float drawHeight = 64f;
+
+        // 用真实 hitbox 尺寸，不要写死 24
+        float hitW = hitbox.width;
+        float hitH = hitbox.height;
+
+        float offsetX = (drawWidth - hitW) / 2f;
+
+
+        float drawX = position.x - (drawWidth - hitbox.width) / 2f;
+
+
+        float drawY = position.y;
+
+
+        batch.draw(currentFrame, drawX, drawY, drawWidth, drawHeight);
+
+
+        batch.setColor(Color.WHITE);
+
+
+
     }
+
 
     public void takeDamage(int dmg) {
-        stats.takeDamage(dmg);
-        isHurt = true;
-        hurtTimer = 0.25f;
+        takeDamage((float) dmg);
     }
 
+
+
     // 添加 float 版本（重载方法）
+
+
     public void takeDamage(float dmg) {
-        // 将 float 转换为 int（四舍五入）
+        if (getHealth() <= 0) return;
+
+        if (damageCooldownTimer > 0f) return;
+
         int damageInt = Math.round(dmg);
         stats.takeDamage(damageInt);
+
         isHurt = true;
         hurtTimer = 0.25f;
+
+        damageCooldownTimer = DAMAGE_COOLDOWN;
     }
+
+
 
     // 添加 getHealth 和 getMaxHealth 方法（GameScreen 需要这些）
     public float getHealth() {

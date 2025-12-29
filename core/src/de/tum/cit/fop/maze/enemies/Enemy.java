@@ -26,11 +26,19 @@ public abstract class Enemy {
     protected AStarPathFinder pathFinder;
     protected List<Vector2> currentPath;
     protected int currentPathIndex;
+  
     public Texture getTexture() {return texture;}
-
     public Color getFallbackBodyColor(){
         return Color.RED;
     }
+  
+    protected float attackCooldown = 0.5f;  // 0.5秒打一次
+    protected float attackTimer = 0f;
+    private static final float ATTACK_COOLDOWN_TIME = 0.8f; // 0.6~1.0都行
+
+
+
+    
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2();
@@ -64,12 +72,22 @@ public abstract class Enemy {
     // 注意：这里有两个不同的 attack 方法
     // 1. 这个接收 Player 参数
     public void attack(Player player) {
-        if (player != null) {
-            // 检查 Player 类是否有 takeDamage 方法
-            // 如果没有，你需要创建它
-            player.takeDamage(attackDamage);
-        }
+        if (player == null) return;
+
+        // 冷却没好：不攻击
+        if (attackTimer > 0f) return;
+
+        System.out.println("[ATTACK] " + this.getClass().getSimpleName()
+                + " playerHp=" + player.getHealth()
+                + " overlap=" + this.getBounds().overlaps(player.getHitbox()));
+
+        player.takeDamage(attackDamage);
+
+        // 攻击后进入冷却
+        attackTimer = attackCooldown;
     }
+
+
 
     // 2. 这个是抽象方法，由子类实现
     public abstract void attack();
@@ -87,7 +105,11 @@ public abstract class Enemy {
         findPathTo(target);
     }
 
+
+
     public void update(float delta) {
+        attackTimer = Math.max(0f, attackTimer - delta);
+
         if (!isAlive()) return;
 
         // 更新位置
