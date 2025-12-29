@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
-
+import com.badlogic.gdx.graphics.Color;
 
 public class QiongQi extends Enemy {
     private Texture texture;
@@ -25,7 +25,7 @@ public class QiongQi extends Enemy {
         this.attackRange = 50f;
         this.detectionRange = 250f;
 
-        this.texture = new Texture(Gdx.files.internal("enemies/qiongqi.png"));
+        this.texture = safeLoadTexture("enemies/qiongqi.png");
     }
 
     @Override
@@ -43,7 +43,13 @@ public class QiongQi extends Enemy {
 
     @Override
     public void render(SpriteBatch batch) {
-        batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
+        if (texture != null) {
+            batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
+        }
+        else {
+            // fallback 方块
+            batch.end();
+        }
     }
 
     @Override

@@ -7,6 +7,9 @@ import de.tum.cit.fop.maze.ai.AIBehavior;
 import de.tum.cit.fop.maze.ai.AStarPathFinder;
 import de.tum.cit.fop.maze.Player; // 添加这行导入
 import java.util.List;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Color;
 
 public abstract class Enemy {
     protected Vector2 position;
@@ -18,17 +21,29 @@ public abstract class Enemy {
     protected float attackDamage;
     protected float attackRange;
     protected float detectionRange;
-
+    protected Texture texture;
     protected AIBehavior currentBehavior;
     protected AStarPathFinder pathFinder;
     protected List<Vector2> currentPath;
     protected int currentPathIndex;
+    public Texture getTexture() {return texture;}
 
+    public Color getFallbackBodyColor(){
+        return Color.RED;
+    }
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2();
         this.bounds = new Rectangle(x, y, width, height);
         this.currentPathIndex = 0;
+    }
+
+    protected Texture safeLoadTexture(String path) {
+        if (Gdx.files.internal(path).exists()) {
+            return new Texture(Gdx.files.internal(path));
+        } else {
+            return null; // 后续用 fallback 绘制方块
+        }
     }
 
     public boolean isAlive() {
@@ -153,4 +168,19 @@ public abstract class Enemy {
     public float getAttackRange() { return attackRange; }
     public float getDetectionRange() { return detectionRange; }
     public void setVelocity(float x, float y) { velocity.set(x, y); }
+    public float getX() {
+        return bounds.x;
+    }
+
+    public float getY() {
+        return bounds.y;
+    }
+
+    public float getWidth() {
+        return bounds.width;
+    }
+
+    public float getHeight() {
+        return bounds.height;
+    }
 }

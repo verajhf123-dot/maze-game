@@ -14,7 +14,7 @@ public class MapLoader {
         Properties props = new Properties();
 
         try {
-            FileHandle file = Gdx.files.local(internalPath);
+            FileHandle file = Gdx.files.internal(internalPath);
             props.load(file.read());
 
             for (String key : props.stringPropertyNames()) {

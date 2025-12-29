@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.graphics.Color;
 
 public class NineTailedFox extends Enemy {
     private Texture texture;
@@ -21,7 +22,7 @@ public class NineTailedFox extends Enemy {
         this.attackRange = 200f;
         this.detectionRange = 300f;
 
-        this.texture = new Texture(Gdx.files.internal("enemies/nine_tailed_fox.png"));
+        this.texture = safeLoadTexture("enemies/nine_tailed_fox.png");
     }
 
     @Override
@@ -39,7 +40,14 @@ public class NineTailedFox extends Enemy {
 
     @Override
     public void render(SpriteBatch batch) {
-        batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
+        if (texture != null) {
+            batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
+        }
+        else {
+            // fallback 方块
+            batch.end();
+        }
+
     }
 
     @Override
@@ -86,5 +94,9 @@ public class NineTailedFox extends Enemy {
     protected void onDeath() {
         // 死亡效果
         // 掉落物品、播放动画等
+    }
+    @Override
+    public Color getFallbackBodyColor(){
+        return Color.PURPLE;
     }
 }

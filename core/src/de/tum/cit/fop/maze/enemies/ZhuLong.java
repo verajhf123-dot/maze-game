@@ -30,7 +30,7 @@ public class ZhuLong extends Enemy {
 
         // 可选：加载纹理
         try {
-            texture = new Texture(Gdx.files.internal("enemies/zhulong.png"));
+            texture = safeLoadTexture("enemies/zhulong.png");
         } catch (Exception e) {
             // 如果纹理不存在，使用形状渲染器
             texture = null;
@@ -85,25 +85,6 @@ public class ZhuLong extends Enemy {
         // 如果有纹理，使用纹理渲染
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
-        } else {
-            // 否则使用形状渲染器（调试用）
-            batch.end(); // 结束 SpriteBatch
-
-            shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-            // 身体颜色：睁眼黄色，闭眼橙色
-            shapeRenderer.setColor(eyesOpen ? Color.YELLOW : Color.ORANGE);
-            shapeRenderer.rect(position.x, position.y, bounds.width, bounds.height);
-
-            // 眼睛：睁眼白色，闭眼深灰色
-            shapeRenderer.setColor(eyesOpen ? Color.WHITE : Color.DARK_GRAY);
-            shapeRenderer.circle(position.x + 10, position.y + 22, 4);
-            shapeRenderer.circle(position.x + 22, position.y + 22, 4);
-
-            shapeRenderer.end();
-
-            batch.begin(); // 重新开始 SpriteBatch
         }
     }
 
@@ -149,7 +130,8 @@ public class ZhuLong extends Enemy {
         this.eyesOpen = open;
         dayNightTimer = 0f; // 重置计时器
     }
-
+    public Color getFallbackBodyColor(){return eyesOpen ? Color.YELLOW : Color.ORANGE;}
+    public boolean hasTexture() {return texture != null;}
     // 清理资源
     public void dispose() {
         if (shapeRenderer != null) {

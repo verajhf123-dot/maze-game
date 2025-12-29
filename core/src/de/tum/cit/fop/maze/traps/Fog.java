@@ -25,10 +25,26 @@ public class Fog extends Trap {
     }
 
     private void loadAssets() {
-        fogTexture = new Texture(Gdx.files.internal("traps/fog.png"));
-        fogEffect = new ParticleEffect();
-        fogEffect.load(Gdx.files.internal("particles/fog.p"), Gdx.files.internal("particles"));
-        fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width/2, bounds.y + bounds.height/2);
+        if (Gdx.files.internal("traps/fog.png").exists()) {
+            fogTexture = new Texture(Gdx.files.internal("traps/fog.png"));
+        } else {
+            fogTexture = null;
+        }
+
+        // ===== fog particle effect（新增防御）=====
+        if (Gdx.files.internal("particles/fog.p").exists()) {
+            fogEffect = new ParticleEffect();
+            fogEffect.load(
+                    Gdx.files.internal("particles/fog.p"),
+                    Gdx.files.internal("particles")
+            );
+            fogEffect.getEmitters().first().setPosition(
+                    bounds.x + bounds.width / 2,
+                    bounds.y + bounds.height / 2
+            );
+        } else {
+            fogEffect = null; // ❗关键
+        }
     }
 
     @Override
