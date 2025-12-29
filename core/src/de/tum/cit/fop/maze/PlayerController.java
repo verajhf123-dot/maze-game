@@ -12,22 +12,22 @@ public class PlayerController {
 
 
     public boolean up() {
-        return Gdx.input.isKeyPressed(settings.getKeyCode("move_up"));
+        return Gdx.input.isKeyPressed(settings.getKey("move_up"));
     }
 
     public boolean down() {
-        return Gdx.input.isKeyPressed(settings.getKeyCode("move_down"));
+        return Gdx.input.isKeyPressed(settings.getKey("move_down"));
     }
 
     public boolean left() {
-        return Gdx.input.isKeyPressed(settings.getKeyCode("move_left"));
+        return Gdx.input.isKeyPressed(settings.getKey("move_left"));
     }
 
     public boolean right() {
-        return Gdx.input.isKeyPressed(settings.getKeyCode("move_right"));
+        return Gdx.input.isKeyPressed(settings.getKey("move_right"));
     }
 
     public boolean run() {
-        return Gdx.input.isKeyPressed(settings.getKeyCode("run"));
+        return Gdx.input.isKeyPressed(settings.getKey("run"));
     }
 }

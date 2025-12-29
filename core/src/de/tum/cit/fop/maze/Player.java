@@ -1,5 +1,6 @@
 package de.tum.cit.fop.maze;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -33,6 +34,9 @@ public class Player implements CollidableEntity {
     private PlayerStats stats;
     private float damageCooldownTimer = 0f;
     private static final float DAMAGE_COOLDOWN = 0.5f; // 0.5秒内只吃一次伤害
+    private float damageColorTimer = 0f;
+
+
 
 
     public Player(float x, float y) {
@@ -59,12 +63,18 @@ public class Player implements CollidableEntity {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
         this.stats = new PlayerStats();
-        this.hitbox = new Rectangle(x, y, 18, 18);
+        this.hitbox = new Rectangle(x, y, 14, 14);
     }
 
 
 
-    public void update(float dt, boolean up, boolean down, boolean left, boolean right, boolean run) {
+    public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run) {
+        if (damageColorTimer > 0) {
+            damageColorTimer -= delta;
+        }
+        damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
+
+
         float currentSpeed = speed * (run ? runMultiplier : 1f);
 
         // 1. 重置速度
@@ -87,21 +97,35 @@ public class Player implements CollidableEntity {
             velocity.x = currentSpeed;
             currentFrame = rightFrame;
         }
-        damageCooldownTimer = Math.max(0f, damageCooldownTimer - dt);
+        damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
 
 
 
         if (isHurt) {
-            hurtTimer -= dt;
+            hurtTimer -= delta;
             if (hurtTimer <= 0) {
                 isHurt = false;
             }
         }
+
+
+    }
+
+    public void triggerDamageVFX() {
+        this.damageColorTimer = 1.0f; // 设置特效持续时间为1秒
     }
 
 
     public void render(SpriteBatch batch) {
         if (currentFrame == null) return;
+
+        if (damageColorTimer > 0) {
+            batch.setColor(Color.RED);
+        } else {
+            batch.setColor(Color.WHITE); // 确保非受伤状态是正常的 [cite: 27]
+        }
+
+
 
         float drawWidth = 32f;
         float drawHeight = 64f;
@@ -112,14 +136,20 @@ public class Player implements CollidableEntity {
 
         float offsetX = (drawWidth - hitW) / 2f;
 
-        // position 目前是 hitbox 的左下角（因为你 syncPositionToHitbox）
-        float drawX = position.x - offsetX;
 
-        // 关键：把 sprite 往下放一点，让脚更接近 hitbox 底边，而不是让头去“顶墙”
-        // 你可以把这个值理解成“脚底偏移”
-        float drawY = position.y - (drawHeight - hitH);
+        float drawX = position.x - (drawWidth - hitbox.width) / 2f;
+
+
+        float drawY = position.y;
+
 
         batch.draw(currentFrame, drawX, drawY, drawWidth, drawHeight);
+
+
+        batch.setColor(Color.WHITE);
+
+
+
     }
 
 
