@@ -28,11 +28,22 @@ public abstract class Enemy {
     protected int currentPathIndex;
     public Texture getTexture() {return texture;}
 
+    public Color getFallbackBodyColor(){
+        return Color.RED;
+    }
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2();
         this.bounds = new Rectangle(x, y, width, height);
         this.currentPathIndex = 0;
+    }
+
+    protected Texture safeLoadTexture(String path) {
+        if (Gdx.files.internal(path).exists()) {
+            return new Texture(Gdx.files.internal(path));
+        } else {
+            return null; // 后续用 fallback 绘制方块
+        }
     }
 
     public boolean isAlive() {
@@ -157,10 +168,19 @@ public abstract class Enemy {
     public float getAttackRange() { return attackRange; }
     public float getDetectionRange() { return detectionRange; }
     public void setVelocity(float x, float y) { velocity.set(x, y); }
-    public float getMaxHealth() {
-        return maxHealth;
+    public float getX() {
+        return bounds.x;
     }
-    public Vector2 getVelocity() {
-        return velocity;
+
+    public float getY() {
+        return bounds.y;
+    }
+
+    public float getWidth() {
+        return bounds.width;
+    }
+
+    public float getHeight() {
+        return bounds.height;
     }
 }
