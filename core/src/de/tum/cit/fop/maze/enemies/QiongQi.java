@@ -1,13 +1,17 @@
 package de.tum.cit.fop.maze.enemies;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.graphics.Color;
+
 
 public class QiongQi extends Enemy {
     private Texture texture;
+    private static Texture fallbackTexture;
+
     private boolean isCharging = false;
     private float chargeSpeed = 300f;
     private float normalSpeed;
@@ -16,7 +20,7 @@ public class QiongQi extends Enemy {
     private Vector2 chargeDirection;
 
     public QiongQi(float x, float y) {
-        super(x, y, 64, 64);
+        super(x, y, 16, 16);
         this.normalSpeed = 80f;
         this.speed = normalSpeed;
         this.maxHealth = 300f;
@@ -25,7 +29,19 @@ public class QiongQi extends Enemy {
         this.attackRange = 50f;
         this.detectionRange = 250f;
 
-        this.texture = safeLoadTexture("enemies/qiongqi.png");
+        try {
+            this.texture = new Texture(Gdx.files.internal("enemies/qiongqi.png"));
+        } catch (Exception e) {
+            System.out.println("QiongQi texture missing. Using Blue Box.");
+        }
+
+        if (fallbackTexture == null) {
+            Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+            p.setColor(Color.WHITE);
+            p.fill();
+            fallbackTexture = new Texture(p);
+            p.dispose();
+        }
     }
 
     @Override
@@ -45,10 +61,10 @@ public class QiongQi extends Enemy {
     public void render(SpriteBatch batch) {
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
-        }
-        else {
-            // fallback 方块
-            batch.end();
+        } else {
+            batch.setColor(isCharging ? Color.CYAN : Color.BLUE);
+            batch.draw(fallbackTexture, position.x, position.y, bounds.width, bounds.height);
+            batch.setColor(Color.WHITE);
         }
     }
 

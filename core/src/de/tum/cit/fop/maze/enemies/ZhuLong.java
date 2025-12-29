@@ -1,6 +1,7 @@
 package de.tum.cit.fop.maze.enemies;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
@@ -13,10 +14,12 @@ public class ZhuLong extends Enemy {
     private float dayNightTimer = 0f;
     private ShapeRenderer shapeRenderer;
     private Texture texture; // 可选的纹理
-    private Vector2 targetPosition; // 添加目标位置变量
+    private Vector2 targetPosition;
+    private static Texture fallbackTexture;
+    // 添加目标位置变量
 
     public ZhuLong(float x, float y) {
-        super(x, y, 32, 32);
+        super(x, y, 16, 16);
 
         // 初始化 Enemy 基类的属性
         this.health = 150f;
@@ -26,15 +29,20 @@ public class ZhuLong extends Enemy {
         this.attackRange = 60f;
         this.detectionRange = 180f;
 
-        this.shapeRenderer = new ShapeRenderer();
-
-        // 可选：加载纹理
         try {
-            texture = safeLoadTexture("enemies/zhulong.png");
+            texture = new Texture(Gdx.files.internal("enemies/zhulong.png"));
         } catch (Exception e) {
-            // 如果纹理不存在，使用形状渲染器
-            texture = null;
+            System.out.println("ZhuLong texture missing. Using Yellow Box.");
         }
+        if (fallbackTexture == null) {
+            Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+            p.setColor(Color.WHITE);
+            p.fill();
+            fallbackTexture = new Texture(p);
+            p.dispose();
+        }
+
+
     }
 
     @Override
@@ -85,6 +93,10 @@ public class ZhuLong extends Enemy {
         // 如果有纹理，使用纹理渲染
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
+        } else {
+            batch.setColor(eyesOpen ? Color.YELLOW : Color.DARK_GRAY);
+            batch.draw(fallbackTexture, position.x, position.y, bounds.width, bounds.height);
+            batch.setColor(Color.WHITE);
         }
     }
 
@@ -130,8 +142,7 @@ public class ZhuLong extends Enemy {
         this.eyesOpen = open;
         dayNightTimer = 0f; // 重置计时器
     }
-    public Color getFallbackBodyColor(){return eyesOpen ? Color.YELLOW : Color.ORANGE;}
-    public boolean hasTexture() {return texture != null;}
+
     // 清理资源
     public void dispose() {
         if (shapeRenderer != null) {

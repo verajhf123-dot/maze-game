@@ -19,11 +19,15 @@ public class MazeRunnerGame extends Game {
     // Screens
     private MenuScreen menuScreen;
     private GameScreen gameScreen;
+
+
     private SettingsManager settingsManager;
     // Sprite Batch for rendering
     private SpriteBatch spriteBatch;
     // UI Skin
     private Skin skin;
+
+
 
     // Character animation downwards
     private Animation<TextureRegion> characterDownAnimation;

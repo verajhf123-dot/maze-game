@@ -5,9 +5,12 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -37,6 +40,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.ArrayList;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Rectangle;
+
+
 
 import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
 
@@ -56,6 +64,9 @@ public class GameScreen implements Screen {
     private  BitmapFont font;
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
+
+
+
     private float sinusInput = 0f;
     // ==== 新增：路径寻找和陷阱系统 ====
     private AStarPathFinder pathFinder;
@@ -77,6 +88,12 @@ public class GameScreen implements Screen {
     private String currentMapPath;
     private InputController controller;
     private Exit exit;
+    private Vector2 exitPosition;
+    private Texture arrowTexture;
+    private TextureRegion arrowRegion;
+    private float aiTimer = 0f;
+
+
     private Key key;
     private Door door;
     /**
@@ -106,6 +123,7 @@ public class GameScreen implements Screen {
 
         controller = new InputController();
         enemies = new Array<>();
+        traps = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
         createPauseMenu();
@@ -188,6 +206,33 @@ public class GameScreen implements Screen {
         }
     }
 
+    private void drawHealthBar(){
+        if (player == null) return;
+
+
+        shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        float barX = 10;
+        float barY = camera.viewportHeight - 60;
+        float barWidth = 200;
+        float barHeight = 20;
+
+        shapeRenderer.setColor(Color.RED);
+        shapeRenderer.rect(barX, barY, barWidth, barHeight);
+        if (player.getMaxHealth() > 0) {
+            float hpPercent = player.getHealth() / player.getMaxHealth();
+            if (hpPercent < 0) hpPercent = 0;
+            if (hpPercent > 1) hpPercent = 1;
+
+            shapeRenderer.setColor(Color.GREEN);
+            shapeRenderer.rect(barX, barY, barWidth * hpPercent, barHeight);
+        }
+
+        shapeRenderer.end();
+
+    }
+
 
 
     // Screen interface methods with necessary functionality
@@ -198,29 +243,33 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             togglePause();
         }
-
+        //only under running that can update the game logic;
         if (currentState == GameState.RUNNING) {
-            controller.update();
-            gameTime += delta;
-            updateTraps(delta);
-            updateEnemies(delta);
-            updatePlayer(delta);
+    // 关键：每帧更新控制器状态
+    controller.update();
+    // 更新游戏时间
+    gameTime += delta;
 
-            if(key != null && player != null) {
-                key.checkPickup(player);
-            }
+    updateTraps(delta);
+    // 更新敌人
+    updateEnemies(delta);
+    // 更新玩家
+    updatePlayer(delta);
+    // 碰撞检测
+    checkCollisions();
+    // 陷阱激活检测
+    checkTrapActivation();
+    // 让玩家永远在屏幕正中间（你的镜头跟随逻辑）
+    updateCameraFollowPlayer();
+    camera.update();
 
-            if (door != null && player != null) {
-                door.tryOpen(player);
-            }
+}
 
-            checkCollisions();
-            checkTrapActivation();
-            updateCameraFollowPlayer();
-            camera.update();
+        //draw the game picture;
+        if (key != null && !key.isCollected()) {
+            key.checkPickup(player);
         }
-
-        ScreenUtils.clear(0, 0, 0, 1);
+        ScreenUtils.clear(0,0,0,1);
 
         SpriteBatch batch = game.getSpriteBatch();
 
@@ -241,7 +290,9 @@ public class GameScreen implements Screen {
                         Wall.TILE_SIZE
                 );
             }
+            shapeRenderer.end();
         }
+        drawHealthBar();
 
         // 玩家（debug 方块）
         if (player != null) {
@@ -297,6 +348,11 @@ public class GameScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        drawTraps(game.getSpriteBatch());
+        //draw game element;
+        drawEnemies(game.getSpriteBatch());
+        drawPlayer(game.getSpriteBatch());
+        game.getSpriteBatch().end();
         // 敌人（有贴图的）
         for (Enemy enemy : enemies) {
             enemy.render(batch);
@@ -552,6 +608,13 @@ public class GameScreen implements Screen {
     }
 
     // ========== 新增：渲染陷阱 ==========
+    private void drawTraps(SpriteBatch batch) {
+        if (traps != null) {
+            for (Trap trap : traps) {
+                trap.render(batch);
+            }
+        }
+    }
 
     @Override
     public void resize(int width, int height) {
@@ -573,8 +636,7 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         MapLoader loader = new MapLoader();
-        shapeRenderer = new ShapeRenderer();
-
+        key = new Key(300, 200);
         System.out.println("Loading Map from: " + currentMapPath);
         walls = loader.loadWalls(currentMapPath);
         int maxX = 0, maxY = 0;
@@ -582,21 +644,9 @@ public class GameScreen implements Screen {
             if (w.gridX > maxX) maxX = w.gridX;
             if (w.gridY > maxY) maxY = w.gridY;
         }
-        mapPixelWidth = (maxX + 1) * Wall.TILE_SIZE;
-        mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
-        mapWidthInTiles = maxX + 1;
-        mapHeightInTiles = maxY +1;
-        key = spawnRandomKey();
-        door = spawnRandomDoor();
-
-        key = new Key(300, 200);
-        door = new Door(
-                mapPixelWidth - Wall.TILE_SIZE,
-                mapPixelHeight / 2f,
-                Wall.TILE_SIZE,
-                Wall.TILE_SIZE
-        );
 // +1 因为 grid 从 0 开始
+        mapPixelWidth  = (maxX + 1) * Wall.TILE_SIZE;
+        mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
 
         System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
 
@@ -631,63 +681,6 @@ public class GameScreen implements Screen {
         }
     }
 
-
-    private Key spawnRandomKey() {
-        HashSet<String> wallSet = new HashSet<>();
-        for (Wall w : walls) {
-            wallSet.add(w.gridX + "," + w.gridY);
-        }
-
-        Random random = new Random();
-
-        while (true) {
-            int gx = random.nextInt(mapWidthInTiles);
-            int gy = random.nextInt(mapHeightInTiles);
-
-            // 如果这个格子不是墙 → 地板
-            if (!wallSet.contains(gx + "," + gy)) {
-                float x = gx * Wall.TILE_SIZE;
-                float y = gy * Wall.TILE_SIZE;
-                return new Key(x, y);
-            }
-        }
-    }
-
-    private Door spawnRandomDoor() {
-        Random random = new Random();
-
-        int tilesX = (int)(mapPixelWidth / Wall.TILE_SIZE);
-        int tilesY = (int)(mapPixelHeight / Wall.TILE_SIZE);
-
-        int side = random.nextInt(4); // 0上 1下 2左 3右
-        int gridX = 0, gridY = 0;
-
-        switch (side) {
-            case 0: // 上
-                gridX = random.nextInt(tilesX - 2) + 1;
-                gridY = tilesY - 1;
-                break;
-            case 1: // 下
-                gridX = random.nextInt(tilesX - 2) + 1;
-                gridY = 0;
-                break;
-            case 2: // 左
-                gridX = 0;
-                gridY = random.nextInt(tilesY - 2) + 1;
-                break;
-            case 3: // 右
-                gridX = tilesX - 1;
-                gridY = random.nextInt(tilesY - 2) + 1;
-                break;
-        }
-
-        return new Door(
-                gridX * Wall.TILE_SIZE,
-                gridY * Wall.TILE_SIZE,
-                Wall.TILE_SIZE,
-                Wall.TILE_SIZE
-        );
-    }
     // ========== 新增：初始化方法 ==========
     private void initEnemies() {
         enemies.add(new NineTailedFox(150, 100));
@@ -726,16 +719,6 @@ public class GameScreen implements Screen {
                 }
             }
         }
-
-        if (door != null){
-            door.dispose();
-        }
-
-        if (key != null){
-            key.dispose();
-        }
-
-        if (shapeRenderer != null) shapeRenderer.dispose();
 
         // ========== 清理UI ==========
         if (uiStage != null) {
@@ -884,31 +867,5 @@ public class GameScreen implements Screen {
         System.out.println("Initialized " + traps.size + " traps");
     }
 
-    private void drawTraps(SpriteBatch batch) {
-        if (traps == null) return;
-
-        // ① 先画有贴图的陷阱
-        batch.begin();
-        for (Trap trap : traps) {
-            if (trap.hasTexture()) {
-                trap.render(batch);
-            }
-        }
-        batch.end();
-
-        // ② 再画没有贴图的陷阱（fallback 方块）
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (Trap trap : traps) {
-            if (!trap.hasTexture()) {
-                shapeRenderer.setColor(
-                        trap.isActivated() ? Color.ORANGE : Color.GRAY
-                );
-                Rectangle b = trap.getBounds();
-                shapeRenderer.rect(b.x, b.y, b.width, b.height);
-            }
-        }
-        shapeRenderer.end();
-    }
     // Additional methods and logic can be added as needed for the game screen
-
 }
