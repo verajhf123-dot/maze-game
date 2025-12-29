@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -19,7 +19,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -91,6 +90,7 @@ public class GameScreen implements Screen {
     private float aiTimer = 0f;
     private float spawnInvulnTimer = 0f; // 出生无敌计时器
     private static final float SPAWN_INVULN_DURATION = 1.0f; // 1秒
+    private com.badlogic.gdx.graphics.g2d.GlyphLayout layout;
 
 
 
@@ -115,9 +115,10 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
         camera.position.set(240,160,0);
-        camera.zoom = 0.75f;
+        camera.zoom = 0.45f;
         font = new BitmapFont();
         font.getData().setScale(1f);
+        font =  new BitmapFont();
 
         controller = new InputController();
         enemies = new Array<>();
@@ -125,6 +126,7 @@ public class GameScreen implements Screen {
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
         createPauseMenu();
+        layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
 
     }
 
@@ -243,6 +245,10 @@ public class GameScreen implements Screen {
         }
         //only under running that can update the game logic;
         if (currentState == GameState.RUNNING) {
+            if (Gdx.input.isKeyPressed(Input.Keys.Q)) camera.zoom += 0.01f; // 缩小 (看更多)
+            if (Gdx.input.isKeyPressed(Input.Keys.E)) camera.zoom -= 0.01f; // 放大 (看细节)
+            camera.zoom = MathUtils.clamp(camera.zoom, 0.2f, 1.2f);
+
     // 关键：每帧更新控制器状态
     controller.update();
     // 更新游戏时间
@@ -307,7 +313,7 @@ public class GameScreen implements Screen {
             Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
             shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(0, 0, 0, 1);
+            shapeRenderer.setColor(0, 0, 0, 0.5f);
             shapeRenderer.rect(0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
             shapeRenderer.end();
             Gdx.gl.glDisable(Gdx.gl.GL_BLEND);
@@ -324,26 +330,22 @@ public class GameScreen implements Screen {
 
 
 
-    //这个写在这里是测试用的，等到结束屏幕做完了之后把这个删掉-----王思衡
-    private void winGame(){
-        gameWon = true;
-        System.out.println("Game won!");
+
+    private void winGame() {
+            // 1. 防止重复触发 (比如一帧内多次碰撞)
+            if (gameWon) return;
+            gameWon = true;
+
+            int nextLevel = levelNumber + 1;
+            SaveManager.saveGame(nextLevel, 100f, false);
+            System.out.println("Saving Progress: Unlocked Level " + nextLevel);
+
+            int score = (int) (gameTime * 10);
+
+
+            game.setScreen(new ResultScreen(game, true, levelNumber, score));
+
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // ===== 画墙结束 =====
-    // ========== 新增：敌人相关方法 =========
 
 
     private void drawEnemies(SpriteBatch batch) {
@@ -363,31 +365,47 @@ public class GameScreen implements Screen {
     }
 
     private void checkCollisions() {
-private void checkCollisions() {
     if (player == null) return;
 
-    // 1) Exit / win logic (from develop)
-    if (player.getHitbox().overlaps(exitArea)) {
-        exit.onPlayerReach();
-    }
-    if (exit.isReached()) {
-        winGame();
-    }
+        if (exitArea != null && player.getHitbox().overlaps(exitArea)) {
+            // to see if player has a key
+            if (player.getStats().hasKey()) {
+                exit.onPlayerReach();
+                if (exit.isReached()) {
+                    winGame();
+                }
+            } else {
+                float delta = Gdx.graphics.getDeltaTime();
+                // 获取玩家当前的速度
+                com.badlogic.gdx.math.Vector2 velocity = player.getVelocity();
 
-    // 2) Enemy collision damage (from feature/initPlayer-jiao)
-    // 出生无敌期间：不吃敌人碰撞伤害（但仍然允许触发出口胜利）
-    if (spawnInvulnTimer > 0f) return;
+                // 将玩家的 hitbox 坐标往回拉（抵消本帧的移动）
+                player.getHitbox().x -= velocity.x * delta;
+                player.getHitbox().y -= velocity.y * delta;
 
-    for (Enemy enemy : enemies) {
-        if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
-            enemy.attack(player);
-        }
-    }
-}
+                // 同步玩家的逻辑坐标到 hitbox
+                player.syncPositionToHitbox();
 
             }
         }
-    }
+
+        // 2) 敌人碰撞伤害
+        if (spawnInvulnTimer > 0f) return;
+
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
+                enemy.attack(player);
+                player.triggerDamageVFX();
+
+            }
+        }
+
+        if(player.getHealth() <= 0) {
+            game.setScreen(new ResultScreen(game, false, levelNumber, 0));
+        }
+}
+
+
 
 
 
@@ -474,36 +492,24 @@ private void checkCollisions() {
     private void moveEntityWithWallCollision(CollidableEntity entity, float dx, float dy) {
         Rectangle hb = entity.getHitbox();
 
+        float oldX = hb.x;
         hb.x += dx;
-        if (collidesWithAnyWall(hb)) hb.x -= dx;
+        if (collidesWithAnyWall(hb)|| hb.x < 0 || hb.x + hb.width > mapPixelWidth) {
+            hb.x = oldX;
+        }
 
+        // 尝试 Y 轴移动
+        float oldY = hb.y;
         hb.y += dy;
-        if (collidesWithAnyWall(hb)) hb.y -= dy;
+        if (collidesWithAnyWall(hb)|| hb.y < 0 || hb.y + hb.height > mapPixelHeight) {
+            hb.y = oldY;
+        }
 
         entity.syncPositionToHitbox();
     }
 
 
 
-
-    private void movePlayerWithWallCollision(float dx, float dy) {
-        Rectangle hb = player.getHitbox();
-
-        // X
-        hb.x += dx;
-        if (collidesWithAnyWall(hb)) {
-            hb.x -= dx;
-        }
-
-        // Y
-        hb.y += dy;
-        if (collidesWithAnyWall(hb)) {
-            hb.y -= dy;
-        }
-
-        // 同步 position
-        player.syncPositionToHitbox();
-    }
     private boolean collidesWithAnyWall(Rectangle hb) {
         if (walls == null) return false;
 
@@ -518,9 +524,6 @@ private void checkCollisions() {
 
 
 
-
-
-
     private void drawPlayer(SpriteBatch batch) {
         // 由组员2实现\
         if (player != null) {
@@ -530,41 +533,53 @@ private void checkCollisions() {
     }
 
     private void drawHUD(SpriteBatch batch) {
-        float screenWidth = Gdx.graphics.getWidth();
-        float screenHeight = Gdx.graphics.getHeight();
+        batch.setColor(Color.WHITE); // 重置颜色状态 [cite: 157]
 
-        // 绘制敌人数量
-        font.draw(batch, "Enemies: " + enemies.size, 10, camera.viewportHeight - 10);
+        // 使用 UI 视口的高度，确保 UI 不随相机缩放而变小 [cite: 114]
+        float uiH = uiStage.getViewport().getWorldHeight();
+        float uiW = uiStage.getViewport().getWorldWidth();
 
-        // 绘制游戏时间
-        font.draw(batch, String.format("Time: %.1f", gameTime),
-                camera.viewportWidth - 100, camera.viewportHeight - 10);
+        font.getData().setScale(1.5f); // 保持字体清晰
 
-        // ========== 新增：绘制陷阱数量 ==========
-        if (traps != null) {
-            font.draw(batch, "Traps: " + traps.size,
-                    camera.viewportWidth - 200, camera.viewportHeight - 10);
-        }
+        // 1. 绘制生命值 (Lives) [cite: 45, 46]
+        font.draw(batch, "HP: " + (int)player.getHealth(), 20, uiH - 40);
 
-        // ========== 新增：绘制玩家状态 ==========
-        if (player != null) {
-            font.draw(batch, "HP: " + (int)player.getHealth() + "/" + (int)player.getMaxHealth(),
-                    10, camera.viewportHeight - 40);
+        // 2. 绘制钥匙状态 [cite: 45, 47]
+        String keyLabel = player.getStats().hasKey() ? "KEY: FOUND" : "KEY: MISSING";
+        font.setColor(player.getStats().hasKey() ? Color.GOLD : Color.FIREBRICK);
+        font.draw(batch, keyLabel, 20, uiH - 90);
 
-            // 如果玩家在迷雾中，显示提示
-            for (Trap trap : traps) {
-                if (trap instanceof Fog) {
-                    Fog fogTrap = (Fog) trap;
-                    if (fogTrap.isPlayerInFog(player)) {
-                        font.draw(batch, "FOG AFFECTED! Visibility Reduced",
-                                camera.viewportWidth / 2 - 100, 30);
-                        break;
-                    }
-                }
-            }
+        font.setColor(Color.WHITE);
+        String levelText = "LEVEL " + levelNumber;
+        layout.setText(font, levelText);
+        float levelTextWidth = layout.width;
+
+        font.draw(batch, levelText, uiW - levelTextWidth - 20, uiH - 20);
+        String timeText = "TIME: " + (int)gameTime + "s";
+        layout.setText(font, timeText);
+        float timeTextWidth = layout.width;
+        font.draw(batch, timeText, uiW - timeTextWidth - 20, uiH - 50);
+        if (exitPosition != null && arrowRegion != null) {
+
+            float tx = exitPosition.x * Wall.TILE_SIZE;
+            float ty = exitPosition.y * Wall.TILE_SIZE;
+            float dx = tx - player.getPosition().x;
+            float dy = ty - player.getPosition().y;
+
+            // 使用 MathUtils 计算角度（弧度转角度）
+            float currentAngle = MathUtils.atan2(dy, dx) * MathUtils.radDeg;
+
+            // 在屏幕右下角绘制旋转箭头
+            batch.draw(arrowRegion,
+                    uiW - 100, 100,           // 屏幕位置
+                    16, 16,                   // 旋转中心 (Region中心)
+                    32, 32,                   // 渲染尺寸
+                    1.2f, 1.2f,               // 缩放
+                    currentAngle              // 计算出的实时角度
+            );
+            font.draw(batch, "EXIT", uiW - 110, 60);
         }
     }
-
     private void drawDebugInfo() {
         // 使用ShapeRenderer绘制敌人碰撞框（调试用）
         if (shapeRenderer != null) {
@@ -641,6 +656,14 @@ private void checkCollisions() {
         this.walls = data.walls;
         this.exitPosition = data.exitPosition;
 
+        if (this.exitPosition != null) {
+            this.exit = new Exit();
+            this.exitArea = new Rectangle(exitPosition.x, exitPosition.y, Wall.TILE_SIZE, Wall.TILE_SIZE);
+
+        } else {
+            System.out.println("Warning: No exit position found in map file!");
+        }
+
         this.enemies.clear();
         int maxEnemies = levelNumber+1;
         int currentEnemies = 0;
@@ -675,6 +698,13 @@ private void checkCollisions() {
             arrowRegion = new TextureRegion(arrowTexture);
         } catch(Exception e) {
             System.out.println("No arrow.png found, arrow will not show.");
+            com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
+            pixmap.setColor(Color.RED);
+            pixmap.fillTriangle(0, 0, 0, 32, 32, 16);
+            arrowTexture = new Texture(pixmap);
+            arrowRegion = new TextureRegion(arrowTexture);
+            pixmap.dispose();
+
         }
         shapeRenderer = new ShapeRenderer();
         buildCollisionMap(maxX + 1, maxY + 1);
@@ -721,7 +751,7 @@ private void checkCollisions() {
             return;
         }
 
-        int margin = 6; // 不在最外圈出生
+        int margin = 6;
 
         float px = 0;
         float py = 0;

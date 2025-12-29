@@ -148,7 +148,6 @@ public class PlayerStats {
         return health <= 0;
     }
 
-    private boolean hasKey = false;
 
     public boolean hasKey() {
         return hasKey;

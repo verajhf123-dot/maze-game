@@ -4,64 +4,67 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Preferences;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class SettingsManager {
 
-    private static final String PREF_NAME = "MazeRunnerSettings";
-    private final Preferences prefs;
+    // 存档文件的名字，通常保存在用户的主目录下 (例如 ~/.prefs/)
+    private static final String PREF_NAME = "MazeRunnerGame_Settings";
 
-    // action -> keycode
-    private final Map<String, Integer> keyBindings = new HashMap<>();
+    private final Preferences preferences;
 
     public SettingsManager() {
-        prefs = Gdx.app.getPreferences(PREF_NAME);
-        loadDefaults();
-        loadFromPreferences();
+        // 获取 LibGDX 的 Preferences 实例
+        this.preferences = Gdx.app.getPreferences(PREF_NAME);
     }
 
-    /** 默认按键绑定 */
-    private void loadDefaults() {
-        keyBindings.put("move_up", Input.Keys.W);
-        keyBindings.put("move_down", Input.Keys.S);
-        keyBindings.put("move_left", Input.Keys.A);
-        keyBindings.put("move_right", Input.Keys.D);
-        keyBindings.put("run", Input.Keys.SHIFT_LEFT);
+
+    public float getVolume() {
+        return preferences.getFloat("volume", 0.5f);
     }
 
-    /** 从 Preferences 读取（覆盖默认值） */
-    private void loadFromPreferences() {
-        for (String action : keyBindings.keySet()) {
-            if (prefs.contains(action)) {
-                keyBindings.put(action, prefs.getInteger(action));
-            }
+
+    public void setVolume(float volume) {
+        preferences.putFloat("volume", volume);
+        preferences.flush(); // 强制写入硬盘
+    }
+
+
+    public int getKey(String action) {
+        int defaultKey;
+
+        // 定义默认按键
+        switch (action) {
+            case "move_up":
+                defaultKey = Input.Keys.W;
+                break;
+            case "move_down":
+                defaultKey = Input.Keys.S;
+                break;
+            case "move_left":
+                defaultKey = Input.Keys.A;
+                break;
+            case "move_right":
+                defaultKey = Input.Keys.D;
+                break;
+            case "run":
+                defaultKey = Input.Keys.SHIFT_LEFT;
+                break;
+            default:
+                defaultKey = Input.Keys.UNKNOWN;
+                break;
         }
+
+        // 从文件中读取，如果没存过就用 defaultKey
+        return preferences.getInteger(action, defaultKey);
     }
 
-    /** 给 PlayerController 用：返回 keycode */
-    public int getKeyCode(String action) {
-        Integer key = keyBindings.get(action);
-        if (key == null) {
-            // 防止 NPE，兜底
-            return Input.Keys.UNKNOWN;
-        }
-        return key;
-    }
 
-    /** 给 SettingsScreen 用：返回可读的按键名字 */
-    public String getKey(String action) {
-        Integer key = keyBindings.get(action);
-        if (key == null) {
-            return "UNBOUND";
-        }
-        return Input.Keys.toString(key);
-    }
-
-    /** 修改按键绑定（以后设置界面用） */
     public void setKey(String action, int keycode) {
-        keyBindings.put(action, keycode);
-        prefs.putInteger(action, keycode);
-        prefs.flush();
+        preferences.putInteger(action, keycode);
+        preferences.flush(); // 强制写入硬盘
+    }
+
+    public void save() {
+        preferences.flush();
     }
 }
