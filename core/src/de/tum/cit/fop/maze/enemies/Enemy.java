@@ -25,6 +25,8 @@ public abstract class Enemy {
     protected int currentPathIndex;
     protected float attackCooldown = 0.5f;  // 0.5秒打一次
     protected float attackTimer = 0f;
+    private static final float ATTACK_COOLDOWN_TIME = 0.8f; // 0.6~1.0都行
+
 
 
     public Enemy(float x, float y, float width, float height) {
@@ -53,11 +55,20 @@ public abstract class Enemy {
     // 1. 这个接收 Player 参数
     public void attack(Player player) {
         if (player == null) return;
+
+        // 冷却没好：不攻击
         if (attackTimer > 0f) return;
 
+        System.out.println("[ATTACK] " + this.getClass().getSimpleName()
+                + " playerHp=" + player.getHealth()
+                + " overlap=" + this.getBounds().overlaps(player.getHitbox()));
+
         player.takeDamage(attackDamage);
+
+        // 攻击后进入冷却
         attackTimer = attackCooldown;
     }
+
 
 
     // 2. 这个是抽象方法，由子类实现

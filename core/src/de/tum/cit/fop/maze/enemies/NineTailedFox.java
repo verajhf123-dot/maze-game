@@ -21,7 +21,7 @@ public class NineTailedFox extends Enemy {
         this.speed = 120f;
         this.maxHealth = 150f;
         this.health = maxHealth;
-        this.attackDamage = 25f;
+        this.attackDamage = 10f;
         this.attackRange = 200f;
         this.detectionRange = 300f;
 

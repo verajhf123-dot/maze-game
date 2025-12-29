@@ -25,7 +25,7 @@ public class ZhuLong extends Enemy {
         this.health = 150f;
         this.maxHealth = 150f;
         this.speed = 40f;
-        this.attackDamage = 25f;
+        this.attackDamage = 3f;
         this.attackRange = 60f;
         this.detectionRange = 180f;
 
