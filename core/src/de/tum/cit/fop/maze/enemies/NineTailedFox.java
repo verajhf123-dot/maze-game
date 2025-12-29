@@ -1,23 +1,20 @@
 package de.tum.cit.fop.maze.enemies;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.graphics.Color;
 
 public class NineTailedFox extends Enemy {
     private Texture texture;
     private float specialAttackCooldown = 8f;
     private float currentSpecialCooldown = 0;
     private boolean isUsingSpecial = false;
-    private static Texture fallbackTexture;
-
 
     public NineTailedFox(float x, float y) {
-        super(x, y, 16, 16);
+        super(x, y, 48, 48);
         this.speed = 120f;
         this.maxHealth = 150f;
         this.health = maxHealth;
@@ -25,22 +22,7 @@ public class NineTailedFox extends Enemy {
         this.attackRange = 200f;
         this.detectionRange = 300f;
 
-        try {
-            this.texture = new Texture(Gdx.files.internal("enemies/nine_tailed_fox.png"));
-        } catch (Exception e) {
-            System.out.println("NineTailedFox texture missing, using red box.");
-            this.texture = null;
-        }
-
-        // 创建白块
-        if (fallbackTexture == null) {
-            Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-            p.setColor(Color.WHITE);
-            p.fill();
-            fallbackTexture = new Texture(p);
-            p.dispose();
-        }
-
+        this.texture = safeLoadTexture("enemies/nine_tailed_fox.png");
     }
 
     @Override
@@ -58,14 +40,14 @@ public class NineTailedFox extends Enemy {
 
     @Override
     public void render(SpriteBatch batch) {
-
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
-        } else {
-            batch.setColor(Color.RED);
-            batch.draw(fallbackTexture, position.x, position.y, bounds.width, bounds.height);
-            batch.setColor(Color.WHITE);
         }
+        else {
+            // fallback 方块
+            batch.end();
+        }
+
     }
 
     @Override
@@ -95,12 +77,16 @@ public class NineTailedFox extends Enemy {
         if (currentSpecialCooldown <= 0) {
             isUsingSpecial = true;
             currentSpecialCooldown = specialAttackCooldown;
-            com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
-                @Override
-                public void run() {
+
+            // 3秒后结束特殊攻击
+            new Thread(() -> {
+                try {
+                    Thread.sleep(3000);
                     isUsingSpecial = false;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            }, 3.0f);
+            }).start();
         }
     }
 
@@ -108,5 +94,9 @@ public class NineTailedFox extends Enemy {
     protected void onDeath() {
         // 死亡效果
         // 掉落物品、播放动画等
+    }
+    @Override
+    public Color getFallbackBodyColor(){
+        return Color.PURPLE;
     }
 }

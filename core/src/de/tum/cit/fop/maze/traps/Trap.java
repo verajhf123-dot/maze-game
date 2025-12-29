@@ -39,6 +39,9 @@ public abstract class Trap {
             currentCooldown = cooldown;
         }
     }
+    public boolean hasTexture() {
+        return true;
+    }
 
     public Rectangle getBounds() { return bounds; }
     public boolean isActivated() { return activated; }

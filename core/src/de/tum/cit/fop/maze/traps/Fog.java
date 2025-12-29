@@ -32,7 +32,7 @@ public class Fog extends Trap {
             fogTexture = new Texture(Gdx.files.internal("traps/fog.png"));
             fogEffect = new ParticleEffect();
             fogEffect.load(Gdx.files.internal("particles/fog.p"), Gdx.files.internal("particles"));
-            fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width/2, bounds.y + bounds.height/2);
+            fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
         } catch (Exception e) {
             System.out.println("Fog assets missing. Using Transparent Box.");
             fogTexture = null;

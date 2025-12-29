@@ -17,6 +17,7 @@ public class MechanismTrap extends Trap {
     private boolean isAnimating;
     private float damage = 30f;
     private static Texture fallbackTexture;
+    private boolean hasTexture = false;
 
     public MechanismTrap(float x, float y) {
         super(x, y, 16, 16);
@@ -30,6 +31,14 @@ public class MechanismTrap extends Trap {
         try{
         inactiveTexture = new Texture(Gdx.files.internal("traps/mechanism_inactive.png"));
         activeTexture = new Texture(Gdx.files.internal("traps/mechanism_active.png"));
+        if (Gdx.files.internal("traps/mechanism_inactive.png").exists()) {
+            inactiveTexture = new Texture(Gdx.files.internal("traps/mechanism_inactive.png"));
+            hasTexture = true;
+        }
+
+        if (Gdx.files.internal("traps/mechanism_active.png").exists()) {
+            activeTexture = new Texture(Gdx.files.internal("traps/mechanism_active.png"));
+        }
 
         // 创建激活动画
         Texture animSheet = new Texture(Gdx.files.internal("traps/mechanism_anim.png"));
@@ -47,10 +56,29 @@ public class MechanismTrap extends Trap {
             fallbackTexture = new Texture(p);
             p.dispose();
         }
+        if (Gdx.files.internal("traps/mechanism_anim.png").exists()) {
+            Texture animSheet = new Texture(Gdx.files.internal("traps/mechanism_anim.png"));
+            TextureRegion[][] frames = TextureRegion.split(animSheet, 32, 32);
+            TextureRegion[] animFrames = new TextureRegion[3];
+            System.arraycopy(frames[0], 0, animFrames, 0, 3);
+            activationAnim = new Animation<>(0.1f, animFrames);
+        }
     }
 
     @Override
     public void render(SpriteBatch batch) {
+        if (inactiveTexture != null || activeTexture != null) {
+            // 有贴图
+            if (isAnimating && activationAnim != null) {
+                batch.draw(
+                        activationAnim.getKeyFrame(animStateTime, false),
+                        bounds.x, bounds.y
+                );
+            } else if (activated && activeTexture != null) {
+                batch.draw(activeTexture, bounds.x, bounds.y);
+            } else if (inactiveTexture != null) {
+                batch.draw(inactiveTexture, bounds.x, bounds.y);
+            }
         if(inactiveTexture != null){
             if (isAnimating) {
                 TextureRegion frame = activationAnim.getKeyFrame(animStateTime, false);
@@ -69,6 +97,8 @@ public class MechanismTrap extends Trap {
         }
 
 
+        // ❗️没贴图的情况不能在这里画方块
+    }
 
     @Override
     public void activate(Player player) {
