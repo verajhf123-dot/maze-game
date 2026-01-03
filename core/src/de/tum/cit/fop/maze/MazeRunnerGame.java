@@ -27,6 +27,8 @@ public class MazeRunnerGame extends Game {
     // UI Skin
     private Skin skin;
 
+    public int globalScore =0;
+
 
 
     // Character animation downwards
@@ -149,7 +151,13 @@ public class MazeRunnerGame extends Game {
         }
     }
 
+    public void resetGlobalScore() {
+        globalScore=0;
+    }
 
+    public SettingsManager getSettingsManager() {
+        return settingsManager;
+    }
 
     // Getter methods
     public Skin getSkin() {

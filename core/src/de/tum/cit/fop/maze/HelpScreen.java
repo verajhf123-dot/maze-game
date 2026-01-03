@@ -37,7 +37,7 @@ public class HelpScreen implements Screen {
                         "Move: WASD or Arrow Keys\n" +
                         "Run: Hold SHIFT\n" +
                         "Pause: ESC\n" +
-                        "Zoom: Q / E\n\n" +
+                        "Zoom: I / O\n\n" +
                         "OBJECTIVE:\n" +
                         "1. Find the Key to unlock the Exit.\n" +
                         "2. Avoid monsters and traps.\n" +

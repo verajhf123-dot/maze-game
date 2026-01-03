@@ -97,26 +97,22 @@ public class MechanismTrap extends Trap {
         }
 
 
-        // ❗️没贴图的情况不能在这里画方块
     }
 
+    // 修改后的 activate 方法
     @Override
     public void activate(Player player) {
-        if (!activated) {
-            isAnimating = true;
-            animStateTime = 0;
-            activated = true;
 
-            com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
-                @Override
-                public void run() {
-                    if (player != null && bounds.overlaps(player.getHitbox())) {
-                        player.takeDamage(damage);
-                        System.out.println("陷阱触发！玩家受到伤害: " + damage);
-                    }
-                }
-            }, activationDelay);
-        }
+        int currentLevel = (int) player.getStats().getExpSystem().getCurrentLevel();
+
+        float trapDamage = 10 + (currentLevel * 5);
+
+        player.takeDamage(trapDamage);
+
+        isAnimating = true;
+        animStateTime = 0;
+
+        System.out.println("MechanismTrap Level " + currentLevel + " activated! Damage: " + trapDamage);
     }
 
     @Override

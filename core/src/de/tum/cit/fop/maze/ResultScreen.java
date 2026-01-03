@@ -42,7 +42,7 @@ public class ResultScreen implements Screen {
         table.add(titleLabel).padBottom(20).row();
 
         // 2. 分数
-        Label scoreLabel = new Label("Score: " + score, game.getSkin());
+        Label scoreLabel = new Label("Total Journey Score: " + score, game.getSkin());
         table.add(scoreLabel).padBottom(40).row();
 
         // 3. 动态按钮 (下一关 或 重试)
@@ -51,14 +51,8 @@ public class ResultScreen implements Screen {
             nextBtn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
-                    // 如果还有下一关，就跳转
-                    // 假设总共只有 5 关
-                    if (currentLevel < 5) {
-                        game.goToGame(currentLevel + 1);
-                    } else {
-                        System.out.println("You finished the game!");
-                        game.goToMenu();
-                    }
+                   game.goToGame(currentLevel+1);
+
                 }
             });
             table.add(nextBtn).width(300).padBottom(20).row();
@@ -67,7 +61,8 @@ public class ResultScreen implements Screen {
             retryBtn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
-                    game.goToGame(currentLevel); // 重新加载当前关卡
+                    game.resetGlobalScore();
+                    game.goToGame(1);// 重新加载当前关卡
                 }
             });
             table.add(retryBtn).width(300).padBottom(20).row();

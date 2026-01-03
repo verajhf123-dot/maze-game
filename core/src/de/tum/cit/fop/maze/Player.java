@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
+import java.util.List;
 
 
 public class Player implements CollidableEntity {
@@ -68,16 +69,17 @@ public class Player implements CollidableEntity {
 
 
 
-    public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run) {
+    public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run, List<Wall> walls) {
         if (damageColorTimer > 0) {
             damageColorTimer -= delta;
         }
         damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
-
+        if (isHurt) {
+            hurtTimer -= delta;
+            if (hurtTimer <= 0) isHurt = false;
+        }
 
         float currentSpeed = speed * (run ? runMultiplier : 1f);
-
-        // 1. 重置速度
         velocity.set(0, 0);
 
         // 2. 根据按键设置速度和朝向
@@ -97,16 +99,34 @@ public class Player implements CollidableEntity {
             velocity.x = currentSpeed;
             currentFrame = rightFrame;
         }
-        damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
-
-
-
-        if (isHurt) {
-            hurtTimer -= delta;
-            if (hurtTimer <= 0) {
-                isHurt = false;
+        float oldX = hitbox.x;
+        hitbox.x += velocity.x * delta;
+        if (walls != null) {
+            for (Wall wall : walls) {
+                if (hitbox.overlaps(wall.getBounds())) {
+                    hitbox.x = oldX; // 撞墙，退回
+                    break;
+                }
             }
         }
+
+        float oldY = hitbox.y;
+        hitbox.y += velocity.y * delta;
+        if (walls != null) {
+            for (Wall wall : walls) {
+                if (hitbox.overlaps(wall.getBounds())) {
+                    hitbox.y = oldY; // 撞墙，退回
+                    break;
+                }
+            }
+        }
+
+        this.position.set(hitbox.x, hitbox.y);
+
+        // 4. 边界检查
+        if (position.x < 0) position.x = 0;
+        if (position.y < 0) position.y = 0;
+        hitbox.setPosition(position.x, position.y);
 
 
     }
@@ -125,41 +145,17 @@ public class Player implements CollidableEntity {
             batch.setColor(Color.WHITE); // 确保非受伤状态是正常的 [cite: 27]
         }
 
-
-
         float drawWidth = 32f;
         float drawHeight = 64f;
-
-        // 用真实 hitbox 尺寸，不要写死 24
-        float hitW = hitbox.width;
-        float hitH = hitbox.height;
-
-        float offsetX = (drawWidth - hitW) / 2f;
-
-
         float drawX = position.x - (drawWidth - hitbox.width) / 2f;
-
-
         float drawY = position.y;
 
-
         batch.draw(currentFrame, drawX, drawY, drawWidth, drawHeight);
-
-
         batch.setColor(Color.WHITE);
 
-
-
     }
 
 
-    public void takeDamage(int dmg) {
-        takeDamage((float) dmg);
-    }
-
-
-
-    // 添加 float 版本（重载方法）
 
 
     public void takeDamage(float dmg) {
@@ -167,13 +163,11 @@ public class Player implements CollidableEntity {
 
         if (damageCooldownTimer > 0f) return;
 
-        int damageInt = Math.round(dmg);
-        stats.takeDamage(damageInt);
-
+        stats.takeDamage(Math.round(dmg));
         isHurt = true;
         hurtTimer = 0.25f;
-
         damageCooldownTimer = DAMAGE_COOLDOWN;
+        triggerDamageVFX();
     }
 
 

@@ -5,10 +5,12 @@ import de.tum.cit.fop.maze.progression.SkillTree;
 
 public class PlayerStats {
 
-    private int maxHealth = 5;
-    private int health = 5;
-    private boolean hasKey = false;
-    private int bonusKey = 0;
+    private int maxHealth =100;
+    private int health = 100;
+
+    private int score = 0;
+    private boolean hasExitKey = false;
+    private int bonusKeys = 0;
 
     private ExperienceSystem expSystem;
     private SkillTree skillTree;
@@ -20,7 +22,7 @@ public class PlayerStats {
     private float criticalChance = 0.0f;
     private float dodgeChance = 0.0f;
 
-    private int baseMaxHealth = 5;
+    private int baseMaxHealth = 100;
     private float baseSpeedMultiplier = 1.0f;
     private float baseAttackMultiplier = 1.0f;
     private float baseDefenseMultiplier = 1.0f;
@@ -141,6 +143,22 @@ public class PlayerStats {
         health = maxHealth;
     }
 
+    public int getScore() { return score; }
+    public void addScore(int amount) { this.score += amount; }
+    public void setScore(int score) { this.score = score; }
+
+    public void collectBonusKey() {
+        this.bonusKeys++;
+        System.out.println("Bonus Key! Total: " + bonusKeys);
+        addScore(500);
+    }
+
+    public void collectExitKey() {
+        this.hasExitKey = true;
+        System.out.println("EXIT KEY FOUND! Go to the door!");
+    }
+
+
     public int getHealth() { return health; }
     public int getMaxHealth() { return maxHealth; }
 
@@ -150,20 +168,19 @@ public class PlayerStats {
 
 
     public boolean hasKey() {
-        return hasKey;
+        return hasExitKey;
     }
 
-    public void obtainKey() {
-        this.hasKey = true;
-    }
     public void useKey(){
-        if(hasKey){
-            hasKey = false;
+        if(hasExitKey){
+            hasExitKey = false;
+            addScore(1000);
+            System.out.println("Key has been used!");
         }
     }
 
-    public int getBonusKey() { return bonusKey; }
-    public void setBonusKey(int bonusKey) { this.bonusKey = bonusKey; }
+    public int getBonusKey() { return bonusKeys; }
+    public void setBonusKey(int bonusKey) { this.bonusKeys = bonusKey; }
 
     public ExperienceSystem getExpSystem() { return expSystem; }
     public SkillTree getSkillTree() { return skillTree; }
