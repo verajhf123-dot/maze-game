@@ -15,12 +15,12 @@ public class NineTailedFox extends Enemy {
 
     public NineTailedFox(float x, float y) {
         super(x, y, 48, 48);
-        this.speed = 120f;
-        this.maxHealth = 150f;
+        this.speed = 80f;
+        this.maxHealth = 50f;
         this.health = maxHealth;
-        this.attackDamage = 10f;
-        this.attackRange = 200f;
-        this.detectionRange = 300f;
+        this.attackDamage = 1f;
+        this.attackRange = 60f;
+        this.detectionRange = 200f;
 
         this.texture = safeLoadTexture("enemies/nine_tailed_fox.png");
     }
@@ -43,10 +43,7 @@ public class NineTailedFox extends Enemy {
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
         }
-        else {
-            // fallback 方块
-            batch.end();
-        }
+
 
     }
 

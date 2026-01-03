@@ -85,7 +85,8 @@ public class MenuScreen implements Screen {
             public void changed(ChangeEvent event, Actor actor) {
                 Preferences prefs = Gdx.app.getPreferences("MazeRunnerGame");
                 int maxLevel = prefs.getInteger("maxLevel", 1);
-                    game.goToGame(1);
+                game.resetGlobalScore();
+                game.goToGame(1);
             }
         });
 
@@ -125,7 +126,7 @@ public class MenuScreen implements Screen {
         highScoresButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                Gdx.app.log("MenuScreen", "High Scores");
+              game.setScreen(new HighScoreScreen(game));
             }
         });
         TextButton HelpButton = new TextButton("Help", game.getSkin());

@@ -11,18 +11,30 @@ public class Key {
     private Rectangle bounds;
     private boolean collected = false;
     private Texture texture;
+    private boolean isBonus;
 
-    public Key(float x, float y) {
+    public Key(float x, float y,boolean isBonus) {
         bounds = new Rectangle(x, y, 32, 32);
-        texture = new Texture(Gdx.files.internal("items/key.png"));
+        texture = new Texture(Gdx.files.internal("key.png"));
+        this.isBonus = isBonus;
     }
 
     public void checkPickup(Player player) {
         if (!collected && bounds.overlaps(player.getHitbox())) {
+
             collected = true;
-            player.getStats().obtainKey();
-            System.out.println("Key collected!");
+
+
+            if (isBonus) {
+                player.getStats().collectBonusKey();
+            } else {
+                player.getStats().collectExitKey();
+            }
+
+            System.out.println("Key collected! Is Bonus: " + isBonus);
         }
+
+
     }
 
     public void render(SpriteBatch batch) {

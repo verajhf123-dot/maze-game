@@ -20,7 +20,7 @@ public class RetreatBehavior extends AIBehavior {
     protected void updateAI() {
         if (targetPlayer == null) return;
 
-        float healthRatio = enemy.getHealth() / enemy.getMaxHealth();
+        float healthRatio = (float) enemy.getHealth() / enemy.getMaxHealth();
 
         if (!isRetreating && healthRatio < retreatThreshold) {
             startRetreat();

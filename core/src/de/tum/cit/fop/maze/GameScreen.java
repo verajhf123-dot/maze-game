@@ -5,8 +5,10 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -79,15 +81,17 @@ public class GameScreen implements Screen {
     private String currentMapPath;
     private InputController controller;
     private Exit exit;
-    private Key key;
+    private List<Key> keys;
     private Door door;
     private Vector2 exitPosition;
+    private Vector2 entryPosition;
     private Texture arrowTexture;
     private TextureRegion arrowRegion;
     private float aiTimer = 0f;
     private float spawnInvulnTimer = 0f; // 出生无敌计时器
     private static final float SPAWN_INVULN_DURATION = 1.0f; // 1秒
     private com.badlogic.gdx.graphics.g2d.GlyphLayout layout;
+    private SettingsManager settingsManager;
 
 
 
@@ -109,6 +113,7 @@ public class GameScreen implements Screen {
     }
 
     private void initCommon() {
+        settingsManager = new SettingsManager();
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
         camera.position.set(240,160,0);
@@ -117,7 +122,7 @@ public class GameScreen implements Screen {
         font.getData().setScale(1f);
         font =  new BitmapFont();
 
-        controller = new InputController();
+        controller = new InputController(settingsManager);
         enemies = new Array<>();
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
@@ -213,36 +218,50 @@ public class GameScreen implements Screen {
             togglePause();
         }
 
+
         if (currentState == GameState.RUNNING) {
             controller.update();
+            if (controller.zoomChange != 0) {
+                camera.zoom += controller.zoomChange;
+                // 限制缩放范围，防止缩太小或太大
+                camera.zoom = MathUtils.clamp(camera.zoom, 0.2f, 2.0f);
+            }
+
             gameTime += delta;
             if (spawnInvulnTimer > 0f) {
                 spawnInvulnTimer -= delta;
             }
-          
+
             updateTraps(delta);
             updateEnemies(delta);
             updatePlayer(delta);
-          
-            checkCollisions();
-            checkTrapActivation();
-          
-          
-            updateCameraFollowPlayer();
-            camera.update();
-            if(key != null && player != null) {
-                key.checkPickup(player);
-            }
-
-            if (door != null && player != null) {
-                door.tryOpen(player);
-            }
 
             checkCollisions();
             checkTrapActivation();
+
+
+            float visibilityFactor = 1.0f;
+            if (traps != null) {
+                for (Trap trap : traps) {
+                    if (trap instanceof Fog) {
+                        Fog fog = (Fog) trap;
+                        if (fog.isPlayerInFog(player)) {
+                            visibilityFactor = fog.getVisibilityReduction(); // 获取能见度 (例如 0.4)
+                            fog.activate(player);
+                        }
+                    }
+                }
+            }
+
+            if (visibilityFactor < 1.0f) {
+                float targetZoom = 0.2f;
+                camera.zoom = MathUtils.lerp(camera.zoom, targetZoom, 0.05f);
+            }
+
             updateCameraFollowPlayer();
             camera.update();
         }
+
 
         ScreenUtils.clear(0, 0, 0, 1);
 
@@ -267,28 +286,6 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 玩家（debug 方块）
-        if (player != null) {
-            shapeRenderer.setColor(Color.RED);
-            shapeRenderer.rect(
-                    player.getPosition().x,
-                    player.getPosition().y,
-                    32,
-                    32
-            );
-        }
-        // 1. 画钥匙（黄色）
-        if (key != null) {
-            shapeRenderer.setColor(Color.YELLOW);
-            shapeRenderer.rect(
-                    key.getX(),
-                    key.getY(),
-                    Wall.TILE_SIZE / 2f,
-                    Wall.TILE_SIZE / 2f
-            );
-        }
-
-        // 2. 画门（蓝色）
         if (door != null) {
             shapeRenderer.setColor(Color.BLUE);
             shapeRenderer.rect(
@@ -299,7 +296,7 @@ public class GameScreen implements Screen {
             );
         }
 
-        // 敌人（没有贴图的）
+
         for (Enemy enemy : enemies) {
             if (!enemy.isAlive()) continue;
             if (enemy.getTexture() != null) continue;
@@ -313,29 +310,78 @@ public class GameScreen implements Screen {
             );
         }
 
+        if (traps != null) {
+            for (Trap trap : traps) {
+                if (!trap.hasTexture()) {
+                    shapeRenderer.setColor(trap.isActivated() ? Color.ORANGE : Color.GRAY);
+                    Rectangle b = trap.getBounds();
+                    shapeRenderer.rect(b.x, b.y, b.width, b.height);
+                }
+            }
+        }
+
         shapeRenderer.end();
 
-        // =================================================
-        // 2️⃣ SpriteBatch：所有“贴图”的东西
-        // =================================================
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
+
+        if (traps != null) {
+            for (Trap trap : traps) {
+                if (trap.hasTexture()) trap.render(batch);
+            }
+        }
 
         // 敌人（有贴图的）
         for (Enemy enemy : enemies) {
             enemy.render(batch);
         }
+        if (keys != null) {
+            for (Key k : keys) {
 
-        // 其他贴图（道具 / 地图 / etc）
-        // drawXXX(batch);
+                if (k != null && !k.isCollected()) {
+                    k.render(batch);
+
+                    if (player != null) {
+                        k.checkPickup(player);
+                    }
+                }
+            }
+        }
+
+        if (door != null) door.render(batch);
+
+        if (player != null) {
+            player.render(batch);
+        }
 
         batch.end();
 
-        // =================================================
-        // 3️⃣ UI
-        // =================================================
+
+        shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        float barX = 20;
+        float barY = uiStage.getViewport().getWorldHeight() - 40; // 位置稍微调高一点，别挡住字
+        float barW = 200;
+        float barH = 20;
+
+        shapeRenderer.setColor(Color.DARK_GRAY);
+        shapeRenderer.rect(barX, barY, barW, barH);
+
+        if (player != null) {
+            float hpPercent = player.getHealth() / player.getMaxHealth();
+            if (hpPercent < 0) hpPercent = 0;
+            if (hpPercent > 1) hpPercent = 1;
+
+            shapeRenderer.setColor(Color.RED);
+            shapeRenderer.rect(barX, barY, barW * hpPercent, barH);
+        }
+        shapeRenderer.end();
+
         batch.setProjectionMatrix(uiStage.getCamera().combined);
         batch.begin();
+        font.getData().setScale(1.5f);
+        font.setColor(Color.WHITE);
         drawHUD(batch);
         batch.end();
 
@@ -351,15 +397,7 @@ public class GameScreen implements Screen {
             uiStage.act(delta);
             uiStage.draw();
         }
-        // 拿钥匙
-        if (key != null && !key.isCollected()) {
-            key.checkPickup(player);
-        }
 
-// 开门
-        if (door != null && !door.isOpen()) {
-            door.tryOpen(player);
-        }
     }
 
 
@@ -369,27 +407,23 @@ public class GameScreen implements Screen {
 
 
     private void winGame() {
-            // 1. 防止重复触发 (比如一帧内多次碰撞)
-            if (gameWon) return;
-            gameWon = true;
+        // 1. 防止重复触发
+        if (gameWon) return;
+        gameWon = true;
 
-            int nextLevel = levelNumber + 1;
-            SaveManager.saveGame(nextLevel, 100f, false);
-            System.out.println("Saving Progress: Unlocked Level " + nextLevel);
-
-            int score = (int) (gameTime * 10);
+        int levelBonus = 1000 + (int)player.getHealth() * 5 - (int)gameTime;
+        if (levelBonus < 0) levelBonus = 0;
+        game.globalScore += levelBonus;
 
 
-            game.setScreen(new ResultScreen(game, true, levelNumber, score));
-
+        game.setScreen(new ResultScreen(game, true, levelNumber, game.globalScore));
+    }
 
 
 
-    // ===== 画墙结束 =====
-    // ========== 新增：敌人相关方法 =========
-    private void updateEnemies(float delta) {
+    private void  updateEnemies(float delta) {
         for (Enemy enemy : enemies) {
-            if (！enemy.isAlive()) {
+            if (! enemy.isAlive()) {
               continue;
             }
                 enemy.update(delta);
@@ -404,7 +438,7 @@ public class GameScreen implements Screen {
                         enemy.findPathTo(player.getPosition());
 
                         // 如果玩家在攻击范围内，攻击
-                        if (distance <= enemy.getAttackRange()) {
+                        if (distance <= enemy.getAttackRange() && spawnInvulnTimer<= 0f) {
                             enemy.attack(player);
                         }
                     } else {
@@ -413,47 +447,31 @@ public class GameScreen implements Screen {
                     }
                 }
             }
-        }
-        // 移除死亡的敌人
-        removeDeadEnemies();
+
+        for (int i = enemies.size - 1; i >= 0; i--){
+        if (!enemies.get(i).isAlive()) enemies.removeIndex(i);}
     }
 
-    private void drawEnemies(SpriteBatch batch) {
-        for (Enemy enemy : enemies) {
-            if (enemy.isAlive()) {
-                enemy.render(batch);
-            }
-        }
-    }
 
-    private void removeDeadEnemies() {
-        for (int i = enemies.size - 1; i >= 0; i--) {
-            if (!enemies.get(i).isAlive()) {
-                enemies.removeIndex(i);
-            }
-        }
-    }
 
     private void checkCollisions() {
     if (player == null) return;
 
-        if (exitArea != null && player.getHitbox().overlaps(exitArea)) {
-            // to see if player has a key
+        if (door != null && player.getHitbox().overlaps(door.getBounds())) {
+
             if (player.getStats().hasKey()) {
-                exit.onPlayerReach();
-                if (exit.isReached()) {
-                    winGame();
-                }
-            } else {
+                door.tryOpen(player); // 让门变成开启状态（如果有动画的话）
+                System.out.println("Door opened! Level Completed!");
+
+                winGame();
+            }
+            else {
                 float delta = Gdx.graphics.getDeltaTime();
-                // 获取玩家当前的速度
                 com.badlogic.gdx.math.Vector2 velocity = player.getVelocity();
 
-                // 将玩家的 hitbox 坐标往回拉（抵消本帧的移动）
+                // 物理回弹：把玩家推回上一帧的位置
                 player.getHitbox().x -= velocity.x * delta;
                 player.getHitbox().y -= velocity.y * delta;
-
-                // 同步玩家的逻辑坐标到 hitbox
                 player.syncPositionToHitbox();
 
             }
@@ -471,6 +489,8 @@ public class GameScreen implements Screen {
         }
 
         if(player.getHealth() <= 0) {
+            HighScoreManager.saveScore(game.globalScore);
+            game.resetGlobalScore();
             game.setScreen(new ResultScreen(game, false, levelNumber, 0));
         }
 }
@@ -520,23 +540,11 @@ public class GameScreen implements Screen {
            boolean right = controller.right;
            boolean run = controller.run;
 
-           player.update(delta, up, down, left, right, run);
+           player.update(delta, up, down, left, right, run,walls);
 
 
        }
 
-        float oldX = hb.x;
-        hb.x += dx;
-        if (collidesWithAnyWall(hb)|| hb.x < 0 || hb.x + hb.width > mapPixelWidth) {
-            hb.x = oldX;
-        }
-
-        // 尝试 Y 轴移动
-        float oldY = hb.y;
-        hb.y += dy;
-        if (collidesWithAnyWall(hb)|| hb.y < 0 || hb.y + hb.height > mapPixelHeight) {
-            hb.y = oldY;
-        }
 
     }
 
@@ -555,15 +563,6 @@ public class GameScreen implements Screen {
 
 
 
-
-    private void drawPlayer(SpriteBatch batch) {
-        // 由组员2实现\
-        if (player != null) {
-            player.render(batch);
-
-        }
-    }
-
     private void drawHUD(SpriteBatch batch) {
         batch.setColor(Color.WHITE); // 重置颜色状态 [cite: 157]
 
@@ -573,10 +572,8 @@ public class GameScreen implements Screen {
 
         font.getData().setScale(1.5f); // 保持字体清晰
 
-        // 1. 绘制生命值 (Lives) [cite: 45, 46]
         font.draw(batch, "HP: " + (int)player.getHealth(), 20, uiH - 40);
 
-        // 2. 绘制钥匙状态 [cite: 45, 47]
         String keyLabel = player.getStats().hasKey() ? "KEY: FOUND" : "KEY: MISSING";
         font.setColor(player.getStats().hasKey() ? Color.GOLD : Color.FIREBRICK);
         font.draw(batch, keyLabel, 20, uiH - 90);
@@ -591,23 +588,22 @@ public class GameScreen implements Screen {
         layout.setText(font, timeText);
         float timeTextWidth = layout.width;
         font.draw(batch, timeText, uiW - timeTextWidth - 20, uiH - 50);
-        if (exitPosition != null && arrowRegion != null) {
 
+        if (exitPosition != null && arrowRegion != null&& player!=null) {
             float tx = exitPosition.x * Wall.TILE_SIZE;
             float ty = exitPosition.y * Wall.TILE_SIZE;
             float dx = tx - player.getPosition().x;
             float dy = ty - player.getPosition().y;
 
-            // 使用 MathUtils 计算角度（弧度转角度）
             float currentAngle = MathUtils.atan2(dy, dx) * MathUtils.radDeg;
 
             // 在屏幕右下角绘制旋转箭头
             batch.draw(arrowRegion,
-                    uiW - 100, 100,           // 屏幕位置
-                    16, 16,                   // 旋转中心 (Region中心)
-                    32, 32,                   // 渲染尺寸
-                    1.2f, 1.2f,               // 缩放
-                    currentAngle              // 计算出的实时角度
+                    uiW - 100, 100,
+                    16, 16,
+                    32, 32,
+                    1.2f, 1.2f,
+                    currentAngle
             );
             font.draw(batch, "EXIT", uiW - 110, 60);
         }
@@ -658,7 +654,7 @@ public class GameScreen implements Screen {
        camera.viewportWidth = width;
        camera.viewportHeight = height;
        camera.update();
-       uiStage.getViewport().update(width, height, true);
+       uiStage.getViewport().update(width, height, false);
         // 不要在这里固定 camera.position
     }
 
@@ -674,17 +670,34 @@ public class GameScreen implements Screen {
     public void show() {
         MapLoader loader = new MapLoader();
         shapeRenderer = new ShapeRenderer();
-        key = new Key(300, 200);
-        System.out.println("Loading Map from: " + currentMapPath);
 
-        MapLoader.LevelData data = loader.loadLevel(currentMapPath);
+        String actualPathToLoad;
+
+        if (levelNumber > 5 || !Gdx.files.local("maps/level-" + levelNumber + ".properties").exists()) {
+            System.out.println("Entering Endless Mode: Base Map is Level 5");
+            actualPathToLoad = "maps/level-5.properties";
+        } else {
+            actualPathToLoad = "maps/level-" + levelNumber + ".properties";
+        }
+        MapLoader.LevelData data = loader.loadLevel(actualPathToLoad);
 
         this.walls = data.walls;
+        this.entryPosition = data.entryPosition;
         this.exitPosition = data.exitPosition;
-
         if (this.exitPosition != null) {
             this.exit = new Exit();
-            this.exitArea = new Rectangle(exitPosition.x, exitPosition.y, Wall.TILE_SIZE, Wall.TILE_SIZE);
+            door = new Door(
+                    exitPosition.x * Wall.TILE_SIZE,
+                    exitPosition.y * Wall.TILE_SIZE,
+                    Wall.TILE_SIZE,
+                    Wall.TILE_SIZE
+            );
+
+            this.exitArea = new Rectangle(
+                    exitPosition.x * Wall.TILE_SIZE,
+                    exitPosition.y * Wall.TILE_SIZE,
+                    Wall.TILE_SIZE,
+                    Wall.TILE_SIZE);
 
         } else {
             System.out.println("Warning: No exit position found in map file!");
@@ -701,8 +714,22 @@ public class GameScreen implements Screen {
         }
         System.out.println("Loaded " + currentEnemies + " enemies");
 
-        System.out.println("Loading Map from: " + currentMapPath);
-        walls = loader.loadWalls(currentMapPath);
+
+
+        if (levelNumber > 5) {
+            Random rand = new Random();
+            for (int i = walls.size() - 1; i >= 0; i--) {
+                if (rand.nextFloat() < 0.1f) {
+                    walls.remove(i);
+                }
+            }
+            for (int i = 0; i < 5; i++) {
+                Vector2 pos = getRandomEmptyTile();
+                walls.add(new Wall((int)pos.x, (int)pos.y));
+            }
+        }
+
+
         int maxX = 0, maxY = 0;
         for (Wall w : walls) {
             if (w.gridX > maxX) maxX = w.gridX;
@@ -712,17 +739,17 @@ public class GameScreen implements Screen {
         mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
         mapWidthInTiles = maxX + 1;
         mapHeightInTiles = maxY +1;
-        key = spawnRandomKey();
-        door = spawnRandomDoor();
 
-        key = new Key(300, 200);
-        door = new Door(
-                mapPixelWidth - Wall.TILE_SIZE,
-                mapPixelHeight / 2f,
-                Wall.TILE_SIZE,
-                Wall.TILE_SIZE
-        );
-// +1 因为 grid 从 0 开始
+        this.keys = new ArrayList<>(); // 初始化列表
+
+
+        keys.add(spawnSafeKey(false));
+
+        for (int i = 0; i < 2; i++) {
+            keys.add(spawnSafeKey(true));
+        }
+
+
 
         System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
 
@@ -741,8 +768,7 @@ public class GameScreen implements Screen {
             pixmap.dispose();
 
         }
-        shapeRenderer = new ShapeRenderer();
-        // ========== 新增：初始化碰撞地图 ==========
+
         buildCollisionMap(maxX + 1, maxY + 1);
         // ========== 新增：初始化PathFinder ==========
         initPathFinder();
@@ -762,6 +788,8 @@ public class GameScreen implements Screen {
         currentState = GameState.RUNNING;
         Gdx.input.setInputProcessor(null);
 
+
+
         Music music =game.getBackgroundMusic();
         if (music != null && !music.isPlaying()) {
             music.play();
@@ -771,141 +799,64 @@ public class GameScreen implements Screen {
     }
 
 
-    private Key spawnRandomKey() {
-        HashSet<String> wallSet = new HashSet<>();
-        for (Wall w : walls) {
-            wallSet.add(w.gridX + "," + w.gridY);
-        }
-
-        Random random = new Random();
-
-        while (true) {
-            int gx = random.nextInt(mapWidthInTiles);
-            int gy = random.nextInt(mapHeightInTiles);
-
-            // 如果这个格子不是墙 → 地板
-            if (!wallSet.contains(gx + "," + gy)) {
-                float x = gx * Wall.TILE_SIZE;
-                float y = gy * Wall.TILE_SIZE;
-                return new Key(x, y);
-            }
-        }
-    }
-
-    private Door spawnRandomDoor() {
-        Random random = new Random();
-
-        int tilesX = (int)(mapPixelWidth / Wall.TILE_SIZE);
-        int tilesY = (int)(mapPixelHeight / Wall.TILE_SIZE);
-
-        int side = random.nextInt(4); // 0上 1下 2左 3右
-        int gridX = 0, gridY = 0;
-
-        switch (side) {
-            case 0: // 上
-                gridX = random.nextInt(tilesX - 2) + 1;
-                gridY = tilesY - 1;
-                break;
-            case 1: // 下
-                gridX = random.nextInt(tilesX - 2) + 1;
-                gridY = 0;
-                break;
-            case 2: // 左
-                gridX = 0;
-                gridY = random.nextInt(tilesY - 2) + 1;
-                break;
-            case 3: // 右
-                gridX = tilesX - 1;
-                gridY = random.nextInt(tilesY - 2) + 1;
-                break;
-        }
-
-        return new Door(
-                gridX * Wall.TILE_SIZE,
-                gridY * Wall.TILE_SIZE,
-                Wall.TILE_SIZE,
-                Wall.TILE_SIZE
-        );
-    }
     // ========== 新增：初始化方法 ==========
     private void initEnemies() {
-        enemies.add(new NineTailedFox(150, 100));
-        enemies.add(new QiongQi(200, 150));
-        enemies.add(new ZhuLong(250, 200));
+        enemies.clear();
+        int count = 3 + (levelNumber / 2);
 
-        System.out.println("Initialized " + enemies.size + " enemies");
+        for (int i = 0; i < count; i++) {
+
+            Vector2 smartPos = getSmartSpawnPosition();
+
+            if (smartPos != null) {
+                float rand = (float)Math.random();
+                Enemy e;
+                if (rand < 0.33f) {
+                    e = new NineTailedFox(smartPos.x, smartPos.y);
+                } else if (rand < 0.66f) {
+                    e = new QiongQi(smartPos.x, smartPos.y);
+                } else {
+                    e = new ZhuLong(smartPos.x, smartPos.y);
+                }
+
+                e.adjustDifficulty(this.levelNumber);
+                enemies.add(e);
+            }
+        }
     }
 
     private void initPlayer() {
         if (player != null) return;
 
-        float hbW = 24f;
-        float hbH = 24f;
+        float spawnX;
+        float spawnY;
 
-        if (collisionMap == null) {
-            player = new Player(50, 50);
-            spawnInvulnTimer = SPAWN_INVULN_DURATION;
+        if (entryPosition != null) {
+            spawnX = entryPosition.x;
+            spawnY = entryPosition.y;
+            System.out.println("Spawned at Map Entry (Type 1): " + spawnX + "," + spawnY);
+        }
 
+        else if (exitPosition != null) {
+
+            spawnX = exitPosition.x * Wall.TILE_SIZE;
+            spawnY = exitPosition.y * Wall.TILE_SIZE;
+            System.out.println("Spawned at Map Exit (Type 2): " + spawnX + "," + spawnY);
+        }
+        else {
+            spawnX = 50;
+            spawnY = 50;
+            System.out.println("No Entry/Exit found, using default: 50,50");
+        }
+
+        player = new Player(spawnX, spawnY);
+
+        spawnInvulnTimer = SPAWN_INVULN_DURATION;
+
+        if (player.getStats() != null) {
             player.getStats().heal(100);
-            System.out.println("Warning: collisionMap null, fallback spawn");
-            return;
         }
-
-        int margin = 6;
-
-        float px = 0;
-        float py = 0;
-        int x = 0;
-        int y;
-        for (y = margin; y < collisionMap.length - margin; y++) {
-            for (x = margin; x < collisionMap[0].length - margin; x++) {
-                if (collisionMap[y][x] == 0) {
-
-                    px = x * Wall.TILE_SIZE + (Wall.TILE_SIZE - hbW) / 2f;
-                    py = y * Wall.TILE_SIZE + (Wall.TILE_SIZE - hbH) / 2f;
-
-                    float minDist = 6f * Wall.TILE_SIZE;     // 至少离敌人2格
-                    if (!farFromEnemies(px, py, minDist)) {  // 不满足就继续找
-                        continue;
-                    }
-
-                    player = new Player(px, py);
-                    player.getStats().heal(100);
-                    player.syncPositionToHitbox();
-
-                    System.out.println(
-                            "Player spawned at tile (" + x + "," + y + ") -> (" + px + "," + py + ")"
-                    );
-                    return;
-                }
-            }
-
-        }
-
-        // 兜底
-        player = new Player(px, py);
-        player.getStats().heal(100);
         player.syncPositionToHitbox();
-
-        System.out.println(
-                "Player spawned at tile (" + x + "," + y + ") -> (" + px + "," + py + ")"
-        );
-        System.out.println("Spawn HP = " + player.getHealth() + " / " + player.getMaxHealth());
-        return;
-
-
-    }
-
-    private boolean farFromEnemies(float px, float py, float minDist) {
-        if (enemies == null) return true;
-
-        Vector2 p = new Vector2(px, py);
-        for (Enemy e : enemies) {
-            if (e != null && e.isAlive()) {
-                if (e.getPosition().dst(p) < minDist) return false;
-            }
-        }
-        return true;
     }
 
 
@@ -936,9 +887,12 @@ public class GameScreen implements Screen {
             door.dispose();
         }
 
-        if (key != null){
-            key.dispose();
+        if (keys != null){
+            for (Key k : keys) {
+                k.dispose();
+            }
         }
+
 
         if (shapeRenderer != null) shapeRenderer.dispose();
 
@@ -1038,82 +992,102 @@ public class GameScreen implements Screen {
     private void initTraps() {
         traps = new Array<>();
 
-        // 在随机位置生成陷阱（避开玩家起始位置）
-        int trapCount = 3 + levelNumber; // 随关卡增加陷阱数量
+        int trapCount = Math.min(3 + levelNumber, 15);
 
         for (int i = 0; i < trapCount; i++) {
-            // 随机位置，但确保不在墙上
-            float x, y;
-            boolean validPosition;
-            int attempts = 0;
 
-            do {
-                validPosition = true;
-                x = (float) (Math.random() * (mapPixelWidth - 64));
-                y = (float) (Math.random() * (mapPixelHeight - 64));
+            Vector2 smartPos = getSmartSpawnPosition();
 
-                // 检查是否在墙上
-                int gridX = (int)(x / Wall.TILE_SIZE);
-                int gridY = (int)(y / Wall.TILE_SIZE);
+            if (smartPos != null) {
 
-                if (collisionMap != null && gridY < collisionMap.length && gridX < collisionMap[0].length) {
-                    if (collisionMap[gridY][gridX] == 1) {
-                        validPosition = false;
-                    }
-                }
-
-                // 检查是否太靠近玩家起始位置
-                if (player != null) {
-                    float distance = (float) Math.sqrt(
-                            Math.pow(x - player.getPosition().x, 2) +
-                                    Math.pow(y - player.getPosition().y, 2)
-                    );
-                    if (distance < 100) {
-                        validPosition = false;
-                    }
-                }
-
-                attempts++;
-            } while (!validPosition && attempts < 100);
-
-            if (validPosition) {
-                // 随机选择陷阱类型
                 if (Math.random() > 0.5) {
-                    traps.add(new MechanismTrap(x, y));
+                    traps.add(new MechanismTrap(smartPos.x, smartPos.y));
                 } else {
-                    traps.add(new Fog(x, y));
+                    traps.add(new Fog(smartPos.x, smartPos.y));
                 }
             }
         }
 
-        System.out.println("Initialized " + traps.size + " traps");
+        System.out.println("Initialized " + traps.size + " smart traps");
     }
 
-    private void drawTraps(SpriteBatch batch) {
-        if (traps == null) return;
 
-        // ① 先画有贴图的陷阱
-        batch.begin();
-        for (Trap trap : traps) {
-            if (trap.hasTexture()) {
-                trap.render(batch);
+    private Vector2 getRandomEmptyTile() {
+        List<Vector2> emptyTiles = new ArrayList<>();
+        HashSet<String> occupied = new HashSet<>();
+
+        if (walls != null) {
+            for (Wall w : walls) {
+                occupied.add(w.gridX + "," + w.gridY);
             }
         }
-        batch.end();
+        if (entryPosition != null) occupied.add((int)entryPosition.x + "," + (int)entryPosition.y);
+        if (exitPosition != null) occupied.add((int)exitPosition.x + "," + (int)exitPosition.y);
 
-        // ② 再画没有贴图的陷阱（fallback 方块）
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (Trap trap : traps) {
-            if (!trap.hasTexture()) {
-                shapeRenderer.setColor(
-                        trap.isActivated() ? Color.ORANGE : Color.GRAY
-                );
-                Rectangle b = trap.getBounds();
-                shapeRenderer.rect(b.x, b.y, b.width, b.height);
+
+        for (int x = 0; x < mapWidthInTiles; x++) {
+            for (int y = 0; y < mapHeightInTiles; y++) {
+                String key = x + "," + y;
+                if (!occupied.contains(key)) {
+                    emptyTiles.add(new Vector2(x, y));
+                }
             }
         }
-        shapeRenderer.end();
+
+        if (!emptyTiles.isEmpty()) {
+            Random random = new Random();
+            return emptyTiles.get(random.nextInt(emptyTiles.size()));
+        }
+        return new Vector2(1, 1);
     }
-    // Additional methods and logic can be added as needed for the game screen
+
+    private Key spawnSafeKey(boolean isBonus) {
+        Vector2 pos = getRandomEmptyTile();
+
+        return new Key(pos.x * Wall.TILE_SIZE, pos.y * Wall.TILE_SIZE, isBonus);
+    }
+
+
+    private Vector2 getSmartSpawnPosition() {
+        int attempts = 0;
+        while (attempts < 150) {
+            Vector2 tilePos = getRandomEmptyTile(); // 获取一个没墙的格子坐标
+            float worldX = tilePos.x * Wall.TILE_SIZE;
+            float worldY = tilePos.y * Wall.TILE_SIZE;
+
+            if (player != null && player.getPosition().dst(worldX, worldY) < 250) {
+                attempts++;
+                continue;
+            }
+
+            if (exitPosition != null) {
+                float exitWorldX = exitPosition.x * Wall.TILE_SIZE;
+                float exitWorldY = exitPosition.y * Wall.TILE_SIZE;
+                if (Vector2.dst(worldX, worldY, exitWorldX, exitWorldY) < 100) {
+                    attempts++;
+                    continue;
+                }
+            }
+
+            boolean tooCloseToOthers = false;
+            for (Enemy e : enemies) {
+                if (e.getPosition().dst(worldX, worldY) < 120) {
+                    tooCloseToOthers = true;
+                    break;
+                }
+            }
+            if (tooCloseToOthers) {
+                attempts++;
+                continue;
+            }
+
+            return new Vector2(worldX, worldY); // 找到了完美位置！
+        }
+        return null;
+    }
+
+
+
+
 
 }

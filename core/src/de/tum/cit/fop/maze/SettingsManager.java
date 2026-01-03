@@ -54,14 +54,14 @@ public class SettingsManager {
                 break;
         }
 
-        // 从文件中读取，如果没存过就用 defaultKey
+
         return preferences.getInteger(action, defaultKey);
     }
 
 
     public void setKey(String action, int keycode) {
         preferences.putInteger(action, keycode);
-        preferences.flush(); // 强制写入硬盘
+        preferences.flush();
     }
 
     public void save() {

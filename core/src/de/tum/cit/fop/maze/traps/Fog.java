@@ -28,16 +28,27 @@ public class Fog extends Trap {
     }
 
     private void loadAssets() {
-        try {
-            fogTexture = new Texture(Gdx.files.internal("traps/fog.png"));
-            fogEffect = new ParticleEffect();
-            fogEffect.load(Gdx.files.internal("particles/fog.p"), Gdx.files.internal("particles"));
-            fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
-        } catch (Exception e) {
-            System.out.println("Fog assets missing. Using Transparent Box.");
-            fogTexture = null;
+        if (Gdx.files.internal("traps/fog.png").exists()) {
+            try {
+                fogTexture = new Texture(Gdx.files.internal("traps/fog.png"));
+            } catch (Exception e) {
+                System.out.println("Failed to load fog.png");
+            }
+        }
+
+        if (Gdx.files.internal("particles/fog.p").exists()) {
+            try {
+                fogEffect = new ParticleEffect();
+                fogEffect.load(Gdx.files.internal("particles/fog.p"), Gdx.files.internal("particles"));
+                fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+            } catch (Exception e) {
+                System.out.println("Failed to load fog particles. Effect disabled.");
+                fogEffect = null;
+            }
+        } else {
             fogEffect = null;
         }
+
         if (fallbackTexture == null) {
             Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
             p.setColor(Color.WHITE);
@@ -53,7 +64,10 @@ public class Fog extends Trap {
 
         if (effectActive) {
             currentEffectTime += delta;
-            fogEffect.update(delta);
+
+            if (fogEffect != null) {
+                fogEffect.update(delta);
+            }
 
             if (currentEffectTime >= effectDuration) {
                 deactivateEffect();
@@ -63,18 +77,21 @@ public class Fog extends Trap {
 
     @Override
     public void render(SpriteBatch batch) {
-        if (visible && fogTexture != null) {
-            batch.draw(fogTexture, bounds.x, bounds.y, bounds.width, bounds.height);
-        } else if (visible) {
-            batch.setColor(0.5f, 0.5f, 0.5f, 0.5f);
-            batch.draw(fallbackTexture, bounds.x, bounds.y, bounds.width, bounds.height);
-            batch.setColor(Color.WHITE);
+        if (!effectActive && visible) {
+            if (fogTexture != null) {
+                batch.draw(fogTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+            } else {
+                batch.setColor(Color.GRAY);
+                batch.draw(fallbackTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+                batch.setColor(Color.WHITE);
+            }
         }
 
         if (effectActive) {
             if (fogEffect != null) {
-                fogEffect.draw(batch, Gdx.graphics.getDeltaTime());
-            } else {
+                fogEffect.draw(batch);
+            }
+            else {
                 batch.setColor(0.8f, 0.8f, 0.8f, 0.5f);
                 float size = effectArea.radius * 2;
                 batch.draw(fallbackTexture, effectArea.x - effectArea.radius, effectArea.y - effectArea.radius, size, size);
@@ -91,14 +108,21 @@ public class Fog extends Trap {
             currentCooldown = cooldown;
             activated = true;
 
-            fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width/2, bounds.y + bounds.height/2);
-            fogEffect.start();
+            if (fogEffect != null) {
+                fogEffect.getEmitters().first().setPosition(bounds.x + bounds.width/2, bounds.y + bounds.height/2);
+                fogEffect.start();
+            }
+
+            System.out.println("Fog Activated!");
         }
     }
 
     private void deactivateEffect() {
         effectActive = false;
-        fogEffect.allowCompletion();
+
+        if (fogEffect != null) {
+            fogEffect.allowCompletion();
+        }
     }
 
     @Override
