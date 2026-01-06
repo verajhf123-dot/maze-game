@@ -199,3 +199,11 @@ $RECYCLE.BIN/
 
 ### Include gradle-wrapper
 !gradle/wrapper/gradle-wrapper.jar
+
+### IDE configurations
+# The content of this file depends on OS and the name of project folder,
+# it is very problematic to manage it with git.
+# However, this configuration is necessary to run the project straight from
+# IDE. All team members are supposed to configure it manually, see Artemis.
+# https://artemis.tum.de/courses/494/exercises/18415 Troubleshooting section.
+.idea/runConfigurations/Run_Game.xml
