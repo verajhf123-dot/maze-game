@@ -114,6 +114,7 @@ public class GameScreen implements Screen {
         initCommon();
     }
 
+
     private void initCommon() {
         settingsManager = new SettingsManager();
         camera = new OrthographicCamera();
