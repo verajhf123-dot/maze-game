@@ -28,7 +28,6 @@ import de.tum.cit.fop.maze.enemies.QiongQi;
 import de.tum.cit.fop.maze.enemies.ZhuLong;
 
 import java.util.List;
-import com.badlogic.gdx.graphics.Color;
 import de.tum.cit.fop.maze.Exit;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import de.tum.cit.fop.maze.ai.AStarPathFinder;
@@ -40,8 +39,10 @@ import java.util.Random;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.ArrayList;
-import com.badlogic.gdx.utils.Array;
-
+import de.tum.cit.fop.maze.items.Item;
+import de.tum.cit.fop.maze.items.Xiandan;
+import de.tum.cit.fop.maze.items.Yufengfu;
+import de.tum.cit.fop.maze.items.Jingangfu;
 import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
 
 /**
@@ -82,6 +83,7 @@ public class GameScreen implements Screen {
     private InputController controller;
     private Exit exit;
     private List<Key> keys;
+    private List<Item> items;
     private Door door;
     private Vector2 exitPosition;
     private Vector2 entryPosition;
@@ -235,7 +237,7 @@ public class GameScreen implements Screen {
             updateTraps(delta);
             updateEnemies(delta);
             updatePlayer(delta);
-
+            updateItems();
             checkCollisions();
             checkTrapActivation();
 
@@ -335,6 +337,15 @@ public class GameScreen implements Screen {
         for (Enemy enemy : enemies) {
             enemy.render(batch);
         }
+
+        // ===== 新增：绘制 Item =====
+        if (items != null) {
+            for (Item item : items) {
+                item.render(batch);
+            }
+        }
+
+
         if (keys != null) {
             for (Key k : keys) {
 
@@ -749,7 +760,17 @@ public class GameScreen implements Screen {
             keys.add(spawnSafeKey(true));
         }
 
+        items = new ArrayList<>();
 
+        // 测试用：先直接生成几个
+        Vector2 p1 = getRandomEmptyTile();
+        items.add(new Xiandan(p1.x * Wall.TILE_SIZE, p1.y * Wall.TILE_SIZE));
+
+        Vector2 p2 = getRandomEmptyTile();
+        items.add(new Yufengfu(p2.x * Wall.TILE_SIZE, p2.y * Wall.TILE_SIZE));
+
+        Vector2 p3 = getRandomEmptyTile();
+        items.add(new Jingangfu(p3.x * Wall.TILE_SIZE, p3.y * Wall.TILE_SIZE));
 
         System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
 
@@ -1086,7 +1107,17 @@ public class GameScreen implements Screen {
         return null;
     }
 
+    private void updateItems() {
+        if (items == null || player == null) return;
 
+        for (int i = items.size() - 1; i >= 0; i--) {
+            Item item = items.get(i);
+            if (player.getHitbox().overlaps(item.getBounds())) {
+                item.onPickup(player);
+                items.remove(i); // 拾取后消失
+            }
+        }
+    }
 
 
 
