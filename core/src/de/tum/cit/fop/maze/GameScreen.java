@@ -949,6 +949,7 @@ public class GameScreen implements Screen {
         }
 
         else if (level <= 3) {
+
             if (rand < 0.7) {
                 return new NineTailedFox(x, y);
             } else {
