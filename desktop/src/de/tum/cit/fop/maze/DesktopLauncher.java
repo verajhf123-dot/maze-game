@@ -11,13 +11,19 @@ import games.spooky.gdx.nativefilechooser.desktop.DesktopFileChooser;
  */
 public class DesktopLauncher {
 	/**
+     * *
 	 * The main method sets up the configuration for the game window and starts the application.
 	 *
 	 * @param arg Command line arguments (not used in this application)
 	 */
+
+
+
 	public static void main(String[] arg) {
 		// Configuration for the game window
+
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
+
 		config.setTitle("Maze Runner"); // Set the window title
 
 		// Get the display mode of the current monitor
