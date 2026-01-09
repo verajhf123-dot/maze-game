@@ -1279,6 +1279,7 @@ public class GameScreen implements Screen {
             }
         }
 
+
         if (door != null){
             door.dispose();
         }
