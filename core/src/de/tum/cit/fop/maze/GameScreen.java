@@ -43,6 +43,9 @@ import de.tum.cit.fop.maze.items.Item;
 import de.tum.cit.fop.maze.items.Xiandan;
 import de.tum.cit.fop.maze.items.Yufengfu;
 import de.tum.cit.fop.maze.items.Jingangfu;
+
+import com.badlogic.gdx.graphics.Texture;
+
 import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
 
 /**
@@ -55,6 +58,7 @@ public class GameScreen implements Screen {
     private int mapWidthInTiles;
     private int mapHeightInTiles;
     private boolean gameWon = false;
+
 
     private final MazeRunnerGame game;
     private  OrthographicCamera camera;
@@ -94,6 +98,14 @@ public class GameScreen implements Screen {
     private static final float SPAWN_INVULN_DURATION = 1.0f; // 1秒
     private com.badlogic.gdx.graphics.g2d.GlyphLayout layout;
     private SettingsManager settingsManager;
+    private int minX, maxX, minY, maxY;
+
+    private Texture floorTexture;
+    private Texture wallTexture;
+
+
+
+
 
 
 
@@ -269,24 +281,46 @@ public class GameScreen implements Screen {
 
         SpriteBatch batch = game.getSpriteBatch();
 
-        // =================================================
-        // 1️⃣ ShapeRenderer：所有“纯方块”的东西
-        // =================================================
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+// ✅【插入从这里开始】先画地面（batch）
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
 
-        // 墙
-        if (walls != null) {
-            shapeRenderer.setColor(Color.GRAY);
-            for (Wall wall : walls) {
-                shapeRenderer.rect(
-                        wall.worldX,
-                        wall.worldY,
+        for (int x = 0; x < mapWidthInTiles; x++) {
+            for (int y = 0; y < mapHeightInTiles; y++) {
+                batch.draw(
+                        floorTexture,
+                        x * Wall.TILE_SIZE,
+                        y * Wall.TILE_SIZE,
                         Wall.TILE_SIZE,
                         Wall.TILE_SIZE
                 );
             }
         }
+
+        batch.end();
+// ✅【插入到这里结束】
+
+// 1️⃣ ShapeRenderer：所有“纯方块”的东西
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        System.out.println("WORLD rect reached");
+
+
+
+        /*
+if (walls != null) {
+    shapeRenderer.setColor(Color.GRAY);
+    for (Wall wall : walls) {
+        shapeRenderer.rect(
+                wall.worldX,
+                wall.worldY,
+                Wall.TILE_SIZE,
+                Wall.TILE_SIZE
+        );
+    }
+}
+*/
+
 
         if (door != null) {
             shapeRenderer.setColor(Color.BLUE);
@@ -326,6 +360,22 @@ public class GameScreen implements Screen {
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
+
+        // ===== 墙贴图 =====
+        if (walls != null) {
+            for (Wall wall : walls) {
+                batch.draw(
+                        wallTexture,          // 你刚才生成/放进 assets 的 wall.png
+                        wall.worldX,
+                        wall.worldY,
+                        Wall.TILE_SIZE,
+                        Wall.TILE_SIZE
+                );
+            }
+        }
+
+
+
 
         if (traps != null) {
             for (Trap trap : traps) {
@@ -682,6 +732,10 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        floorTexture = new Texture(Gdx.files.internal("floor.png"));
+        wallTexture = new Texture(Gdx.files.internal("wall.png"));
+
+
         MapLoader loader = new MapLoader();
         shapeRenderer = new ShapeRenderer();
 
