@@ -27,11 +27,18 @@ public class SkillNode {
     private float speedBonus = 0;
     private float critChanceBonus = 0;
     private float dodgeChanceBonus = 0;
+    private float critDamageBonus = 0;
 
     private boolean unlocksDoubleJump = false;
     private boolean unlocksDash = false;
     private boolean unlocksFireResistance = false;
     private boolean unlocksPoisonResistance = false;
+    private boolean unlocksPhasing = false;
+
+    private float trapResistance = 0;
+    private float fogResistance = 0;
+    private float itemEffectBonus = 0;
+    private int extraLives = 0;
 
     private int gridX;
     private int gridY;
@@ -106,6 +113,10 @@ public class SkillNode {
     public float getDodgeChanceBonus() { return dodgeChanceBonus; }
     public void setDodgeChanceBonus(float chance) { this.dodgeChanceBonus = chance; }
 
+    // 新增：暴击伤害加成
+    public float getCritDamageBonus() { return critDamageBonus; }
+    public void setCritDamageBonus(float bonus) { this.critDamageBonus = bonus; }
+
     public boolean unlocksDoubleJump() { return unlocksDoubleJump; }
     public void setUnlocksDoubleJump(boolean unlocks) { this.unlocksDoubleJump = unlocks; }
 
@@ -117,6 +128,26 @@ public class SkillNode {
 
     public boolean unlocksPoisonResistance() { return unlocksPoisonResistance; }
     public void setUnlocksPoisonResistance(boolean resistance) { this.unlocksPoisonResistance = resistance; }
+
+    // 新增：穿墙能力
+    public boolean unlocksPhasing() { return unlocksPhasing; }
+    public void setUnlocksPhasing(boolean phasing) { this.unlocksPhasing = phasing; }
+
+    // 新增：陷阱抗性
+    public float getTrapResistance() { return trapResistance; }
+    public void setTrapResistance(float resistance) { this.trapResistance = resistance; }
+
+    // 新增：迷雾抗性
+    public float getFogResistance() { return fogResistance; }
+    public void setFogResistance(float resistance) { this.fogResistance = resistance; }
+
+    // 新增：物品效果加成
+    public float getItemEffectBonus() { return itemEffectBonus; }
+    public void setItemEffectBonus(float bonus) { this.itemEffectBonus = bonus; }
+
+    // 新增：额外生命
+    public int getExtraLives() { return extraLives; }
+    public void setExtraLives(int lives) { this.extraLives = lives; }
 
     public int getGridX() { return gridX; }
     public int getGridY() { return gridY; }

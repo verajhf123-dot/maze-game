@@ -12,6 +12,14 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
 
 public abstract class Enemy {
+    public enum EnemyState {
+        PATROL,      // 巡逻
+        CHASE,       // 追击
+        ATTACK,      // 攻击
+        RETREAT,     // 撤退
+        EVADE,       // 规避
+        STUNNED      // 眩晕
+    }
     protected Vector2 position;
     protected Vector2 velocity;
     protected Rectangle bounds;
@@ -26,19 +34,21 @@ public abstract class Enemy {
     protected AStarPathFinder pathFinder;
     protected List<Vector2> currentPath;
     protected int currentPathIndex;
-  
-    public Texture getTexture() {return texture;}
-    public Color getFallbackBodyColor(){
-        return Color.RED;
-    }
-  
-    protected float attackCooldown = 0.5f;  // 0.5秒打一次
+
+    protected EnemyState currentState = EnemyState.PATROL;
+    protected float stateTimer = 0f;
+    protected float retreatHealthThreshold = 0.3f;
+    protected float evadeCooldown = 3f;
+    protected float currentEvadeCooldown = 0f;
+    protected Player targetPlayer;
+
+    protected float attackCooldown = 0.5f;
     protected float attackTimer = 0f;
-    private static final float ATTACK_COOLDOWN_TIME = 0.8f; // 0.6~1.0都行
+    private static final float ATTACK_COOLDOWN_TIME = 0.8f;
 
+    protected float pathfindingCooldown = 0.5f;
+    protected float currentPathfindingCooldown = 0f;
 
-
-    
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2();
@@ -46,11 +56,16 @@ public abstract class Enemy {
         this.currentPathIndex = 0;
     }
 
+    public Texture getTexture() {return texture;}
+    public Color getFallbackBodyColor(){
+        return Color.RED;
+    }
+
     protected Texture safeLoadTexture(String path) {
         if (Gdx.files.internal(path).exists()) {
             return new Texture(Gdx.files.internal(path));
         } else {
-            return null; // 后续用 fallback 绘制方块
+            return null;
         }
     }
 
@@ -61,80 +76,161 @@ public abstract class Enemy {
     public void clearPath() {
         currentPath = null;
         currentPathIndex = 0;
-        velocity.set(0, 0); // 停止移动
+        velocity.set(0, 0);
     }
 
     public void setWalkableGrid(boolean[][] grid) {
-        // 这个方法可能不再需要，因为我们使用 PathFinder
-        // 但为了兼容性保留
     }
 
-    // 注意：这里有两个不同的 attack 方法
-    // 1. 这个接收 Player 参数
     public void attack(Player player) {
         if (player == null) return;
 
-        // 冷却没好：不攻击
         if (attackTimer > 0f) return;
 
+        float distance = position.dst(player.getPosition());
+        if (distance > attackRange) return;
+
         System.out.println("[ATTACK] " + this.getClass().getSimpleName()
-                + " playerHp=" + player.getHealth()
-                + " overlap=" + this.getBounds().overlaps(player.getHitbox()));
+                + " attacks player for " + attackDamage + " damage");
 
-        player.takeDamage(attackDamage);
+        float finalDamage = attackDamage;
 
-        // 攻击后进入冷却
+        if (Math.random() < 0.1f) {
+            finalDamage *= 1.5f;
+            System.out.println("ENEMY CRITICAL HIT!");
+        }
+
+        player.takeDamage(finalDamage);
+
         attackTimer = attackCooldown;
+
+        if (currentBehavior != null) {
+            currentBehavior.onAttack();
+        }
     }
 
-
-
-    // 2. 这个是抽象方法，由子类实现
     public abstract void attack();
-
-    // 删除重复的方法定义（第59-63行）
-    // public float getDetectionRange() {
-    //     return detectionRange;
-    // }
-    //
-    // public float getAttackRange() {
-    //     return attackRange;
-    // }
 
     public void setTargetPosition(Vector2 target) {
         findPathTo(target);
     }
 
-
-
     public void update(float delta) {
-        attackTimer = Math.max(0f, attackTimer - delta);
-
         if (!isAlive()) return;
 
-        // 更新位置
+        attackTimer = Math.max(0f, attackTimer - delta);
+        currentPathfindingCooldown = Math.max(0f, currentPathfindingCooldown - delta);
+        currentEvadeCooldown = Math.max(0f, currentEvadeCooldown - delta);
+        stateTimer += delta;
+
+        updateState(delta);
+
         position.add(velocity.x * delta, velocity.y * delta);
         bounds.setPosition(position.x, position.y);
 
-        // 更新AI行为
         if (currentBehavior != null) {
             currentBehavior.update(delta);
         }
 
-        // 沿路径移动
         if (currentPath != null && !currentPath.isEmpty()) {
             followPath(delta);
         }
 
-        // 边界检查
         keepInBounds();
+    }
+
+    private void updateState(float delta) {
+        if (targetPlayer == null) return;
+
+        float distanceToPlayer = position.dst(targetPlayer.getPosition());
+        float healthRatio = health / maxHealth;
+
+        switch (currentState) {
+            case PATROL:
+                if (distanceToPlayer <= detectionRange) {
+                    changeState(EnemyState.CHASE);
+                }
+                break;
+
+            case CHASE:
+                if (distanceToPlayer <= attackRange) {
+                    changeState(EnemyState.ATTACK);
+                } else if (distanceToPlayer > detectionRange * 1.5f) {
+                    changeState(EnemyState.PATROL);
+                }
+                break;
+
+            case ATTACK:
+                if (distanceToPlayer > attackRange) {
+                    changeState(EnemyState.CHASE);
+                } else if (healthRatio < retreatHealthThreshold) {
+                    changeState(EnemyState.RETREAT);
+                }
+                break;
+
+            case RETREAT:
+                if (stateTimer > 5f || distanceToPlayer > detectionRange * 2) {
+                    changeState(EnemyState.PATROL);
+                } else if (healthRatio > 0.5f && distanceToPlayer < attackRange) {
+                    changeState(EnemyState.ATTACK);
+                }
+                break;
+
+            case EVADE:
+                if (stateTimer > 1f) {
+                    changeState(previousState);
+                }
+                break;
+        }
+
+        if (currentEvadeCooldown <= 0 && distanceToPlayer < 50f && currentState != EnemyState.EVADE) {
+            if (Math.random() < 0.3f) {
+                changeState(EnemyState.EVADE);
+                currentEvadeCooldown = evadeCooldown;
+            }
+        }
+    }
+
+    private EnemyState previousState;
+
+    private void changeState(EnemyState newState) {
+        if (currentState == newState) return;
+
+        previousState = currentState;
+        System.out.println(this.getClass().getSimpleName() +
+                " state: " + currentState + " -> " + newState);
+        currentState = newState;
+        stateTimer = 0f;
+
+        switch (newState) {
+            case PATROL:
+                setBehavior(new de.tum.cit.fop.maze.ai.PatrolBehavior(this));
+                break;
+            case CHASE:
+            case ATTACK:
+                setBehavior(new de.tum.cit.fop.maze.ai.AttackBehavior(this, targetPlayer));
+                break;
+            case RETREAT:
+                setBehavior(new de.tum.cit.fop.maze.ai.RetreatBehavior(this));
+                if (currentBehavior instanceof de.tum.cit.fop.maze.ai.RetreatBehavior) {
+                    ((de.tum.cit.fop.maze.ai.RetreatBehavior) currentBehavior).setTargetPlayer(targetPlayer);
+                }
+                break;
+            case EVADE:
+                setBehavior(new de.tum.cit.fop.maze.ai.EvadeBehavior(this));
+                if (currentBehavior instanceof de.tum.cit.fop.maze.ai.EvadeBehavior) {
+                    ((de.tum.cit.fop.maze.ai.EvadeBehavior) currentBehavior).setTargetPlayer(targetPlayer);
+                }
+                break;
+            case STUNNED:
+                velocity.set(0, 0);
+                break;
+        }
     }
 
     private void followPath(float delta) {
         if (currentPathIndex >= currentPath.size()) {
-            currentPath = null;
-            currentPathIndex = 0;
-            velocity.set(0, 0);
+            clearPath();
             return;
         }
 
@@ -150,7 +246,6 @@ public abstract class Enemy {
     }
 
     private void keepInBounds() {
-        // 确保敌人在地图边界内
         if (position.x < 0) position.x = 0;
         if (position.y < 0) position.y = 0;
         if (position.x > 800 - bounds.width) position.x = 800 - bounds.width;
@@ -162,9 +257,12 @@ public abstract class Enemy {
     }
 
     public void findPathTo(Vector2 target) {
+        if (currentPathfindingCooldown > 0) return;
+
         if (pathFinder != null) {
             currentPath = pathFinder.findPath(position, target);
             currentPathIndex = 0;
+            currentPathfindingCooldown = pathfindingCooldown;
         }
     }
 
@@ -176,13 +274,16 @@ public abstract class Enemy {
         health -= damage;
         if (health <= 0) {
             onDeath();
+        } else {
+            if (Math.random() < 0.2f && currentState != EnemyState.EVADE) {
+                changeState(EnemyState.EVADE);
+            }
         }
     }
 
     public abstract void render(SpriteBatch batch);
     protected abstract void onDeath();
 
-    // Getters - 这些已经在下文定义了，不要重复
     public Vector2 getPosition() { return position; }
     public Rectangle getBounds() { return bounds; }
     public float getSpeed() { return speed; }
@@ -190,6 +291,7 @@ public abstract class Enemy {
     public float getAttackRange() { return attackRange; }
     public float getDetectionRange() { return detectionRange; }
     public void setVelocity(float x, float y) { velocity.set(x, y); }
+
     public float getX() {
         return bounds.x;
     }
@@ -209,18 +311,49 @@ public abstract class Enemy {
     public float getMaxHealth() {
         return maxHealth;
     }
+    public float getAttackDamage() { return attackDamage; }
+
+    public void setTargetPlayer(Player player) {
+        this.targetPlayer = player;
+    }
+
+    public Player getTargetPlayer() {
+        return targetPlayer;
+    }
+
+    public EnemyState getCurrentState() {
+        return currentState;
+    }
+
+    public boolean isInAttackRange() {
+        if (targetPlayer == null) return false;
+        float distance = position.dst(targetPlayer.getPosition());
+        return distance <= attackRange;
+    }
+
+    public boolean isInDetectionRange() {
+        if (targetPlayer == null) return false;
+        float distance = position.dst(targetPlayer.getPosition());
+        return distance <= detectionRange;
+    }
+
+    public float getHealthRatio() {
+        return health / maxHealth;
+    }
 
     public void adjustDifficulty(int level) {
-        // 1. 基础血量 + 等级系数 (等级越高，血量越厚)
         this.maxHealth = 50 + (level * 20);
         this.health = this.maxHealth;
 
-        // 2. 基础伤害 + 等级系数 (等级越高，打人越疼)
         this.attackDamage = 5 + (level * 2);
 
-        // 3. 速度小幅提升 (保持可控，防止玩家完全跑不掉)
         this.speed = 80f + (level * 5f);
 
-        System.out.println(this.getClass().getSimpleName() + " HP=" + maxHealth + ", DMG=" + attackDamage);
+        this.retreatHealthThreshold = Math.max(0.1f, 0.3f - (level * 0.02f));
+
+        System.out.println(this.getClass().getSimpleName() +
+                " adjusted - HP=" + maxHealth +
+                ", DMG=" + attackDamage +
+                ", Retreat at " + (retreatHealthThreshold * 100) + "%");
     }
 }

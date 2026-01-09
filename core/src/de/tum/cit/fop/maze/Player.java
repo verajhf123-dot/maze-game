@@ -37,10 +37,7 @@ public class Player implements CollidableEntity {
     private static final float DAMAGE_COOLDOWN = 0.5f; // 0.5秒内只吃一次伤害
     private float damageColorTimer = 0f;
 
-    private float speedBuffTimer = 0f;
-    private float speedBuffMultiplier = 1f;
 
-    private boolean hasFatalProtection = false;
 
 
     public Player(float x, float y) {
@@ -73,15 +70,6 @@ public class Player implements CollidableEntity {
 
 
     public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run, List<Wall> walls) {
-
-        if (speedBuffTimer > 0f) {
-            speedBuffTimer -= delta;
-            if (speedBuffTimer <= 0f) {
-                speedBuffMultiplier = 1f; // 还原移速
-            }
-        }
-
-
         if (damageColorTimer > 0) {
             damageColorTimer -= delta;
         }
@@ -91,7 +79,13 @@ public class Player implements CollidableEntity {
             if (hurtTimer <= 0) isHurt = false;
         }
 
-        float currentSpeed = speed * speedBuffMultiplier * (run ? runMultiplier : 1f);
+        float speedMultiplier = 1.0f;
+        if (stats != null && stats.getSkillTree() != null) {
+            speedMultiplier += stats.getSkillTree().getTotalSpeedBonus();
+        }
+
+        float currentSpeed = speed * (run ? runMultiplier : 1f) * speedMultiplier;
+
         velocity.set(0, 0);
 
         // 2. 根据按键设置速度和朝向
@@ -172,18 +166,10 @@ public class Player implements CollidableEntity {
 
     public void takeDamage(float dmg) {
         if (getHealth() <= 0) return;
+
         if (damageCooldownTimer > 0f) return;
 
-        int damage = Math.round(dmg);
-
-        // === 金刚符：免疫一次致死伤害 ===
-        if (hasFatalProtection && damage >= stats.getHealth()) {
-            hasFatalProtection = false;
-            stats.takeDamage(stats.getHealth() - 1); // 保留1点血
-        } else {
-            stats.takeDamage(damage);
-        }
-
+        stats.takeDamage(Math.round(dmg));
         isHurt = true;
         hurtTimer = 0.25f;
         damageCooldownTimer = DAMAGE_COOLDOWN;
@@ -225,20 +211,6 @@ public class Player implements CollidableEntity {
 
     public void dispose() {
         texture.dispose();
-    }
-
-    public void healByPercentage(float percent) {
-        float heal = stats.getMaxHealth() * percent;
-        stats.heal(Math.round(heal));
-    }
-
-    public void applySpeedBuff(float multiplier, float duration) {
-        speedBuffMultiplier = multiplier;
-        speedBuffTimer = duration;
-    }
-
-    public void enableFatalProtection() {
-        hasFatalProtection = true;
     }
 }
 
