@@ -8,3 +8,4 @@ public interface CollidableEntity {
     Vector2 getPosition();
     void syncPositionToHitbox();
 }
+

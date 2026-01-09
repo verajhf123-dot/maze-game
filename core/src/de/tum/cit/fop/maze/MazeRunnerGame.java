@@ -116,6 +116,7 @@ public class MazeRunnerGame extends Game {
         characterDownAnimation = new Animation<>(0.1f, walkFrames);
     }
 
+
     /**
      * Cleans up resources when the game is disposed.
      */

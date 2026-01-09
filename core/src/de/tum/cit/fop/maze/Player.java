@@ -15,6 +15,7 @@ public class Player implements CollidableEntity {
     private Texture texture;
     private TextureRegion currentFrame;
 
+
     private TextureRegion downFrame;
     private TextureRegion upFrame;
     private TextureRegion leftFrame;

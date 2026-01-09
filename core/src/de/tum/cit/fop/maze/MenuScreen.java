@@ -76,6 +76,7 @@ public class MenuScreen implements Screen {
             });
         }
 
+
         // Create and add a button to go to the game screen
         TextButton goToGameButton = new TextButton("New Game", game.getSkin());
         table.add(goToGameButton).width(300).padBottom(15).row();

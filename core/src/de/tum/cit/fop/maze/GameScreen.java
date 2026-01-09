@@ -388,11 +388,14 @@ public class GameScreen implements Screen {
 
         if (door != null) door.render(batch);
 
+
         if (player != null) {
             player.render(batch);
+
         }
 
         batch.end();
+
 
 
         shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);

@@ -89,6 +89,7 @@ public class SettingsScreen implements Screen {
         int currentKeyCode = settings.getKey(keyName);
         String keyString = Input.Keys.toString(currentKeyCode); // 把数字变成 "W", "UP" 等文字
 
+
         final TextButton keyButton = new TextButton(keyString, game.getSkin());
 
         // 点击按钮后的逻辑

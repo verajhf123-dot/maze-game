@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 
+
 public class HelpScreen implements Screen {
 
     private final MazeRunnerGame game;
