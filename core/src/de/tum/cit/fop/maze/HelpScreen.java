@@ -39,6 +39,11 @@ public class HelpScreen implements Screen {
                         "Run: Hold SHIFT\n" +
                         "Pause: ESC\n" +
                         "Zoom: I / O\n\n" +
+                        "COMBAT SKILLS:\n" +
+                        "Q - Fireball: Launch fireball at nearest enemy\n" +
+                        "E - Healing Aura: Restore health\n" +
+                        "R - Chain Lightning: Attack multiple enemies\n" +
+                        "T - Open Skill Tree\n\n" +
                         "OBJECTIVE:\n" +
                         "1. Find the Key to unlock the Exit.\n" +
                         "2. Avoid monsters and traps.\n" +

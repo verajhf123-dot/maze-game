@@ -9,24 +9,26 @@ import com.badlogic.gdx.math.Vector2;
 
 import java.util.List;
 
-
 public class Player implements CollidableEntity {
 
     private Texture texture;
     private TextureRegion currentFrame;
-
 
     private TextureRegion downFrame;
     private TextureRegion upFrame;
     private TextureRegion leftFrame;
     private TextureRegion rightFrame;
 
-
     private Vector2 position;
     private Vector2 velocity;
 
     private float speed = 120f;
     private float runMultiplier = 1.6f;
+
+    // 速度增益相关变量
+    private float speedBuffMultiplier = 1.0f;
+    private float speedBuffTimer = 0.0f;
+    private float originalSpeed = 120f;
 
     private boolean isHurt = false;
     private float hurtTimer = 0;
@@ -35,11 +37,14 @@ public class Player implements CollidableEntity {
 
     private PlayerStats stats;
     private float damageCooldownTimer = 0f;
-    private static final float DAMAGE_COOLDOWN = 0.5f; // 0.5秒内只吃一次伤害
+    private static final float DAMAGE_COOLDOWN = 0.5f;
     private float damageColorTimer = 0f;
 
-
-
+    private boolean isInvincible = false;
+    private float invincibleTimer = 0f;
+    private static final float INVINCIBLE_DURATION = 3.0f;
+    private float blinkTimer = 0f;
+    private static final float BLINK_SPEED = 10f;
 
     public Player(float x, float y) {
         this.texture = new Texture("character.png");
@@ -51,29 +56,43 @@ public class Player implements CollidableEntity {
             upFrame = tmp[2][0];
             leftFrame = tmp[3][0];
         } else {
-            // 保底防止报错
             downFrame = new TextureRegion(texture, 0, 0, 16, 32);
             rightFrame = downFrame;
             upFrame = downFrame;
             leftFrame = downFrame;
         }
 
-        // 默认初始面朝下
         this.currentFrame = downFrame;
 
-        // ... 后面的代码保持不变 ...
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
         this.stats = new PlayerStats();
         this.hitbox = new Rectangle(x, y, 14, 14);
+        this.originalSpeed = speed;
     }
 
-
-
     public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run, List<Wall> walls) {
+        if (isInvincible) {
+            invincibleTimer -= delta;
+            blinkTimer += delta * BLINK_SPEED;
+            if (invincibleTimer <= 0) {
+                isInvincible = false;
+                System.out.println("Invincibility ended");
+            }
+        }
+
+        if (speedBuffTimer > 0) {
+            speedBuffTimer -= delta;
+            if (speedBuffTimer <= 0) {
+                speedBuffMultiplier = 1.0f;
+                System.out.println("Speed buff ended");
+            }
+        }
+
         if (damageColorTimer > 0) {
             damageColorTimer -= delta;
         }
+
         damageCooldownTimer = Math.max(0f, damageCooldownTimer - delta);
         if (isHurt) {
             hurtTimer -= delta;
@@ -85,11 +104,10 @@ public class Player implements CollidableEntity {
             speedMultiplier += stats.getSkillTree().getTotalSpeedBonus();
         }
 
-        float currentSpeed = speed * (run ? runMultiplier : 1f) * speedMultiplier;
+        float currentSpeed = speed * (run ? runMultiplier : 1f) * speedMultiplier * speedBuffMultiplier;
 
         velocity.set(0, 0);
 
-        // 2. 根据按键设置速度和朝向
         if (up) {
             velocity.y = currentSpeed;
             currentFrame = upFrame;
@@ -106,12 +124,13 @@ public class Player implements CollidableEntity {
             velocity.x = currentSpeed;
             currentFrame = rightFrame;
         }
+
         float oldX = hitbox.x;
         hitbox.x += velocity.x * delta;
         if (walls != null) {
             for (Wall wall : walls) {
                 if (hitbox.overlaps(wall.getBounds())) {
-                    hitbox.x = oldX; // 撞墙，退回
+                    hitbox.x = oldX;
                     break;
                 }
             }
@@ -122,7 +141,7 @@ public class Player implements CollidableEntity {
         if (walls != null) {
             for (Wall wall : walls) {
                 if (hitbox.overlaps(wall.getBounds())) {
-                    hitbox.y = oldY; // 撞墙，退回
+                    hitbox.y = oldY;
                     break;
                 }
             }
@@ -130,26 +149,27 @@ public class Player implements CollidableEntity {
 
         this.position.set(hitbox.x, hitbox.y);
 
-        // 4. 边界检查
         if (position.x < 0) position.x = 0;
         if (position.y < 0) position.y = 0;
         hitbox.setPosition(position.x, position.y);
-
-
     }
 
     public void triggerDamageVFX() {
-        this.damageColorTimer = 1.0f; // 设置特效持续时间为1秒
+        this.damageColorTimer = 1.0f;
     }
-
 
     public void render(SpriteBatch batch) {
         if (currentFrame == null) return;
 
-        if (damageColorTimer > 0) {
+        if (isInvincible) {
+            float alpha = (float) (Math.sin(blinkTimer) * 0.5 + 0.5);
+            batch.setColor(1.0f, 1.0f, 0.5f, alpha);
+        }
+        else if (damageColorTimer > 0) {
             batch.setColor(Color.RED);
-        } else {
-            batch.setColor(Color.WHITE); // 确保非受伤状态是正常的 [cite: 27]
+        }
+        else {
+            batch.setColor(Color.WHITE);
         }
 
         float drawWidth = 32f;
@@ -159,13 +179,14 @@ public class Player implements CollidableEntity {
 
         batch.draw(currentFrame, drawX, drawY, drawWidth, drawHeight);
         batch.setColor(Color.WHITE);
-
     }
 
-
-
-
     public void takeDamage(float dmg) {
+        if (isInvincible) {
+            System.out.println("Invincible! Damage ignored: " + dmg);
+            return;
+        }
+
         if (getHealth() <= 0) return;
 
         if (damageCooldownTimer > 0f) return;
@@ -178,8 +199,23 @@ public class Player implements CollidableEntity {
     }
 
 
+    public void healByPercentage(float percentage) {
+        if (stats == null) return;
 
-    // 添加 getHealth 和 getMaxHealth 方法（GameScreen 需要这些）
+        int maxHealth = stats.getMaxHealth();
+        int healAmount = (int)(maxHealth * percentage);
+
+        stats.heal(healAmount);
+        System.out.println("Healed by " + (percentage * 100) + "% (" + healAmount + " HP)");
+    }
+
+
+    public void applySpeedBuff(float multiplier, float duration) {
+        this.speedBuffMultiplier = multiplier;
+        this.speedBuffTimer = duration;
+        System.out.println("Speed buff applied: " + multiplier + "x for " + duration + " seconds");
+    }
+
     public float getHealth() {
         return stats.getHealth();
     }
@@ -196,7 +232,6 @@ public class Player implements CollidableEntity {
         this.position.set(hitbox.x, hitbox.y);
     }
 
-
     public Rectangle getHitbox() {
         return hitbox;
     }
@@ -205,7 +240,6 @@ public class Player implements CollidableEntity {
         return stats;
     }
 
-
     public com.badlogic.gdx.math.Vector2 getPosition() {
         return position;
     }
@@ -213,7 +247,48 @@ public class Player implements CollidableEntity {
     public void dispose() {
         texture.dispose();
     }
+
+    public void enableInvincibility(float duration) {
+        this.isInvincible = true;
+        this.invincibleTimer = duration;
+        this.blinkTimer = 0f;
+        System.out.println("Invincibility enabled for " + duration + " seconds!");
+    }
+
+    public void enableFatalProtection() {
+        enableInvincibility(INVINCIBLE_DURATION);
+    }
+
+    public void quickInvincibility(float duration) {
+        if (!isInvincible || invincibleTimer < duration) {
+            enableInvincibility(duration);
+        }
+    }
+
+    public boolean isInvincible() {
+        return isInvincible;
+    }
+
+    public float getInvincibleTimeLeft() {
+        return Math.max(0f, invincibleTimer);
+    }
+
+    public void cancelInvincibility() {
+        this.isInvincible = false;
+        this.invincibleTimer = 0f;
+    }
+
+    public void autoQuickInvincibility() {
+        if (!isInvincible) {
+            quickInvincibility(0.3f); // 0.3秒短暂无敌
+        }
+    }
+
+    public float getSpeedBuffMultiplier() {
+        return speedBuffMultiplier;
+    }
+
+    public float getSpeedBuffTimeLeft() {
+        return Math.max(0f, speedBuffTimer);
+    }
 }
-
-
-
