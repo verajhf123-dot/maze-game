@@ -12,6 +12,7 @@ public class SaveManager {
         SaveData data = new SaveData(level, health, hasKey);
 
 
+
         FileHandle file = Gdx.files.local(SAVE_FILE);
         file.writeString(json.toJson(data), false);
 

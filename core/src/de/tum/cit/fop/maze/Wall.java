@@ -8,6 +8,7 @@ public class Wall  {
     public final float worldX;
     public final float worldY;
 
+
     public static final float TILE_SIZE = 32f;
 
     private final Rectangle bounds;

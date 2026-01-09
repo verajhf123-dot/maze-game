@@ -5,6 +5,7 @@ import com.badlogic.gdx.Preferences;
 import java.util.ArrayList;
 import java.util.Collections;
 
+
 public class HighScoreManager {
     private static final Preferences prefs = Gdx.app.getPreferences("MyMazeScores");
 

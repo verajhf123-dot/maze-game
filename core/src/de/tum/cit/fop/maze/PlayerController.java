@@ -15,6 +15,7 @@ public class PlayerController {
         return Gdx.input.isKeyPressed(settings.getKey("move_up"));
     }
 
+
     public boolean down() {
         return Gdx.input.isKeyPressed(settings.getKey("move_down"));
     }

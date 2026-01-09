@@ -19,6 +19,7 @@ public class ResultScreen implements Screen {
     private final int currentLevel;
     private final int score;
 
+
     public ResultScreen(MazeRunnerGame game, boolean isVictory, int currentLevel, int score) {
         this.game = game;
         this.isVictory = isVictory;

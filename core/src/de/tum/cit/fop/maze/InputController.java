@@ -10,6 +10,7 @@ public class InputController {
     private int keyUp, keyDown, keyLeft, keyRight, keyRun;
 
 
+
     public InputController(SettingsManager settingsManager) {
         this.settingsManager = settingsManager;
         updateKeyBindings();

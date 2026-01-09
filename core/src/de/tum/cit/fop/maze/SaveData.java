@@ -12,6 +12,7 @@ public class SaveData {
     public SaveData() {}
 
 
+
     public SaveData(int level, float health, boolean hasKey) {
         this.currentLevel = level;
         this.playerHealth = health;
