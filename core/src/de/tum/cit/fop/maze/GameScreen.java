@@ -1270,6 +1270,7 @@ public class GameScreen implements Screen {
 
         // ========== 新增：清理陷阱资源 ==========
         if (traps != null) {
+
             for (Trap trap : traps) {
                 if (trap instanceof Fog) {
                     ((Fog) trap).dispose();
