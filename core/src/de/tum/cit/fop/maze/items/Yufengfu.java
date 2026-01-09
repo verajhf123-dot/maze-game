@@ -23,3 +23,4 @@ public class Yufengfu extends Item {
         player.applySpeedBuff(1.2f, 20f);
     }
 }
+
