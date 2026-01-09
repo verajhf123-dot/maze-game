@@ -2,6 +2,7 @@ package de.tum.cit.fop.maze;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -11,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.audio.Sound;
 
 public class ResultScreen implements Screen {
     private final MazeRunnerGame game;
@@ -18,6 +20,8 @@ public class ResultScreen implements Screen {
     private final boolean isVictory;
     private final int currentLevel;
     private final int score;
+    private Music resultMusic;
+    private Sound buttonSound;
 
 
     public ResultScreen(MazeRunnerGame game, boolean isVictory, int currentLevel, int score) {
@@ -32,6 +36,23 @@ public class ResultScreen implements Screen {
     public void show() {
         Gdx.input.setInputProcessor(stage); // 必须开启输入处理
 
+        try {
+            if (isVictory) {
+                resultMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/orchestral-win-331233.mp3"));
+            } else {
+                resultMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/game-over-417465.mp3"));
+            }
+            resultMusic.setLooping(false);
+            resultMusic.play();
+
+            buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
+
+        } catch (Exception e) {
+            System.out.println("Error loading result music: " + e.getMessage());
+        }
+
+
+
         Table table = new Table();
         table.setFillParent(true);
         stage.addActor(table);
@@ -43,15 +64,16 @@ public class ResultScreen implements Screen {
         table.add(titleLabel).padBottom(20).row();
 
         // 2. 分数
-        Label scoreLabel = new Label("Total Journey Score: " + score, game.getSkin());
+        Label scoreLabel = new Label("Total Journey Scores: " + score, game.getSkin());
         table.add(scoreLabel).padBottom(40).row();
 
-        // 3. 动态按钮 (下一关 或 重试)
+        // 3.
         if (isVictory) {
             TextButton nextBtn = new TextButton("Next Level", game.getSkin());
             nextBtn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
+                    playClickAndStopMusic();
                    game.goToGame(currentLevel+1);
 
                 }
@@ -62,6 +84,7 @@ public class ResultScreen implements Screen {
             retryBtn.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
+                    playClickAndStopMusic();
                     game.resetGlobalScore();
                     game.goToGame(1);// 重新加载当前关卡
                 }
@@ -74,10 +97,17 @@ public class ResultScreen implements Screen {
         menuBtn.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                playClickAndStopMusic();
                 game.goToMenu();
             }
         });
         table.add(menuBtn).width(300).row();
+    }
+
+
+    private void playClickAndStopMusic() {
+        if (buttonSound != null) buttonSound.play();
+        if (resultMusic != null) resultMusic.stop();
     }
 
     @Override

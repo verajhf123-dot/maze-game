@@ -27,6 +27,7 @@ public class MazeRunnerGame extends Game {
     // UI Skin
     private Skin skin;
 
+
     public int globalScore =0;
 
 
@@ -65,12 +66,32 @@ public class MazeRunnerGame extends Game {
 
         // Play some background music
         // Background sound
-        backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("background.mp3"));
-        backgroundMusic.setLooping(true);
-        backgroundMusic.play();
+        try {
+            backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/menu_music.mp3"));
+            backgroundMusic.setLooping(true);
+            backgroundMusic.setVolume(0.5f);
+            playMenuMusic();
+        } catch (Exception e) {
+            System.out.println("Error loading menu music: " + e.getMessage());
+        }
 
         goToMenu(); // Navigate to the menu screen
     }
+
+    public void playMenuMusic() {
+        if (backgroundMusic != null && !backgroundMusic.isPlaying()) {
+            backgroundMusic.play();
+        }
+    }
+
+    /** 停止菜单音乐 */
+    public void stopMenuMusic() {
+        if (backgroundMusic != null && backgroundMusic.isPlaying()) {
+            backgroundMusic.stop();
+        }
+    }
+
+
 
     // to update Music;
     public Music getBackgroundMusic() {
@@ -128,6 +149,9 @@ public class MazeRunnerGame extends Game {
 
         if (skin != null) {
             skin.dispose();
+        }
+        if (backgroundMusic != null) {
+            backgroundMusic.dispose();
         }
     }
 

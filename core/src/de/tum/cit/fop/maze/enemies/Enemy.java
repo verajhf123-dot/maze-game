@@ -211,15 +211,11 @@ public abstract class Enemy {
     }
 
     public void adjustDifficulty(int level) {
-        // 1. 基础血量 + 等级系数 (等级越高，血量越厚)
-        this.maxHealth = 50 + (level * 20);
+
+        this.maxHealth = 30 + (level * 10);
         this.health = this.maxHealth;
-
-        // 2. 基础伤害 + 等级系数 (等级越高，打人越疼)
-        this.attackDamage = 5 + (level * 2);
-
-        // 3. 速度小幅提升 (保持可控，防止玩家完全跑不掉)
-        this.speed = 80f + (level * 5f);
+        this.attackDamage = 5 + (level * 1.5f);
+        this.speed = 80f + (level * 2f);
 
         System.out.println(this.getClass().getSimpleName() + " HP=" + maxHealth + ", DMG=" + attackDamage);
     }
