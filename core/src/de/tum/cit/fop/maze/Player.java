@@ -38,6 +38,12 @@ public class Player implements CollidableEntity {
     private static final float DAMAGE_COOLDOWN = 0.5f; // 0.5秒内只吃一次伤害
     private float damageColorTimer = 0f;
 
+    private float speedBuffTimer = 0f;       // Buff 剩余时间
+    private float speedBuffMultiplier = 1.0f; // 当前的加速倍率 (1.0表示正常)
+
+    private boolean isInvincible = false;
+    private float invincibleTimer = 0f;
+
 
 
 
@@ -80,12 +86,31 @@ public class Player implements CollidableEntity {
             if (hurtTimer <= 0) isHurt = false;
         }
 
+
+        if (isInvincible) {
+            invincibleTimer -= delta;
+            if (invincibleTimer <= 0) {
+                isInvincible = false; // 时间到，取消无敌
+                System.out.println("Jingangfu expired.");
+            }
+        }
+
+
+        if (speedBuffTimer > 0) {
+            speedBuffTimer -= delta;
+            if (speedBuffTimer <= 0) {
+                speedBuffMultiplier = 1.0f; // 时间到，恢复正常
+                System.out.println("Speed Buff Ended.");
+            }
+        }
+
+
         float speedMultiplier = 1.0f;
         if (stats != null && stats.getSkillTree() != null) {
             speedMultiplier += stats.getSkillTree().getTotalSpeedBonus();
         }
 
-        float currentSpeed = speed * (run ? runMultiplier : 1f) * speedMultiplier;
+        float currentSpeed = speed * (run ? runMultiplier : 1f) * speedMultiplier*this.speedBuffMultiplier ;
 
         velocity.set(0, 0);
 
@@ -168,14 +193,56 @@ public class Player implements CollidableEntity {
     public void takeDamage(float dmg) {
         if (getHealth() <= 0) return;
 
-        if (damageCooldownTimer > 0f) return;
+        if (isInvincible) {
+            System.out.println("Damage Blocked by Jingangfu!");
+            return;
+        }
 
+        if (damageCooldownTimer > 0f) return;
         stats.takeDamage(Math.round(dmg));
         isHurt = true;
         hurtTimer = 0.25f;
         damageCooldownTimer = DAMAGE_COOLDOWN;
         triggerDamageVFX();
+
+
+
     }
+
+
+    public void heal(float amount) {
+        if (stats != null) {
+            stats.heal((int) amount);
+        }
+    }
+
+    public void healByPercentage(float percentage) {
+        if (stats != null) {
+            float amount = stats.getMaxHealth() * percentage;
+            heal(amount);
+        }
+    }
+
+
+    public void applySpeedBuff(float multiplier, float duration) {
+        this.speedBuffMultiplier = multiplier; // 设置倍率 (比如 1.2)
+        this.speedBuffTimer = duration;        // 设置持续时间 (比如 20秒)
+        System.out.println("Speed Buff Activated! Speed x" + multiplier);
+    }
+
+
+
+    public void enableFatalProtection() {
+        this.isInvincible = true;
+        this.invincibleTimer = 10.0f; // 设定无敌时间，例如 10 秒
+        System.out.println("Jingangfu Activated! You are INVINCIBLE!");
+    }
+
+
+
+
+
+
 
 
 

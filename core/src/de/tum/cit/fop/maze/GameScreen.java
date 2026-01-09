@@ -67,8 +67,8 @@ public class GameScreen implements Screen {
 
 
     private final MazeRunnerGame game;
-    private  OrthographicCamera camera;
-    private  BitmapFont font;
+    private OrthographicCamera camera;
+    private BitmapFont font;
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
     private float sinusInput = 0f;
@@ -109,10 +109,6 @@ public class GameScreen implements Screen {
     private Texture wallTexture;
 
 
-
-
-
-
     private Music mapMusic;
     private Music pauseMusic;
 
@@ -122,9 +118,8 @@ public class GameScreen implements Screen {
     private com.badlogic.gdx.audio.Sound buttonSound;
     private com.badlogic.gdx.audio.Sound mechanismSound; // 机关声音
     private com.badlogic.gdx.audio.Sound keySound;       // 钥匙声音
-    private float fogSoundTimer = 0f;                    // 迷雾声音的冷却计时器
-
-
+    private float fogSoundTimer = 0f;// 迷雾声音的冷却计时器
+    private List<Item> items;
 
 
     /**
@@ -133,7 +128,7 @@ public class GameScreen implements Screen {
      * @param game The main game class, used to access global resources and methods.
      */
     public GameScreen(MazeRunnerGame game) {
-        this(game,1);// 默认进 Level 1
+        this(game, 1);// 默认进 Level 1
     }
 
 
@@ -148,11 +143,11 @@ public class GameScreen implements Screen {
         settingsManager = new SettingsManager();
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
-        camera.position.set(240,160,0);
+        camera.position.set(240, 160, 0);
         camera.zoom = 0.45f;
         font = new BitmapFont();
         font.getData().setScale(1f);
-        font =  new BitmapFont();
+        font = new BitmapFont();
 
         controller = new InputController(settingsManager);
         enemies = new Array<>();
@@ -163,7 +158,7 @@ public class GameScreen implements Screen {
 
     }
 
-    public GameScreen(MazeRunnerGame game,String mapFilePath) {
+    public GameScreen(MazeRunnerGame game, String mapFilePath) {
         this.game = game;
         this.levelNumber = 0;
         this.currentMapPath = mapFilePath;
@@ -178,11 +173,11 @@ public class GameScreen implements Screen {
         pauseMenuTable.center();
         pauseMenuTable.setDebug(false);
 
-        Label pauseLable = new Label("Game PAUSED", game.getSkin(),"title");
+        Label pauseLable = new Label("Game PAUSED", game.getSkin(), "title");
         pauseMenuTable.add(pauseLable).padBottom(40).row();
 
         TextButton resumeButton = new TextButton("Resume", game.getSkin());
-        resumeButton.addListener(new  ChangeListener() {
+        resumeButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
                 if (buttonSound != null) buttonSound.play();
                 togglePause();
@@ -191,7 +186,7 @@ public class GameScreen implements Screen {
         pauseMenuTable.add(resumeButton).width(250).padBottom(15).row();
 
         TextButton musicButton = new TextButton("Music:ON/OFF", game.getSkin());
-        musicButton.addListener(new   ChangeListener() {
+        musicButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
                 Music music = game.getBackgroundMusic();
                 if (music != null) {
@@ -224,17 +219,18 @@ public class GameScreen implements Screen {
 
         uiStage.addActor(pauseMenuTable);
     }
+
     // switch the pauseState
     private void togglePause() {
         Music music = game.getBackgroundMusic();
-        if(currentState==GameState.RUNNING) {
+        if (currentState == GameState.RUNNING) {
             currentState = GameState.PAUSED;
             pauseMenuTable.setVisible(true);
             Gdx.input.setInputProcessor(uiStage);
             if (mapMusic != null) mapMusic.pause();
             if (pauseMusic != null) pauseMusic.play();
 
-        }else{
+        } else {
             currentState = GameState.RUNNING;
             pauseMenuTable.setVisible(false);
             Gdx.input.setInputProcessor(null);
@@ -243,7 +239,6 @@ public class GameScreen implements Screen {
 
         }
     }
-
 
 
     // Screen interface methods with necessary functionality
@@ -437,8 +432,6 @@ if (walls != null) {
         }
 
 
-
-
         if (traps != null) {
             for (Trap trap : traps) {
                 if (trap.hasTexture()) trap.render(batch);
@@ -477,7 +470,6 @@ if (walls != null) {
         batch.end();
 
 
-
         shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -506,12 +498,12 @@ if (walls != null) {
         drawHUD(batch);
         batch.end();
 
-        if(currentState==GameState.PAUSED) {
+        if (currentState == GameState.PAUSED) {
             Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
             shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(0, 0, 0, 0.5f);
-            shapeRenderer.rect(0,0,Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+            shapeRenderer.rect(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
             shapeRenderer.end();
             Gdx.gl.glDisable(Gdx.gl.GL_BLEND);
             // draw the button
@@ -520,13 +512,7 @@ if (walls != null) {
         }
 
 
-
     }
-
-
-
-
-
 
 
     private void winGame() {
@@ -534,11 +520,11 @@ if (walls != null) {
         if (gameWon) return;
         gameWon = true;
 
-        int levelBonus = 1000 + (int)player.getHealth() * 5 - (int)gameTime;
+        int levelBonus = 1000 + (int) player.getHealth() * 5 - (int) gameTime;
         if (levelBonus < 0) levelBonus = 0;
         game.globalScore += levelBonus;
 
-        if(mapMusic!=null) mapMusic.stop();
+        if (mapMusic != null) mapMusic.stop();
 
 
         game.setScreen(new ResultScreen(game, true, levelNumber, game.globalScore));
@@ -586,10 +572,9 @@ if (walls != null) {
     }
 
 
-
     private void updateEnemies(float delta) {
         for (Enemy enemy : enemies) {
-            if (! enemy.isAlive()) {
+            if (!enemy.isAlive()) {
                 continue;
             }
             enemy.update(delta);
@@ -604,7 +589,7 @@ if (walls != null) {
                     enemy.findPathTo(player.getPosition());
 
                     // 如果玩家在攻击范围内，攻击
-                    if (distance <= enemy.getAttackRange() && spawnInvulnTimer<= 0f) {
+                    if (distance <= enemy.getAttackRange() && spawnInvulnTimer <= 0f) {
                         enemy.attack(player);
                     }
                 } else {
@@ -614,7 +599,7 @@ if (walls != null) {
             }
         }
 
-        for (int i = enemies.size - 1; i >= 0; i--){
+        for (int i = enemies.size - 1; i >= 0; i--) {
             if (!enemies.get(i).isAlive()) {
                 if (player != null && player.getStats() != null) {
                     String enemyType = enemies.get(i).getClass().getSimpleName();
@@ -624,7 +609,6 @@ if (walls != null) {
             }
         }
     }
-
 
 
     private void checkCollisions() {
@@ -637,8 +621,7 @@ if (walls != null) {
                 System.out.println("Door opened! Level Completed!");
 
                 winGame();
-            }
-            else {
+            } else {
                 float delta = Gdx.graphics.getDeltaTime();
                 com.badlogic.gdx.math.Vector2 velocity = player.getVelocity();
 
@@ -662,8 +645,8 @@ if (walls != null) {
             }
         }
 
-        if(player.getHealth() <= 0) {
-            if(mapMusic!=null) mapMusic.stop();
+        if (player.getHealth() <= 0) {
+            if (mapMusic != null) mapMusic.stop();
             HighScoreManager.saveScore(game.globalScore);
             game.resetGlobalScore();
             game.setScreen(new ResultScreen(game, false, levelNumber, 0));
@@ -671,14 +654,11 @@ if (walls != null) {
     }
 
 
-
-
-
     private void buildWalkableGrid() {
         // 从地图数据构建可行走网格
         // 假设地图尺寸为 20x20 个瓦片
-        int gridWidth  = (int)(mapPixelWidth / Wall.TILE_SIZE);
-        int gridHeight = (int)(mapPixelHeight / Wall.TILE_SIZE);
+        int gridWidth = (int) (mapPixelWidth / Wall.TILE_SIZE);
+        int gridHeight = (int) (mapPixelHeight / Wall.TILE_SIZE);
 
 
         walkableGrid = new boolean[gridWidth][gridHeight];
@@ -692,8 +672,8 @@ if (walls != null) {
 
         // 将墙壁位置标记为不可行走
         for (Wall wall : walls) {
-            int gridX = (int)(wall.worldX / Wall.TILE_SIZE);
-            int gridY = (int)(wall.worldY / Wall.TILE_SIZE);
+            int gridX = (int) (wall.worldX / Wall.TILE_SIZE);
+            int gridY = (int) (wall.worldY / Wall.TILE_SIZE);
 
             if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
                 walkableGrid[gridX][gridY] = false;
@@ -708,14 +688,14 @@ if (walls != null) {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
-        if (player != null && controller!=null) {
+        if (player != null && controller != null) {
             boolean up = controller.up;
             boolean down = controller.down;
             boolean left = controller.left;
             boolean right = controller.right;
             boolean run = controller.run;
 
-            player.update(delta, up, down, left, right, run,walls);
+            player.update(delta, up, down, left, right, run, walls);
 
             if (player.getStats() != null) {
                 if (Math.floor(gameTime) % 5 < 0.016f) {
@@ -726,7 +706,6 @@ if (walls != null) {
             }
         }
     }
-
 
 
     private boolean collidesWithAnyWall(Rectangle hb) {
@@ -741,7 +720,6 @@ if (walls != null) {
     }
 
 
-
     private void drawHUD(SpriteBatch batch) {
         batch.setColor(Color.WHITE); // 重置颜色状态 [cite: 157]
 
@@ -751,7 +729,7 @@ if (walls != null) {
 
         font.getData().setScale(1.5f); // 保持字体清晰
 
-        font.draw(batch, "HP: " + (int)player.getHealth(), 20, uiH - 40);
+        font.draw(batch, "HP: " + (int) player.getHealth(), 20, uiH - 40);
 
         String keyLabel = player.getStats().hasKey() ? "KEY: FOUND" : "KEY: MISSING";
         font.setColor(player.getStats().hasKey() ? Color.GOLD : Color.FIREBRICK);
@@ -786,12 +764,12 @@ if (walls != null) {
         float levelTextWidth = layout.width;
 
         font.draw(batch, levelText, uiW - levelTextWidth - 20, uiH - 20);
-        String timeText = "TIME: " + (int)gameTime + "s";
+        String timeText = "TIME: " + (int) gameTime + "s";
         layout.setText(font, timeText);
         float timeTextWidth = layout.width;
         font.draw(batch, timeText, uiW - timeTextWidth - 20, uiH - 50);
 
-        if (exitPosition != null && arrowRegion != null&& player!=null) {
+        if (exitPosition != null && arrowRegion != null && player != null) {
             float tx = exitPosition.x * Wall.TILE_SIZE;
             float ty = exitPosition.y * Wall.TILE_SIZE;
             float dx = tx - player.getPosition().x;
@@ -946,6 +924,7 @@ if (walls != null) {
             shapeRenderer.end();
         }
     }
+
     // ========== 新增：更新陷阱 ==========
     private void updateTraps(float delta) {
         if (traps != null) {
@@ -969,9 +948,7 @@ if (walls != null) {
                             mechanismSound.play(1.0f);
                         }
                     }
-                }
-
-                else if (trap instanceof Fog) {
+                } else if (trap instanceof Fog) {
                     if (((Fog) trap).isPlayerInFog(player)) {
 
                         if (fogSoundTimer <= 0) {
@@ -1047,10 +1024,10 @@ if (walls != null) {
         }
 
         this.enemies.clear();
-        int maxEnemies = levelNumber+1;
+        int maxEnemies = levelNumber + 1;
         int currentEnemies = 0;
-        for(Enemy e : data.enemies) {
-            if(currentEnemies < maxEnemies) {
+        for (Enemy e : data.enemies) {
+            if (currentEnemies < maxEnemies) {
                 this.enemies.add(e);
                 currentEnemies++;
             }
@@ -1066,7 +1043,7 @@ if (walls != null) {
             }
             for (int i = 0; i < 5; i++) {
                 Vector2 pos = getRandomEmptyTile();
-                walls.add(new Wall((int)pos.x, (int)pos.y));
+                walls.add(new Wall((int) pos.x, (int) pos.y));
             }
         }
 
@@ -1079,7 +1056,7 @@ if (walls != null) {
         mapPixelWidth = (maxX + 1) * Wall.TILE_SIZE;
         mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
         mapWidthInTiles = maxX + 1;
-        mapHeightInTiles = maxY +1;
+        mapHeightInTiles = maxY + 1;
 
         this.keys = new ArrayList<>(); // 初始化列表
 
@@ -1091,7 +1068,6 @@ if (walls != null) {
         }
 
 
-
         System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
 
         System.out.println("Loaded walls: " + walls.size());
@@ -1099,7 +1075,7 @@ if (walls != null) {
         try {
             arrowTexture = new Texture(Gdx.files.internal("arrow.png"));
             arrowRegion = new TextureRegion(arrowTexture);
-        } catch(Exception e) {
+        } catch (Exception e) {
             System.out.println("No arrow.png found, arrow will not show.");
             com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
             pixmap.setColor(Color.RED);
@@ -1176,7 +1152,6 @@ if (walls != null) {
             keySound = Gdx.audio.newSound(Gdx.files.internal("Sound/key-get-39925.mp3"));
 
 
-
             System.out.println("Sounds loaded successfully!");
 
         } catch (Exception e) {
@@ -1242,24 +1217,19 @@ if (walls != null) {
     }
 
 
-
     private Enemy spawnEnemyByLevel(int level, float x, float y) {
         double rand = Math.random(); // 0.0 到 1.0 之间的随机数
 
         if (level == 1) {
             return new NineTailedFox(x, y);
-        }
-
-        else if (level <= 3) {
+        } else if (level <= 3) {
 
             if (rand < 0.7) {
                 return new NineTailedFox(x, y);
             } else {
                 return new QiongQi(x, y);
             }
-        }
-
-        else if (level <= 4) {
+        } else if (level <= 4) {
             if (rand < 0.4) {
                 return new NineTailedFox(x, y);
             } else if (rand < 0.8) {
@@ -1267,9 +1237,7 @@ if (walls != null) {
             } else {
                 return new ZhuLong(x, y);
             }
-        }
-
-        else {
+        } else {
             if (rand < 0.3) {
                 return new NineTailedFox(x, y);
             } else if (rand < 0.7) {
@@ -1279,10 +1247,6 @@ if (walls != null) {
             }
         }
     }
-
-
-
-
 
 
     private void initPlayer() {
@@ -1295,15 +1259,12 @@ if (walls != null) {
             spawnX = entryPosition.x;
             spawnY = entryPosition.y;
             System.out.println("Spawned at Map Entry (Type 1): " + spawnX + "," + spawnY);
-        }
-
-        else if (exitPosition != null) {
+        } else if (exitPosition != null) {
 
             spawnX = exitPosition.x * Wall.TILE_SIZE;
             spawnY = exitPosition.y * Wall.TILE_SIZE;
             System.out.println("Spawned at Map Exit (Type 2): " + spawnX + "," + spawnY);
-        }
-        else {
+        } else {
             spawnX = 50;
             spawnY = 50;
             System.out.println("No Entry/Exit found, using default: 50,50");
@@ -1325,7 +1286,6 @@ if (walls != null) {
         }
         player.syncPositionToHitbox();
     }
-
 
 
     @Override
@@ -1353,18 +1313,18 @@ if (walls != null) {
 
             if (skillManager != null && skillManager.hasQSkill()) {
                 if (skillManager.useSkill("Q")) {
-                    System.out.println("✅ Q Skill - Fireball cast successfully!");
+                    System.out.println(" Q Skill - Fireball cast successfully!");
                     // Add visual feedback here if needed
                 } else {
                     float cooldown = skillManager.getQCooldown();
                     if (cooldown > 0) {
-                        System.out.println("⏳ Q Skill cooling down: " + String.format("%.1f", cooldown) + "s");
+                        System.out.println(" Q Skill cooling down: " + String.format("%.1f", cooldown) + "s");
                     } else {
-                        System.out.println("❌ Q Skill not available");
+                        System.out.println(" Q Skill not available");
                     }
                 }
             } else {
-                System.out.println("❌ Q Skill not unlocked. Press T to open Skill Tree");
+                System.out.println(" Q Skill not unlocked. Press T to open Skill Tree");
             }
         }
     }
@@ -1375,18 +1335,18 @@ if (walls != null) {
 
             if (skillManager != null && skillManager.hasESkill()) {
                 if (skillManager.useSkill("E")) {
-                    System.out.println("✅ E Skill - Healing cast successfully!");
+                    System.out.println(" E Skill - Healing cast successfully!");
                     // Add visual feedback here if needed
                 } else {
                     float cooldown = skillManager.getECooldown();
                     if (cooldown > 0) {
-                        System.out.println("⏳ E Skill cooling down: " + String.format("%.1f", cooldown) + "s");
+                        System.out.println(" E Skill cooling down: " + String.format("%.1f", cooldown) + "s");
                     } else {
-                        System.out.println("❌ E Skill not available");
+                        System.out.println(" E Skill not available");
                     }
                 }
             } else {
-                System.out.println("❌ E Skill not unlocked. Press T to open Skill Tree");
+                System.out.println(" E Skill not unlocked. Press T to open Skill Tree");
             }
         }
     }
@@ -1397,18 +1357,18 @@ if (walls != null) {
 
             if (skillManager != null && skillManager.hasRSkill()) {
                 if (skillManager.useSkill("R")) {
-                    System.out.println("✅ R Skill - Lightning cast successfully!");
+                    System.out.println(" R Skill - Lightning cast successfully!");
                     // Add visual feedback here if needed
                 } else {
                     float cooldown = skillManager.getRCooldown();
                     if (cooldown > 0) {
-                        System.out.println("⏳ R Skill cooling down: " + String.format("%.1f", cooldown) + "s");
+                        System.out.println(" R Skill cooling down: " + String.format("%.1f", cooldown) + "s");
                     } else {
-                        System.out.println("❌ R Skill not available");
+                        System.out.println(" R Skill not available");
                     }
                 }
             } else {
-                System.out.println("❌ R Skill not unlocked. Press T to open Skill Tree");
+                System.out.println(" R Skill not unlocked. Press T to open Skill Tree");
             }
         }
     }
@@ -1472,11 +1432,11 @@ if (walls != null) {
         }
 
 
-        if (door != null){
+        if (door != null) {
             door.dispose();
         }
 
-        if (keys != null){
+        if (keys != null) {
             for (Key k : keys) {
                 k.dispose();
             }
@@ -1519,6 +1479,7 @@ if (walls != null) {
     public Array<Enemy> getEnemies() {
         return enemies;
     }
+
     public AStarPathFinder getPathFinder() {
         return pathFinder;
     }
@@ -1530,6 +1491,7 @@ if (walls != null) {
     public int[][] getCollisionMap() {
         return collisionMap;
     }
+
     private void updateCameraFollowPlayer() {
         if (player == null) return;
 
@@ -1558,6 +1520,7 @@ if (walls != null) {
         camera.position.set(newX, newY, 0);
 
     }
+
     // ========== 新增：构建碰撞地图 ==========
     private void buildCollisionMap(int width, int height) {
         collisionMap = new int[height][width];
@@ -1622,8 +1585,8 @@ if (walls != null) {
                 occupied.add(w.gridX + "," + w.gridY);
             }
         }
-        if (entryPosition != null) occupied.add((int)entryPosition.x + "," + (int)entryPosition.y);
-        if (exitPosition != null) occupied.add((int)exitPosition.x + "," + (int)exitPosition.y);
+        if (entryPosition != null) occupied.add((int) entryPosition.x + "," + (int) entryPosition.y);
+        if (exitPosition != null) occupied.add((int) exitPosition.x + "," + (int) exitPosition.y);
 
 
         for (int x = 0; x < mapWidthInTiles; x++) {
@@ -1688,16 +1651,20 @@ if (walls != null) {
     }
 
 
+    private void updateItems() {
+        if (items == null || player == null) return;
+
         for (int i = items.size() - 1; i >= 0; i--) {
             Item item = items.get(i);
             if (player.getHitbox().overlaps(item.getBounds())) {
                 item.onPickup(player);
+
+                // 播放捡东西音效
                 if (bonusSound != null) bonusSound.play();
+
                 items.remove(i);
             }
         }
     }
-
-
 
 }
