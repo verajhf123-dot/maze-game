@@ -113,11 +113,31 @@ public class ZhuLong extends Enemy {
                 " (Eyes: " + (eyesOpen ? "OPEN" : "CLOSED") + ")");
     }
 
+
+    @Override
+    public void adjustDifficulty(int level) {
+
+        this.maxHealth = 200 + (level * 40);
+        this.health = this.maxHealth;
+
+        this.attackDamage = 10 + (level * 3);
+
+        this.speed = 40f + (level * 2f);
+
+    }
+
+
+
+
+
+
     @Override
     protected void onDeath() {
         System.out.println("ZhuLong has been defeated!");
         // 可以在这里添加死亡效果、掉落物品等
     }
+
+
 
     // ========== 新增方法 ==========
 

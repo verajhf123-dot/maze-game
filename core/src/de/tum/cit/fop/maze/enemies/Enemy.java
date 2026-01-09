@@ -342,12 +342,11 @@ public abstract class Enemy {
     }
 
     public void adjustDifficulty(int level) {
-        this.maxHealth = 50 + (level * 20);
+
+        this.maxHealth = 30 + (level * 10);
         this.health = this.maxHealth;
-
-        this.attackDamage = 5 + (level * 2);
-
-        this.speed = 80f + (level * 5f);
+        this.attackDamage = 5 + (level * 1.5f);
+        this.speed = 80f + (level * 2f);
 
         this.retreatHealthThreshold = Math.max(0.1f, 0.3f - (level * 0.02f));
 

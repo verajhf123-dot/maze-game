@@ -76,6 +76,20 @@ public class QiongQi extends Enemy {
         }
     }
 
+
+    @Override
+    public void adjustDifficulty(int level) {
+        this.maxHealth = 80 + (level * 15);
+        this.health = this.maxHealth;
+
+        this.attackDamage = 5 + (level * 2);
+
+        this.normalSpeed = 70f + (level * 3f);
+        this.speed = normalSpeed;
+        this.chargeCooldown = Math.max(2f, 6f - (level * 0.3f));
+    }
+
+
     private void performMeleeAttack() {
         // 近战攻击逻辑
         // 检查范围内是否有玩家

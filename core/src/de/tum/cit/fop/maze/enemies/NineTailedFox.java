@@ -55,6 +55,24 @@ public class NineTailedFox extends Enemy {
         }
     }
 
+
+    @Override
+    public void adjustDifficulty(int level) {
+
+        this.maxHealth = 30 + (level * 8);
+        this.health = this.maxHealth;
+
+        this.attackDamage = 2 + (level * 1);
+
+
+        this.speed = 90f + (level * 5f);
+
+        this.specialAttackCooldown = Math.max(3f, 8f - (level * 0.5f));
+    }
+
+
+
+
     private void shootFireball() {
         // 创建火弹攻击
         Vector2 direction = new Vector2(1, 0); // 默认方向，实际应该朝向玩家

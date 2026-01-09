@@ -20,6 +20,7 @@ import games.spooky.gdx.nativefilechooser.NativeFileChooserConfiguration;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import com.badlogic.gdx.audio.Sound;
 import java.util.logging.FileHandler;
 
 /**
@@ -32,6 +33,7 @@ public class MenuScreen implements Screen {
     private final MazeRunnerGame game;
     private final Table table;
     private final SettingsManager settingsManager;
+    private Sound buttonSound;
 
     /**
      * Constructor for MenuScreen. Sets up the camera, viewport, stage, and UI elements.
@@ -52,6 +54,8 @@ public class MenuScreen implements Screen {
         table.setFillParent(true); // Make the table fill the stage
         stage.addActor(table);// Add the table to the stage
         showMainMenu();
+
+        buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
     }
     private void showMainMenu() {
         table.clear();
@@ -65,6 +69,7 @@ public class MenuScreen implements Screen {
             button.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
+                    if (buttonSound != null) buttonSound.play();
                     SaveData data = SaveManager.loadGame();
                     if (data != null) {
                         Gdx.app.log("MenuScreen", "Loading Level: " + data.getCurrentLevel());
@@ -84,6 +89,8 @@ public class MenuScreen implements Screen {
 
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
+
                 Preferences prefs = Gdx.app.getPreferences("MazeRunnerGame");
                 int maxLevel = prefs.getInteger("maxLevel", 1);
                 game.resetGlobalScore();
@@ -96,6 +103,8 @@ public class MenuScreen implements Screen {
         loadGameButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
+
                 showLevelSelection(5);
 
             }
@@ -106,6 +115,8 @@ public class MenuScreen implements Screen {
         loadFileButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
+
                 chooseMapFile();
             }
         });
@@ -116,8 +127,13 @@ public class MenuScreen implements Screen {
         table.add(settingsButton).width(300).padTop(15).row();
 
         settingsButton.addListener(new ChangeListener() {
+
+
             @Override
+
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
+
                 game.setScreen(new SettingsScreen(game, settingsManager));
             }
         });
@@ -127,6 +143,8 @@ public class MenuScreen implements Screen {
         highScoresButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
+
               game.setScreen(new HighScoreScreen(game));
             }
         });
@@ -135,6 +153,8 @@ public class MenuScreen implements Screen {
         HelpButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
+
                game.setScreen(new HelpScreen(game));
             }
         });
@@ -144,6 +164,7 @@ public class MenuScreen implements Screen {
         exitButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
                 Gdx.app.exit();
             }
         });
@@ -198,6 +219,7 @@ public class MenuScreen implements Screen {
     public void show() {
         // Set the input processor so the stage can receive input events
         Gdx.input.setInputProcessor(stage);
+        game.playMenuMusic();
         showMainMenu();
     }
 

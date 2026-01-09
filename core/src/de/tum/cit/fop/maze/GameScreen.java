@@ -113,6 +113,19 @@ public class GameScreen implements Screen {
 
 
 
+    private Music mapMusic;
+    private Music pauseMusic;
+
+    private com.badlogic.gdx.audio.Sound attackSound;
+    private com.badlogic.gdx.audio.Sound fogSound;
+    private com.badlogic.gdx.audio.Sound bonusSound;
+    private com.badlogic.gdx.audio.Sound buttonSound;
+    private com.badlogic.gdx.audio.Sound mechanismSound; // 机关声音
+    private com.badlogic.gdx.audio.Sound keySound;       // 钥匙声音
+    private float fogSoundTimer = 0f;                    // 迷雾声音的冷却计时器
+
+
+
 
     /**
      * Constructor for GameScreen. Sets up the camera and font.
@@ -171,7 +184,8 @@ public class GameScreen implements Screen {
         TextButton resumeButton = new TextButton("Resume", game.getSkin());
         resumeButton.addListener(new  ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
-                togglePause();// tip it ,continue game
+                if (buttonSound != null) buttonSound.play();
+                togglePause();
             }
         });
         pauseMenuTable.add(resumeButton).width(250).padBottom(15).row();
@@ -192,10 +206,16 @@ public class GameScreen implements Screen {
         TextButton quitButton = new TextButton("Exit to Menu", game.getSkin());
         quitButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
-                Music music = game.getBackgroundMusic();
-                if(music != null && music.isPlaying()) {
-                    music.play();
+                if (buttonSound != null) buttonSound.play();
+
+                if (pauseMusic != null) {
+                    pauseMusic.stop();
                 }
+                if (mapMusic != null) {
+                    mapMusic.stop();
+                }
+                game.playMenuMusic();
+
                 game.goToMenu();
 
             }
@@ -211,17 +231,15 @@ public class GameScreen implements Screen {
             currentState = GameState.PAUSED;
             pauseMenuTable.setVisible(true);
             Gdx.input.setInputProcessor(uiStage);
-            if(music !=null && music.isPlaying()) {
-                music.pause();
-            }
+            if (mapMusic != null) mapMusic.pause();
+            if (pauseMusic != null) pauseMusic.play();
 
         }else{
             currentState = GameState.RUNNING;
             pauseMenuTable.setVisible(false);
             Gdx.input.setInputProcessor(null);
-            if(music !=null) {
-                music.play();
-            }
+            if (pauseMusic != null) pauseMusic.stop();
+            if (mapMusic != null) mapMusic.play();
 
         }
     }
@@ -278,6 +296,10 @@ public class GameScreen implements Screen {
                 spawnInvulnTimer -= delta;
             }
 
+            if (fogSoundTimer > 0) {
+                fogSoundTimer -= delta;
+            }
+
             updateTraps(delta);
             updateEnemies(delta);
             updatePlayer(delta);
@@ -313,6 +335,7 @@ public class GameScreen implements Screen {
 
             updateCameraFollowPlayer();
             camera.update();
+
         }
 
 
@@ -433,7 +456,11 @@ if (walls != null) {
                     k.render(batch);
 
                     if (player != null) {
-                        k.checkPickup(player);
+                        if (player.getHitbox().overlaps(k.getBounds())) {
+                            if (keySound != null) keySound.play(1.0f);
+
+                            k.checkPickup(player);
+                        }
                     }
                 }
             }
@@ -510,6 +537,8 @@ if (walls != null) {
         int levelBonus = 1000 + (int)player.getHealth() * 5 - (int)gameTime;
         if (levelBonus < 0) levelBonus = 0;
         game.globalScore += levelBonus;
+
+        if(mapMusic!=null) mapMusic.stop();
 
 
         game.setScreen(new ResultScreen(game, true, levelNumber, game.globalScore));
@@ -627,12 +656,14 @@ if (walls != null) {
         for (Enemy enemy : enemies) {
             if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
                 enemy.attack(player);
+                if (attackSound != null) attackSound.play();
                 player.triggerDamageVFX();
 
             }
         }
 
         if(player.getHealth() <= 0) {
+            if(mapMusic!=null) mapMusic.stop();
             HighScoreManager.saveScore(game.globalScore);
             game.resetGlobalScore();
             game.setScreen(new ResultScreen(game, false, levelNumber, 0));
@@ -928,11 +959,33 @@ if (walls != null) {
     private void checkTrapActivation() {
         if (player != null && traps != null) {
             for (Trap trap : traps) {
+
+                boolean wasActivated = trap.isActivated();
                 trap.checkActivation(player);
+                boolean isActivatedNow = trap.isActivated();
+                if (trap instanceof MechanismTrap) {
+                    if (!wasActivated && isActivatedNow) {
+                        if (mechanismSound != null) {
+                            mechanismSound.play(1.0f);
+                        }
+                    }
+                }
+
+                else if (trap instanceof Fog) {
+                    if (((Fog) trap).isPlayerInFog(player)) {
+
+                        if (fogSoundTimer <= 0) {
+                            if (fogSound != null) {
+                                fogSound.play(0.6f);
+                            }
+
+                            fogSoundTimer = 4.0f;
+                        }
+                    }
+                }
             }
         }
     }
-
     // ========== 新增：渲染陷阱 ==========
 
     @Override
@@ -1099,17 +1152,39 @@ if (walls != null) {
         for (Enemy enemy : enemies) {
             enemy.setPathFinder(pathFinder);
         }
+
+        game.stopMenuMusic();
+        try {
+
+            mapMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/mapbackground.mp3"));
+            mapMusic.setLooping(true);
+            mapMusic.setVolume(0.4f);
+            mapMusic.play();
+
+            // B. 暂停背景乐 (先加载，暂停时才放)
+            pauseMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/pausegameSound.mp3"));
+            pauseMusic.setLooping(true);
+            pauseMusic.setVolume(0.3f);
+
+            // C. 音效 (Sound)
+            attackSound = Gdx.audio.newSound(Gdx.files.internal("Sound/attack.mp3"));
+            fogSound = Gdx.audio.newSound(Gdx.files.internal("Sound/fog.mp3"));
+            // 注意：这里用了你截图里的长文件名
+            bonusSound = Gdx.audio.newSound(Gdx.files.internal("Sound/video-game-bonus-323603.mp3"));
+            buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
+            mechanismSound = Gdx.audio.newSound(Gdx.files.internal("Sound/trap1.mp3"));
+            keySound = Gdx.audio.newSound(Gdx.files.internal("Sound/key-get-39925.mp3"));
+
+
+
+            System.out.println("Sounds loaded successfully!");
+
+        } catch (Exception e) {
+            System.out.println("Error loading sounds: " + e.getMessage());
+        }
+
         currentState = GameState.RUNNING;
         Gdx.input.setInputProcessor(null);
-
-
-
-        Music music =game.getBackgroundMusic();
-        if (music != null && !music.isPlaying()) {
-            music.play();
-            music.setLooping(true);
-
-        }
 
         // 初始化技能系统
         if (player != null && player.getStats() != null) {
@@ -1126,30 +1201,89 @@ if (walls != null) {
 
 
     // ========== 新增：初始化方法 ==========
+    // 在 GameScreen.java 中
+
     private void initEnemies() {
+        Array<Enemy> upgradedEnemies = new Array<>();
+
+        for (Enemy mapEnemy : enemies) {
+            float x = mapEnemy.getX();
+            float y = mapEnemy.getY();
+            Enemy newEnemy = spawnEnemyByLevel(levelNumber, x, y);
+            if (newEnemy != null) {
+                newEnemy.adjustDifficulty(this.levelNumber);
+
+                newEnemy.setWalkableGrid(walkableGrid);
+                newEnemy.setPathFinder(pathFinder);
+
+                upgradedEnemies.add(newEnemy);
+            }
+        }
+
         enemies.clear();
-        int count = 3 + (levelNumber / 2);
+        enemies.addAll(upgradedEnemies);
 
-        for (int i = 0; i < count; i++) {
-
-            Vector2 smartPos = getSmartSpawnPosition();
-
-            if (smartPos != null) {
-                float rand = (float)Math.random();
-                Enemy e;
-                if (rand < 0.33f) {
-                    e = new NineTailedFox(smartPos.x, smartPos.y);
-                } else if (rand < 0.66f) {
-                    e = new QiongQi(smartPos.x, smartPos.y);
-                } else {
-                    e = new ZhuLong(smartPos.x, smartPos.y);
+        if (levelNumber > 5) {
+            int extraCount = levelNumber - 5;
+            for (int i = 0; i < extraCount; i++) {
+                Vector2 pos = getSmartSpawnPosition();
+                if (pos != null) {
+                    Enemy e = spawnEnemyByLevel(levelNumber, pos.x, pos.y);
+                    if (e != null) {
+                        e.adjustDifficulty(levelNumber);
+                        e.setPathFinder(pathFinder);
+                        enemies.add(e);
+                    }
                 }
+            }
+        }
 
-                e.adjustDifficulty(this.levelNumber);
-                enemies.add(e);
+        System.out.println("Enemies initialized: " + enemies.size);
+    }
+
+
+
+    private Enemy spawnEnemyByLevel(int level, float x, float y) {
+        double rand = Math.random(); // 0.0 到 1.0 之间的随机数
+
+        if (level == 1) {
+            return new NineTailedFox(x, y);
+        }
+
+        else if (level <= 3) {
+
+            if (rand < 0.7) {
+                return new NineTailedFox(x, y);
+            } else {
+                return new QiongQi(x, y);
+            }
+        }
+
+        else if (level <= 4) {
+            if (rand < 0.4) {
+                return new NineTailedFox(x, y);
+            } else if (rand < 0.8) {
+                return new QiongQi(x, y);
+            } else {
+                return new ZhuLong(x, y);
+            }
+        }
+
+        else {
+            if (rand < 0.3) {
+                return new NineTailedFox(x, y);
+            } else if (rand < 0.7) {
+                return new QiongQi(x, y);
+            } else {
+                return new ZhuLong(x, y);
             }
         }
     }
+
+
+
+
+
 
     private void initPlayer() {
         if (player != null) return;
@@ -1355,6 +1489,18 @@ if (walls != null) {
         if (uiStage != null) {
             uiStage.dispose();
         }
+
+
+        if (mapMusic != null) mapMusic.dispose();
+        if (pauseMusic != null) pauseMusic.dispose();
+        if (attackSound != null) attackSound.dispose();
+        if (fogSound != null) fogSound.dispose();
+        if (bonusSound != null) bonusSound.dispose();
+        if (buttonSound != null) buttonSound.dispose();
+        if (keySound != null) keySound.dispose();
+        if (mechanismSound != null) mechanismSound.dispose();
+
+
     }
 
     // ========== 新增：Getter方法 ==========
@@ -1542,6 +1688,15 @@ if (walls != null) {
     }
 
 
+        for (int i = items.size() - 1; i >= 0; i--) {
+            Item item = items.get(i);
+            if (player.getHitbox().overlaps(item.getBounds())) {
+                item.onPickup(player);
+                if (bonusSound != null) bonusSound.play();
+                items.remove(i);
+            }
+        }
+    }
 
 
 
