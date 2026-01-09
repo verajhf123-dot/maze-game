@@ -35,6 +35,11 @@ import de.tum.cit.fop.maze.items.Key;
 import de.tum.cit.fop.maze.traps.Trap;
 import de.tum.cit.fop.maze.traps.Fog;
 import de.tum.cit.fop.maze.traps.MechanismTrap;
+import de.tum.cit.fop.maze.progression.SkillTreeScreen;
+import de.tum.cit.fop.maze.progression.SkillTree;
+import de.tum.cit.fop.maze.progression.ExperienceSystem;
+import de.tum.cit.fop.maze.progression.SkillManager;
+
 import java.util.Random;
 import java.util.HashSet;
 import java.util.Set;
@@ -43,6 +48,10 @@ import de.tum.cit.fop.maze.items.Item;
 import de.tum.cit.fop.maze.items.Xiandan;
 import de.tum.cit.fop.maze.items.Yufengfu;
 import de.tum.cit.fop.maze.items.Jingangfu;
+
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.utils.Array;
+
 import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
 
 /**
@@ -55,6 +64,7 @@ public class GameScreen implements Screen {
     private int mapWidthInTiles;
     private int mapHeightInTiles;
     private boolean gameWon = false;
+
 
     private final MazeRunnerGame game;
     private  OrthographicCamera camera;
@@ -78,12 +88,11 @@ public class GameScreen implements Screen {
 
     // ==== 其他变量 ====
     private float gameTime = 0f;
-    private  int levelNumber;
+    private int levelNumber;
     private String currentMapPath;
     private InputController controller;
     private Exit exit;
     private List<Key> keys;
-    private List<Item> items;
     private Door door;
     private Vector2 exitPosition;
     private Vector2 entryPosition;
@@ -94,6 +103,14 @@ public class GameScreen implements Screen {
     private static final float SPAWN_INVULN_DURATION = 1.0f; // 1秒
     private com.badlogic.gdx.graphics.g2d.GlyphLayout layout;
     private SettingsManager settingsManager;
+    private int minX, maxX, minY, maxY;
+
+    private Texture floorTexture;
+    private Texture wallTexture;
+
+
+
+
 
 
     private Music mapMusic;
@@ -161,8 +178,8 @@ public class GameScreen implements Screen {
         pauseMenuTable.center();
         pauseMenuTable.setDebug(false);
 
-       Label pauseLable = new Label("Game PAUSED", game.getSkin(),"title");
-       pauseMenuTable.add(pauseLable).padBottom(40).row();
+        Label pauseLable = new Label("Game PAUSED", game.getSkin(),"title");
+        pauseMenuTable.add(pauseLable).padBottom(40).row();
 
         TextButton resumeButton = new TextButton("Resume", game.getSkin());
         resumeButton.addListener(new  ChangeListener() {
@@ -238,12 +255,39 @@ public class GameScreen implements Screen {
             togglePause();
         }
 
+        if (currentState == GameState.RUNNING) {
+            handleSkillInput();
+        }
+
+        if (currentState == GameState.RUNNING) {
+            controller.update();
+            // ... 现有的游戏逻辑代码
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.T) && currentState == GameState.RUNNING) {
+            if (player != null && player.getStats() != null) {
+                game.setScreen(new SkillTreeScreen(game, player.getStats()));
+            }
+        }
+
+        if (currentState == GameState.RUNNING) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+                useSkill1();
+            }
+
+            if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+                useSkill2();
+            }
+
+            if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+                useSkill3();
+            }
+        }
 
         if (currentState == GameState.RUNNING) {
             controller.update();
             if (controller.zoomChange != 0) {
                 camera.zoom += controller.zoomChange;
-                // 限制缩放范围，防止缩太小或太大
                 camera.zoom = MathUtils.clamp(camera.zoom, 0.2f, 2.0f);
             }
 
@@ -259,9 +303,16 @@ public class GameScreen implements Screen {
             updateTraps(delta);
             updateEnemies(delta);
             updatePlayer(delta);
-            updateItems();
+
             checkCollisions();
             checkTrapActivation();
+
+            if (player != null && player.getStats() != null) {
+                SkillManager skillManager = player.getStats().getSkillManager();
+                if (skillManager != null) {
+                    skillManager.update(delta);
+                }
+            }
 
 
             float visibilityFactor = 1.0f;
@@ -292,24 +343,46 @@ public class GameScreen implements Screen {
 
         SpriteBatch batch = game.getSpriteBatch();
 
-        // =================================================
-        // 1️⃣ ShapeRenderer：所有“纯方块”的东西
-        // =================================================
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+// ✅【插入从这里开始】先画地面（batch）
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
 
-        // 墙
-        if (walls != null) {
-            shapeRenderer.setColor(Color.GRAY);
-            for (Wall wall : walls) {
-                shapeRenderer.rect(
-                        wall.worldX,
-                        wall.worldY,
+        for (int x = 0; x < mapWidthInTiles; x++) {
+            for (int y = 0; y < mapHeightInTiles; y++) {
+                batch.draw(
+                        floorTexture,
+                        x * Wall.TILE_SIZE,
+                        y * Wall.TILE_SIZE,
                         Wall.TILE_SIZE,
                         Wall.TILE_SIZE
                 );
             }
         }
+
+        batch.end();
+// ✅【插入到这里结束】
+
+// 1️⃣ ShapeRenderer：所有“纯方块”的东西
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        System.out.println("WORLD rect reached");
+
+
+
+        /*
+if (walls != null) {
+    shapeRenderer.setColor(Color.GRAY);
+    for (Wall wall : walls) {
+        shapeRenderer.rect(
+                wall.worldX,
+                wall.worldY,
+                Wall.TILE_SIZE,
+                Wall.TILE_SIZE
+        );
+    }
+}
+*/
+
 
         if (door != null) {
             shapeRenderer.setColor(Color.BLUE);
@@ -350,6 +423,22 @@ public class GameScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
+        // ===== 墙贴图 =====
+        if (walls != null) {
+            for (Wall wall : walls) {
+                batch.draw(
+                        wallTexture,          // 你刚才生成/放进 assets 的 wall.png
+                        wall.worldX,
+                        wall.worldY,
+                        Wall.TILE_SIZE,
+                        Wall.TILE_SIZE
+                );
+            }
+        }
+
+
+
+
         if (traps != null) {
             for (Trap trap : traps) {
                 if (trap.hasTexture()) trap.render(batch);
@@ -360,15 +449,6 @@ public class GameScreen implements Screen {
         for (Enemy enemy : enemies) {
             enemy.render(batch);
         }
-
-        // ===== 新增：绘制 Item =====
-        if (items != null) {
-            for (Item item : items) {
-                item.render(batch);
-            }
-        }
-
-
         if (keys != null) {
             for (Key k : keys) {
 
@@ -439,6 +519,8 @@ public class GameScreen implements Screen {
             uiStage.draw();
         }
 
+
+
     }
 
 
@@ -462,43 +544,91 @@ public class GameScreen implements Screen {
         game.setScreen(new ResultScreen(game, true, levelNumber, game.globalScore));
     }
 
+    private void handleSkillInput() {
+        if (player == null || player.getStats() == null) return;
 
-
-    private void  updateEnemies(float delta) {
-        for (Enemy enemy : enemies) {
-            if (! enemy.isAlive()) {
-              continue;
+        // 按T打开技能树
+        if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            if (player != null && player.getStats() != null) {
+                game.setScreen(new SkillTreeScreen(game, player.getStats()));
             }
-                enemy.update(delta);
+        }
 
-                // 如果敌人有PathFinder，让它寻找路径到玩家位置
-                if (player != null && pathFinder != null) {
-                    // 检查玩家是否在检测范围内
-                    float distance = enemy.getPosition().dst(player.getPosition());
+        // 技能快捷键 Q/E/R
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+            useSkill1();
+        }
 
-                    if (distance <= enemy.getDetectionRange()) {
-                        // 玩家在检测范围内，开始寻路追击
-                        enemy.findPathTo(player.getPosition());
+        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            useSkill2();
+        }
 
-                        // 如果玩家在攻击范围内，攻击
-                        if (distance <= enemy.getAttackRange() && spawnInvulnTimer<= 0f) {
-                            enemy.attack(player);
-                        }
-                    } else {
-                        // 玩家不在检测范围，清空路径
-                        enemy.clearPath();
-                    }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            useSkill3();
+        }
+
+        // Shift冲刺（需要持续检测）
+        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)) {
+            if (player.getStats().getSkillManager() != null &&
+                    player.getStats().getSkillManager().canDash()) {
+                // 获取移动方向
+                float dirX = 0, dirY = 0;
+                if (controller.up) dirY = 1;
+                if (controller.down) dirY = -1;
+                if (controller.left) dirX = -1;
+                if (controller.right) dirX = 1;
+
+                if (dirX != 0 || dirY != 0) {
+                    player.getStats().getSkillManager().performDash(dirX, dirY);
                 }
             }
+        }
+    }
+
+
+
+    private void updateEnemies(float delta) {
+        for (Enemy enemy : enemies) {
+            if (! enemy.isAlive()) {
+                continue;
+            }
+            enemy.update(delta);
+
+            // 如果敌人有PathFinder，让它寻找路径到玩家位置
+            if (player != null && pathFinder != null) {
+                // 检查玩家是否在检测范围内
+                float distance = enemy.getPosition().dst(player.getPosition());
+
+                if (distance <= enemy.getDetectionRange()) {
+                    // 玩家在检测范围内，开始寻路追击
+                    enemy.findPathTo(player.getPosition());
+
+                    // 如果玩家在攻击范围内，攻击
+                    if (distance <= enemy.getAttackRange() && spawnInvulnTimer<= 0f) {
+                        enemy.attack(player);
+                    }
+                } else {
+                    // 玩家不在检测范围，清空路径
+                    enemy.clearPath();
+                }
+            }
+        }
 
         for (int i = enemies.size - 1; i >= 0; i--){
-        if (!enemies.get(i).isAlive()) enemies.removeIndex(i);}
+            if (!enemies.get(i).isAlive()) {
+                if (player != null && player.getStats() != null) {
+                    String enemyType = enemies.get(i).getClass().getSimpleName();
+                    player.getStats().gainExpFromKill(enemyType);
+                }
+                enemies.removeIndex(i);
+            }
+        }
     }
 
 
 
     private void checkCollisions() {
-    if (player == null) return;
+        if (player == null) return;
 
         if (door != null && player.getHitbox().overlaps(door.getBounds())) {
 
@@ -538,7 +668,7 @@ public class GameScreen implements Screen {
             game.resetGlobalScore();
             game.setScreen(new ResultScreen(game, false, levelNumber, 0));
         }
-}
+    }
 
 
 
@@ -578,19 +708,23 @@ public class GameScreen implements Screen {
 
     private void updatePlayer(float delta) {
         // 由组员2实现
-       if (player != null && controller!=null) {
-           boolean up = controller.up;
-           boolean down = controller.down;
-           boolean left = controller.left;
-           boolean right = controller.right;
-           boolean run = controller.run;
+        if (player != null && controller!=null) {
+            boolean up = controller.up;
+            boolean down = controller.down;
+            boolean left = controller.left;
+            boolean right = controller.right;
+            boolean run = controller.run;
 
-           player.update(delta, up, down, left, right, run,walls);
+            player.update(delta, up, down, left, right, run,walls);
 
-
-       }
-
-
+            if (player.getStats() != null) {
+                if (Math.floor(gameTime) % 5 < 0.016f) {
+                    if (player.getHealth() < player.getMaxHealth()) {
+                        player.getStats().heal(1);
+                    }
+                }
+            }
+        }
     }
 
 
@@ -624,6 +758,29 @@ public class GameScreen implements Screen {
         font.draw(batch, keyLabel, 20, uiH - 90);
 
         font.setColor(Color.WHITE);
+        if (player != null && player.getStats() != null) {
+            int skillPoints = player.getStats().getExpSystem().getSkillPoints();
+            int level = player.getStats().getExpSystem().getCurrentLevel();
+
+            if (skillPoints > 0) {
+                font.setColor(Color.YELLOW);
+                String skillText = "Skill Points: " + skillPoints + " (Press T)";
+                font.draw(batch, skillText, 20, uiH - 120);
+                font.setColor(Color.WHITE);
+            }
+
+            font.draw(batch, "Level: " + level, 20, uiH - 140);
+
+            font.getData().setScale(1.0f);
+            font.setColor(Color.CYAN);
+            font.draw(batch, "Q - Attack", uiW - 150, 100);
+            font.draw(batch, "E - Defense", uiW - 150, 80);
+            font.draw(batch, "R - Area", uiW - 150, 60);
+            font.draw(batch, "SPACE - Special", uiW - 150, 40);
+            font.getData().setScale(1.5f);
+            font.setColor(Color.WHITE);
+        }
+
         String levelText = "LEVEL " + levelNumber;
         layout.setText(font, levelText);
         float levelTextWidth = layout.width;
@@ -652,7 +809,122 @@ public class GameScreen implements Screen {
             );
             font.draw(batch, "EXIT", uiW - 110, 60);
         }
+
+        if (player != null && player.getStats() != null) {
+            SkillManager skillManager = player.getStats().getSkillManager();
+            if (skillManager != null) {
+                font.getData().setScale(1.0f);
+
+                // Q Skill Display
+                float qY = uiH - 200;
+                if (skillManager.hasQSkill()) {
+                    float qCd = skillManager.getQCooldown();
+                    if (qCd > 0) {
+                        font.setColor(Color.RED);
+                        font.draw(batch, "Q:Fireball " + String.format("%.1f", qCd) + "s",
+                                uiW - 150, qY);
+                    } else {
+                        font.setColor(Color.GREEN);
+                        font.draw(batch, "Q:Fireball [READY]", uiW - 150, qY);
+                    }
+                } else {
+                    font.setColor(Color.GRAY);
+                    font.draw(batch, "Q:Not Unlocked", uiW - 150, qY);
+                }
+
+                // E Skill Display
+                float eY = uiH - 220;
+                if (skillManager.hasESkill()) {
+                    float eCd = skillManager.getECooldown();
+                    if (eCd > 0) {
+                        font.setColor(Color.RED);
+                        font.draw(batch, "E:Healing " + String.format("%.1f", eCd) + "s",
+                                uiW - 150, eY);
+                    } else {
+                        font.setColor(Color.GREEN);
+                        font.draw(batch, "E:Healing [READY]", uiW - 150, eY);
+                    }
+                } else {
+                    font.setColor(Color.GRAY);
+                    font.draw(batch, "E:Not Unlocked", uiW - 150, eY);
+                }
+
+                // R Skill Display
+                float rY = uiH - 240;
+                if (skillManager.hasRSkill()) {
+                    float rCd = skillManager.getRCooldown();
+                    if (rCd > 0) {
+                        font.setColor(Color.RED);
+                        font.draw(batch, "R:Lightning " + String.format("%.1f", rCd) + "s",
+                                uiW - 150, rY);
+                    } else {
+                        font.setColor(Color.GREEN);
+                        font.draw(batch, "R:Lightning [READY]", uiW - 150, rY);
+                    }
+                } else {
+                    font.setColor(Color.GRAY);
+                    font.draw(batch, "R:Not Unlocked", uiW - 150, rY);
+                }
+
+                // Dash Display
+                float dashY = uiH - 260;
+                if (skillManager.hasSpecialAbility("dash")) {
+                    float dashCd = skillManager.getDashCooldown();
+                    if (dashCd > 0) {
+                        font.setColor(Color.RED);
+                        font.draw(batch, "Dash " + String.format("%.1f", dashCd) + "s",
+                                uiW - 150, dashY);
+                    } else {
+                        font.setColor(Color.CYAN);
+                        font.draw(batch, "Dash [READY]", uiW - 150, dashY);
+                    }
+                }
+
+                font.setColor(Color.WHITE);
+                font.getData().setScale(1.5f);
+            }
+        }
     }
+
+    private void drawSkillHUD(SpriteBatch batch) {
+        if (player == null || player.getStats() == null) return;
+
+        float uiH = uiStage.getViewport().getWorldHeight();
+        float uiW = uiStage.getViewport().getWorldWidth();
+
+        SkillTree skillTree = player.getStats().getSkillTree();
+        int skillPoints = player.getStats().getExpSystem().getSkillPoints();
+
+        // 显示技能点数
+        if (skillPoints > 0) {
+            font.setColor(Color.YELLOW);
+            String skillText = "Skill Points: " + skillPoints + " (Press T)";
+            font.draw(batch, skillText, uiW - 200, uiH - 20);
+            font.setColor(Color.WHITE);
+        }
+
+        // 显示已解锁的特殊能力
+        int yOffset = 40;
+        if (skillTree.hasDoubleJump()) {
+            font.draw(batch, "Double Jump: Ready", uiW - 200, uiH - yOffset);
+            yOffset += 20;
+        }
+        if (skillTree.hasDash()) {
+            font.draw(batch, "Dash: Ready (Shift)", uiW - 200, uiH - yOffset);
+            yOffset += 20;
+        }
+
+        // 显示快捷键提示
+        font.setColor(Color.CYAN);
+        font.getData().setScale(1.0f);
+        font.draw(batch, "Q - Attack Boost", 20, 100);
+        font.draw(batch, "E - Healing Aura", 20, 80);
+        font.draw(batch, "R - Area Attack", 20, 60);
+        font.draw(batch, "SPACE - Special", 20, 40);
+        font.getData().setScale(1.5f);
+        font.setColor(Color.WHITE);
+    }
+
     private void drawDebugInfo() {
         // 使用ShapeRenderer绘制敌人碰撞框（调试用）
         if (shapeRenderer != null) {
@@ -718,10 +990,10 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-       camera.viewportWidth = width;
-       camera.viewportHeight = height;
-       camera.update();
-       uiStage.getViewport().update(width, height, false);
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
+        uiStage.getViewport().update(width, height, false);
         // 不要在这里固定 camera.position
     }
 
@@ -735,6 +1007,10 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        floorTexture = new Texture(Gdx.files.internal("floor.png"));
+        wallTexture = new Texture(Gdx.files.internal("wall.png"));
+
+
         MapLoader loader = new MapLoader();
         shapeRenderer = new ShapeRenderer();
 
@@ -781,8 +1057,6 @@ public class GameScreen implements Screen {
         }
         System.out.println("Loaded " + currentEnemies + " enemies");
 
-
-
         if (levelNumber > 5) {
             Random rand = new Random();
             for (int i = walls.size() - 1; i >= 0; i--) {
@@ -816,17 +1090,7 @@ public class GameScreen implements Screen {
             keys.add(spawnSafeKey(true));
         }
 
-        items = new ArrayList<>();
 
-        // 测试用：先直接生成几个
-        Vector2 p1 = getRandomEmptyTile();
-        items.add(new Xiandan(p1.x * Wall.TILE_SIZE, p1.y * Wall.TILE_SIZE));
-
-        Vector2 p2 = getRandomEmptyTile();
-        items.add(new Yufengfu(p2.x * Wall.TILE_SIZE, p2.y * Wall.TILE_SIZE));
-
-        Vector2 p3 = getRandomEmptyTile();
-        items.add(new Jingangfu(p3.x * Wall.TILE_SIZE, p3.y * Wall.TILE_SIZE));
 
         System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
 
@@ -856,9 +1120,35 @@ public class GameScreen implements Screen {
         initEnemies();
         initPlayer();
         buildWalkableGrid();
-        // =====================================
-        //remark code (store the original code)
-        // ========== 为敌人设置PathFinder ==========
+
+        if (player != null && player.getStats() != null) {
+            player.getStats().getExpSystem().addListener(new ExperienceSystem.ExpListener() {
+                @Override
+                public void onExpGained(int amount, int total) {
+                    System.out.println("Gained " + amount + " EXP. Total: " + total);
+                }
+
+                @Override
+                public void onLevelUp(int newLevel, int skillPoints) {
+                    System.out.println("=== LEVEL UP! ===");
+                    System.out.println("You are now level " + newLevel);
+                    System.out.println("You have " + skillPoints + " skill point(s) available!");
+                    System.out.println("Press T to open Skill Tree");
+
+                    if (player != null && player.getStats() != null) {
+                        int healAmount = player.getStats().getMaxHealth() / 4;
+                        player.getStats().heal(healAmount);
+                        System.out.println("Healed " + healAmount + " HP from level up!");
+                    }
+                }
+
+                @Override
+                public void onSkillPointsChanged(int points) {
+                    System.out.println("Skill points now: " + points);
+                }
+            });
+        }
+
         for (Enemy enemy : enemies) {
             enemy.setPathFinder(pathFinder);
         }
@@ -896,6 +1186,17 @@ public class GameScreen implements Screen {
         currentState = GameState.RUNNING;
         Gdx.input.setInputProcessor(null);
 
+        // 初始化技能系统
+        if (player != null && player.getStats() != null) {
+            player.getStats().setPlayer(player);
+
+            // 测试：添加一些初始技能点（可以根据需要移除）
+            player.getStats().getExpSystem().gainExp(150);
+
+            System.out.println("Skill system initialized");
+            System.out.println("Available skill points: " + player.getStats().getExpSystem().getSkillPoints());
+            System.out.println("Press T to open Skill Tree");
+        }
     }
 
 
@@ -1010,6 +1311,13 @@ public class GameScreen implements Screen {
 
         player = new Player(spawnX, spawnY);
 
+        if (player.getStats() != null) {
+            SkillManager skillManager = player.getStats().getSkillManager();
+            if (skillManager != null) {
+                skillManager.setGameScreen(this);  // 设置 GameScreen 引用
+            }
+        }
+
         spawnInvulnTimer = SPAWN_INVULN_DURATION;
 
         if (player.getStats() != null) {
@@ -1024,6 +1332,126 @@ public class GameScreen implements Screen {
     public void hide() {
     }
 
+//    private void useSpecialSkill() {
+//        if (player != null && player.getStats() != null) {
+//            PlayerStats stats = player.getStats();
+//
+//            if (stats.canDash()) {
+//                performDash();
+//            } else if (stats.canDoubleJump()) {
+//                performDoubleJump();
+//            } else {
+//                System.out.println("No special skills unlocked yet!");
+//                System.out.println("Press T to open Skill Tree and unlock skills!");
+//            }
+//        }
+//    }
+
+    private void useSkill1() {
+        if (player != null && player.getStats() != null) {
+            SkillManager skillManager = player.getStats().getSkillManager();
+
+            if (skillManager != null && skillManager.hasQSkill()) {
+                if (skillManager.useSkill("Q")) {
+                    System.out.println("✅ Q Skill - Fireball cast successfully!");
+                    // Add visual feedback here if needed
+                } else {
+                    float cooldown = skillManager.getQCooldown();
+                    if (cooldown > 0) {
+                        System.out.println("⏳ Q Skill cooling down: " + String.format("%.1f", cooldown) + "s");
+                    } else {
+                        System.out.println("❌ Q Skill not available");
+                    }
+                }
+            } else {
+                System.out.println("❌ Q Skill not unlocked. Press T to open Skill Tree");
+            }
+        }
+    }
+
+    private void useSkill2() {
+        if (player != null && player.getStats() != null) {
+            SkillManager skillManager = player.getStats().getSkillManager();
+
+            if (skillManager != null && skillManager.hasESkill()) {
+                if (skillManager.useSkill("E")) {
+                    System.out.println("✅ E Skill - Healing cast successfully!");
+                    // Add visual feedback here if needed
+                } else {
+                    float cooldown = skillManager.getECooldown();
+                    if (cooldown > 0) {
+                        System.out.println("⏳ E Skill cooling down: " + String.format("%.1f", cooldown) + "s");
+                    } else {
+                        System.out.println("❌ E Skill not available");
+                    }
+                }
+            } else {
+                System.out.println("❌ E Skill not unlocked. Press T to open Skill Tree");
+            }
+        }
+    }
+
+    private void useSkill3() {
+        if (player != null && player.getStats() != null) {
+            SkillManager skillManager = player.getStats().getSkillManager();
+
+            if (skillManager != null && skillManager.hasRSkill()) {
+                if (skillManager.useSkill("R")) {
+                    System.out.println("✅ R Skill - Lightning cast successfully!");
+                    // Add visual feedback here if needed
+                } else {
+                    float cooldown = skillManager.getRCooldown();
+                    if (cooldown > 0) {
+                        System.out.println("⏳ R Skill cooling down: " + String.format("%.1f", cooldown) + "s");
+                    } else {
+                        System.out.println("❌ R Skill not available");
+                    }
+                }
+            } else {
+                System.out.println("❌ R Skill not unlocked. Press T to open Skill Tree");
+            }
+        }
+    }
+
+//    private void performDash() {
+//        System.out.println("Player dashes forward!");
+//        // 冲刺逻辑
+//        if (controller != null && player != null) {
+//            // 获取当前移动方向
+//            float dashDistance = 150f; // 冲刺距离
+//
+//            // 根据控制器输入决定冲刺方向
+//            Vector2 dashDirection = new Vector2();
+//            if (controller.up) dashDirection.y += 1;
+//            if (controller.down) dashDirection.y -= 1;
+//            if (controller.left) dashDirection.x -= 1;
+//            if (controller.right) dashDirection.x += 1;
+//
+//            // 如果没有方向输入，使用玩家当前朝向
+//            if (dashDirection.len() == 0) {
+//                dashDirection.set(0, 1); // 默认向上
+//            }
+//
+//            dashDirection.nor().scl(dashDistance);
+//
+//            // 应用冲刺
+//            Vector2 playerPos = player.getPosition();
+//            playerPos.add(dashDirection);
+//
+//            // 同步碰撞箱
+//            player.syncPositionToHitbox();
+//
+//            System.out.println("Dashed " + dashDistance + " units!");
+//        }
+//    }
+//
+//    private void performDoubleJump() {
+//        System.out.println("Player double jumps!");
+//        // 二段跳逻辑
+//        // 需要在 Player 类中添加跳跃状态
+//        // 这里只是一个占位符
+//    }
+
     @Override
     public void dispose() {
         // ========== 清理资源 ==========
@@ -1033,6 +1461,7 @@ public class GameScreen implements Screen {
 
         // ========== 新增：清理陷阱资源 ==========
         if (traps != null) {
+
             for (Trap trap : traps) {
                 if (trap instanceof Fog) {
                     ((Fog) trap).dispose();
@@ -1041,6 +1470,7 @@ public class GameScreen implements Screen {
                 }
             }
         }
+
 
         if (door != null){
             door.dispose();
@@ -1257,8 +1687,6 @@ public class GameScreen implements Screen {
         return null;
     }
 
-    private void updateItems() {
-        if (items == null || player == null) return;
 
         for (int i = items.size() - 1; i >= 0; i--) {
             Item item = items.get(i);

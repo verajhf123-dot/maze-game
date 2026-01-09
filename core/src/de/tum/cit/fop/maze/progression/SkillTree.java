@@ -3,105 +3,207 @@ package de.tum.cit.fop.maze.progression;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Enhanced Skill Tree with Q/E/R skills system.
+ */
 public class SkillTree {
-    private Map<String, SkillNode> nodes = new HashMap<>();
+    // Make SkillNode public and fields public
+    public static class SkillNode {
+        public String id;
+        public String name;
+        public String description;
+        public int cost;
+        public boolean unlocked;
+        public float healthBonus;
+        public float speedBonus;
+        public float attackBonus;
+
+        // Skill-related fields
+        public String skillType;  // "fireball", "heal", "lightning", "shield", "slow", "teleport"
+        public float skillValue;  // Skill value (damage/healing amount)
+        public float skillCooldown; // Cooldown time in seconds
+        public String bindKey;    // Bind to key "Q", "E", "R"
+
+        public SkillNode(String id, String name, String description, int cost,
+                         float healthBonus, float speedBonus, float attackBonus,
+                         String skillType, float skillValue, float skillCooldown, String bindKey) {
+            this.id = id;
+            this.name = name;
+            this.description = description;
+            this.cost = cost;
+            this.unlocked = false;
+            this.healthBonus = healthBonus;
+            this.speedBonus = speedBonus;
+            this.attackBonus = attackBonus;
+            this.skillType = skillType;
+            this.skillValue = skillValue;
+            this.skillCooldown = skillCooldown;
+            this.bindKey = bindKey;
+        }
+    }
+
     private ExperienceSystem expSystem;
+    private Map<String, SkillNode> nodes;
 
+    // Q/E/R skill cooldown timers
+    private float qCooldownTimer = 0f;
+    private float eCooldownTimer = 0f;
+    private float rCooldownTimer = 0f;
+
+    // Skill states
+    private boolean shieldActive = false;
+    private float shieldTimer = 0f;
+    private float shieldValue = 0f;
+
+    // Total bonuses
     private float totalHealthBonus = 0;
-    private float totalAttackBonus = 0;
-    private float totalDefenseBonus = 0;
     private float totalSpeedBonus = 0;
-    private float totalCritChance = 0;
-    private float totalDodgeChance = 0;
+    private float totalAttackBonus = 0;
 
+    // Special abilities
     private boolean hasDoubleJump = false;
     private boolean hasDash = false;
     private boolean hasFireResistance = false;
     private boolean hasPoisonResistance = false;
+    private boolean hasPhasing = false;
 
     public SkillTree(ExperienceSystem expSystem) {
         this.expSystem = expSystem;
-        initializeSkillTree();
+        this.nodes = new HashMap<>();
+        initializeSkills();
     }
 
-    private void initializeSkillTree() {
-        createAttackBranch();
-        createDefenseBranch();
-        createUtilityBranch();
-        createMagicBranch();
+    private void initializeSkills() {
+        // 1. Health Boost (基础技能)
+        nodes.put("health_boost", new SkillNode(
+                "health_boost",
+                "Health Boost",
+                "Max Health +30",
+                100,
+                30f,
+                0f,
+                0f,
+                "", 0f, 0f, ""
+        ));
 
-        updateSkillAvailability();
+        // 2. Speed Boost (基础技能)
+        nodes.put("speed_boost", new SkillNode(
+                "speed_boost",
+                "Swift Step",
+                "Move Speed +20%",
+                100,
+                0f,
+                0.2f,
+                0f,
+                "", 0f, 0f, ""
+        ));
+
+        // 3. Attack Boost (基础技能)
+        nodes.put("attack_boost", new SkillNode(
+                "attack_boost",
+                "Power Strike",
+                "Attack Damage +2",
+                150,
+                0f,
+                0f,
+                2f,
+                "", 0f, 0f, ""
+        ));
+
+        // 4. Q Skill - Fireball
+        nodes.put("fireball", new SkillNode(
+                "fireball",
+                "Fireball",
+                "Launch fireball at enemies (Q Key)",
+                150,
+                0f,
+                0f,
+                0f,
+                "fireball",
+                30f,
+                3.0f,
+                "Q"
+        ));
+
+        // 5. E Skill - Healing Aura
+        nodes.put("heal", new SkillNode(
+                "heal",
+                "Healing Aura",
+                "Restore health (E Key)",
+                120,
+                20f,
+                0f,
+                0f,
+                "heal",
+                50f,
+                5.0f,
+                "E"
+        ));
+
+        // 6. R Skill - Chain Lightning
+        nodes.put("lightning", new SkillNode(
+                "lightning",
+                "Chain Lightning",
+                "Lightning attacks multiple enemies (R Key)",
+                200,
+                0f,
+                0f,
+                2f,
+                "lightning",
+                15f,
+                8.0f,
+                "R"
+        ));
+
+        // 7. Shield Skill
+        nodes.put("shield", new SkillNode(
+                "shield",
+                "Energy Shield",
+                "Create shield to absorb damage",
+                180,
+                0f,
+                0f,
+                0f,
+                "shield",
+                100f,
+                10.0f,
+                ""  // Not bound to specific key
+        ));
+
+        // 8. Double Jump Ability
+        nodes.put("double_jump", new SkillNode(
+                "double_jump",
+                "Double Jump",
+                "Jump twice in mid-air",
+                150,
+                0f,
+                0.1f,
+                0f,
+                "ability",
+                0f,
+                0f,
+                ""  // Passive ability
+        ));
+
+        // 9. Dash Ability
+        nodes.put("dash", new SkillNode(
+                "dash",
+                "Dash",
+                "Quick dash forward (Shift Key)",
+                150,
+                0f,
+                0.15f,
+                0f,
+                "ability",
+                0f,
+                2.0f,
+                ""  // Bound to Shift
+        ));
     }
 
-    private void createAttackBranch() {
-        SkillNode basicAttack = new SkillNode("attack_basic", "Basic Attack",
-                "Attack +5", SkillNode.SkillType.ATTACK, 1, 0, 0);
-        basicAttack.setAttackBonus(5);
-        addNode(basicAttack);
-
-        SkillNode powerAttack = new SkillNode("attack_power", "Power Attack",
-                "Attack +10", SkillNode.SkillType.ATTACK, 2, 1, 0);
-        powerAttack.setAttackBonus(10);
-        powerAttack.addPrerequisite(basicAttack);
-        addNode(powerAttack);
-
-        SkillNode criticalStrike = new SkillNode("attack_critical", "Critical Strike",
-                "Critical Chance +15%", SkillNode.SkillType.ATTACK, 3, 2, 0);
-        criticalStrike.setCritChanceBonus(0.15f);
-        criticalStrike.addPrerequisite(powerAttack);
-        addNode(criticalStrike);
-    }
-
-    private void createDefenseBranch() {
-        SkillNode basicHealth = new SkillNode("defense_health", "Health Boost",
-                "Max Health +20", SkillNode.SkillType.DEFENSE, 1, 0, 1);
-        basicHealth.setHealthBonus(20);
-        addNode(basicHealth);
-
-        SkillNode ironDefense = new SkillNode("defense_iron", "Iron Defense",
-                "Defense +5", SkillNode.SkillType.DEFENSE, 2, 0, 2);
-        ironDefense.setDefenseBonus(5);
-        ironDefense.addPrerequisite(basicHealth);
-        addNode(ironDefense);
-
-        SkillNode agileDodge = new SkillNode("defense_dodge", "Agile Dodge",
-                "Dodge Chance +10%", SkillNode.SkillType.DEFENSE, 3, 0, 3);
-        agileDodge.setDodgeChanceBonus(0.1f);
-        agileDodge.addPrerequisite(ironDefense);
-        addNode(agileDodge);
-    }
-
-    private void createUtilityBranch() {
-        SkillNode swiftStep = new SkillNode("utility_speed", "Swift Step",
-                "Movement Speed +20%", SkillNode.SkillType.UTILITY, 1, 1, 1);
-        swiftStep.setSpeedBonus(0.2f);
-        addNode(swiftStep);
-
-        SkillNode doubleJump = new SkillNode("utility_doublejump", "Double Jump",
-                "Can jump again in mid-air", SkillNode.SkillType.UTILITY, 2, 2, 1);
-        doubleJump.setUnlocksDoubleJump(true);
-        doubleJump.addPrerequisite(swiftStep);
-        addNode(doubleJump);
-
-        SkillNode dash = new SkillNode("utility_dash", "Dash",
-                "Short distance dash ability", SkillNode.SkillType.UTILITY, 3, 3, 1);
-        dash.setUnlocksDash(true);
-        dash.addPrerequisite(doubleJump);
-        addNode(dash);
-    }
-
-    private void createMagicBranch() {
-        SkillNode fireResist = new SkillNode("magic_fire", "Fire Resistance",
-                "Reduces fire damage taken", SkillNode.SkillType.MAGIC, 2, 2, 2);
-        fireResist.setUnlocksFireResistance(true);
-        addNode(fireResist);
-
-        SkillNode poisonResist = new SkillNode("magic_poison", "Poison Resistance",
-                "Reduces poison damage taken", SkillNode.SkillType.MAGIC, 2, 3, 2);
-        poisonResist.setUnlocksPoisonResistance(true);
-        addNode(poisonResist);
-    }
-
+    /**
+     * Unlock a skill
+     */
     public boolean unlockSkill(String skillId) {
         SkillNode node = nodes.get(skillId);
         if (node == null) {
@@ -109,120 +211,328 @@ public class SkillTree {
             return false;
         }
 
-        if (node.isUnlocked()) {
-            System.err.println("Skill already unlocked: " + skillId);
+        if (node.unlocked) {
+            System.err.println("Skill already unlocked: " + node.name);
             return false;
         }
 
-        if (!node.canUnlock()) {
-            System.err.println("Cannot unlock skill: " + skillId + " (prerequisites not met or not enough skill points)");
+        // Check if player has enough XP
+        if (expSystem.getCurrentExp() < node.cost) {
+            System.err.println("Not enough XP! Need: " + node.cost + ", Have: " + expSystem.getCurrentExp());
             return false;
         }
 
+        // Check skill points
+        if (expSystem.getSkillPoints() <= 0) {
+            System.err.println("No skill points available");
+            return false;
+        }
+
+        // Use skill point
         if (!expSystem.useSkillPoint()) {
-            System.err.println("Not enough skill points");
+            System.err.println("Failed to use skill point");
             return false;
         }
 
-        if (node.unlock()) {
-            applySkillEffects(node);
-            updateSkillAvailability();
-            System.out.println("Successfully unlocked skill: " + node.getName());
-            return true;
+        // Unlock the skill
+        node.unlocked = true;
+
+        // Apply skill bonuses
+        applySkillBonuses(node);
+
+        // Activate special abilities
+        activateSpecialAbilities(node);
+
+        System.out.println("✓ Skill unlocked: " + node.name +
+                (node.bindKey.isEmpty() ? "" : " (" + node.bindKey + " Key)"));
+        return true;
+    }
+
+    private void applySkillBonuses(SkillNode node) {
+        totalHealthBonus += node.healthBonus;
+        totalSpeedBonus += node.speedBonus;
+        totalAttackBonus += node.attackBonus;
+
+        System.out.println("Bonuses applied: HP +" + node.healthBonus +
+                ", Speed +" + (node.speedBonus * 100) + "%, " +
+                "ATK +" + node.attackBonus);
+    }
+
+    private void activateSpecialAbilities(SkillNode node) {
+        switch (node.id) {
+            case "double_jump":
+                hasDoubleJump = true;
+                System.out.println("Double Jump ability activated!");
+                break;
+            case "dash":
+                hasDash = true;
+                System.out.println("Dash ability activated! (Press Shift)");
+                break;
+            case "fireball":
+                System.out.println("Fireball skill ready! (Press Q)");
+                break;
+            case "heal":
+                System.out.println("Healing skill ready! (Press E)");
+                break;
+            case "lightning":
+                System.out.println("Lightning skill ready! (Press R)");
+                break;
+        }
+    }
+
+    /**
+     * Check if a skill can be unlocked
+     */
+    public boolean canUnlockSkill(String skillId) {
+        SkillNode node = nodes.get(skillId);
+        if (node == null) return false;
+        if (node.unlocked) return false;
+        return expSystem.getSkillPoints() >= 1 && expSystem.getCurrentExp() >= node.cost;
+    }
+
+    /**
+     * Check if a skill is ready to use
+     */
+    public boolean canUseSkill(String key) {
+        SkillNode node = getSkillByKey(key);
+        if (node == null || !node.unlocked) {
+            return false;
         }
 
-        return false;
+        switch (key) {
+            case "Q": return qCooldownTimer <= 0;
+            case "E": return eCooldownTimer <= 0;
+            case "R": return rCooldownTimer <= 0;
+            default: return false;
+        }
     }
 
-    private void applySkillEffects(SkillNode skill) {
-        totalHealthBonus += skill.getHealthBonus();
-        totalAttackBonus += skill.getAttackBonus();
-        totalDefenseBonus += skill.getDefenseBonus();
-        totalSpeedBonus += skill.getSpeedBonus();
-        totalCritChance += skill.getCritChanceBonus();
-        totalDodgeChance += skill.getDodgeChanceBonus();
+    /**
+     * Use a skill
+     */
+    public SkillNode useSkill(String key) {
+        if (!canUseSkill(key)) {
+            return null;
+        }
 
-        if (skill.unlocksDoubleJump()) hasDoubleJump = true;
-        if (skill.unlocksDash()) hasDash = true;
-        if (skill.unlocksFireResistance()) hasFireResistance = true;
-        if (skill.unlocksPoisonResistance()) hasPoisonResistance = true;
+        SkillNode node = getSkillByKey(key);
+        if (node == null) {
+            return null;
+        }
+
+        // Set cooldown
+        switch (key) {
+            case "Q":
+                qCooldownTimer = node.skillCooldown;
+                System.out.println("🔥 Fireball launched! Cooldown: " + node.skillCooldown + "s");
+                break;
+            case "E":
+                eCooldownTimer = node.skillCooldown;
+                System.out.println("💚 Healing applied! Cooldown: " + node.skillCooldown + "s");
+                break;
+            case "R":
+                rCooldownTimer = node.skillCooldown;
+                System.out.println("⚡ Lightning cast! Cooldown: " + node.skillCooldown + "s");
+                break;
+        }
+
+        return node;
     }
 
-    public void updateSkillAvailability() {
-        for (SkillNode node : nodes.values()) {
-            if (!node.isUnlocked()) {
-                boolean available = true;
+    /**
+     * Update cooldowns and effects
+     */
+    public void update(float delta) {
+        if (qCooldownTimer > 0) qCooldownTimer -= delta;
+        if (eCooldownTimer > 0) eCooldownTimer -= delta;
+        if (rCooldownTimer > 0) rCooldownTimer -= delta;
 
-                for (SkillNode prereq : node.getPrerequisites()) {
-                    if (!prereq.isUnlocked()) {
-                        available = false;
-                        break;
-                    }
-                }
-
-                if (available && expSystem.getSkillPoints() < node.getCost()) {
-                    available = false;
-                }
-
-                node.setAvailable(available);
+        if (shieldActive) {
+            shieldTimer -= delta;
+            if (shieldTimer <= 0) {
+                shieldActive = false;
+                System.out.println("Shield expired");
             }
         }
     }
 
+    /**
+     * Get skill by key binding
+     */
+    private SkillNode getSkillByKey(String key) {
+        for (SkillNode node : nodes.values()) {
+            if (node.bindKey != null && node.bindKey.equals(key) && node.unlocked) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Activate shield effect
+     */
+    public void activateShield(float value, float duration) {
+        shieldActive = true;
+        shieldValue = value;
+        shieldTimer = duration;
+        System.out.println("🛡️ Shield activated: " + value + " HP, " + duration + "s");
+    }
+
+    /**
+     * Calculate damage reduction from shield
+     */
+    public float applyShield(float damage) {
+        if (!shieldActive) return damage;
+
+        float remainingDamage = damage - shieldValue;
+        shieldValue -= damage;
+
+        if (shieldValue <= 0) {
+            shieldActive = false;
+            System.out.println("Shield broken!");
+            return Math.max(0, remainingDamage);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Reset all skills
+     */
     public void reset() {
         for (SkillNode node : nodes.values()) {
-            if (node.isUnlocked()) {
-                node.reset();
-            }
+            node.unlocked = false;
         }
-
         totalHealthBonus = 0;
-        totalAttackBonus = 0;
-        totalDefenseBonus = 0;
         totalSpeedBonus = 0;
-        totalCritChance = 0;
-        totalDodgeChance = 0;
+        totalAttackBonus = 0;
 
         hasDoubleJump = false;
         hasDash = false;
         hasFireResistance = false;
         hasPoisonResistance = false;
+        hasPhasing = false;
 
-        updateSkillAvailability();
+        qCooldownTimer = 0;
+        eCooldownTimer = 0;
+        rCooldownTimer = 0;
+        shieldActive = false;
+
         System.out.println("Skill tree reset");
     }
 
-    public SkillNode getNode(String id) {
-        return nodes.get(id);
-    }
-
-    public Map<String, SkillNode> getAllNodes() {
-        return nodes;
-    }
-
+    // ===== GETTER METHODS =====
+    public SkillNode getNode(String id) { return nodes.get(id); }
+    public Map<String, SkillNode> getAllNodes() { return nodes; }
     public Map<String, SkillNode> getUnlockedNodes() {
         Map<String, SkillNode> unlocked = new HashMap<>();
         for (Map.Entry<String, SkillNode> entry : nodes.entrySet()) {
-            if (entry.getValue().isUnlocked()) {
+            if (entry.getValue().unlocked) {
                 unlocked.put(entry.getKey(), entry.getValue());
             }
         }
         return unlocked;
     }
 
-    private void addNode(SkillNode node) {
-        nodes.put(node.getId(), node);
+    // Skill cooldown getters
+    public float getQCooldown() { return qCooldownTimer; }
+    public float getECooldown() { return eCooldownTimer; }
+    public float getRCooldown() { return rCooldownTimer; }
+
+    public float getQCooldownPercent() {
+        SkillNode node = getSkillByKey("Q");
+        if (node == null) return 0;
+        return Math.min(1.0f, qCooldownTimer / node.skillCooldown);
     }
 
+    public float getECooldownPercent() {
+        SkillNode node = getSkillByKey("E");
+        if (node == null) return 0;
+        return Math.min(1.0f, eCooldownTimer / node.skillCooldown);
+    }
+
+    public float getRCooldownPercent() {
+        SkillNode node = getSkillByKey("R");
+        if (node == null) return 0;
+        return Math.min(1.0f, rCooldownTimer / node.skillCooldown);
+    }
+
+    // Get specific skill nodes
+    public SkillNode getQSkill() { return getSkillByKey("Q"); }
+    public SkillNode getESkill() { return getSkillByKey("E"); }
+    public SkillNode getRSkill() { return getSkillByKey("R"); }
+
+    // Check skill availability
+    public boolean hasQSkill() { return getQSkill() != null; }
+    public boolean hasESkill() { return getESkill() != null; }
+    public boolean hasRSkill() { return getRSkill() != null; }
+
+    // Total bonuses
     public float getTotalHealthBonus() { return totalHealthBonus; }
     public float getTotalAttackBonus() { return totalAttackBonus; }
-    public float getTotalDefenseBonus() { return totalDefenseBonus; }
     public float getTotalSpeedBonus() { return totalSpeedBonus; }
-    public float getTotalCritChance() { return totalCritChance; }
-    public float getTotalDodgeChance() { return totalDodgeChance; }
+    public float getTotalDefenseBonus() { return 0; } // Not used
+    public float getTotalCritChance() { return 0; } // Not used
+    public float getTotalDodgeChance() { return 0; } // Not used
+    public float getTotalCritDamageBonus() { return 0; } // Not used
+    public float getTotalTrapResistance() { return 0; } // Not used
+    public float getTotalFogResistance() { return 0; } // Not used
+    public float getTotalItemEffectBonus() { return 0; } // Not used
+    public int getTotalExtraLives() { return 0; } // Not used
 
+    // Special abilities
     public boolean hasDoubleJump() { return hasDoubleJump; }
     public boolean hasDash() { return hasDash; }
     public boolean hasFireResistance() { return hasFireResistance; }
     public boolean hasPoisonResistance() { return hasPoisonResistance; }
+    public boolean hasPhasing() { return hasPhasing; }
+
+    public boolean hasShieldActive() { return shieldActive; }
+    public float getShieldValue() { return shieldValue; }
+    public float getShieldTimer() { return shieldTimer; }
+
+    /**
+     * Get skill status summary
+     */
+    public String getSkillSummary() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== SKILL TREE SUMMARY ===\n");
+
+        int unlockedCount = 0;
+        for (SkillNode node : nodes.values()) {
+            sb.append(node.name);
+            if (!node.bindKey.isEmpty()) {
+                sb.append(" [").append(node.bindKey).append("]");
+            }
+            sb.append(": ");
+            if (node.unlocked) {
+                sb.append("[UNLOCKED]");
+                unlockedCount++;
+            } else {
+                sb.append("[LOCKED] - Cost: ").append(node.cost).append(" XP");
+            }
+            sb.append("\n");
+        }
+
+        sb.append("\n=== ACTIVE SKILLS ===\n");
+        if (hasQSkill()) sb.append("Q: Fireball\n");
+        if (hasESkill()) sb.append("E: Healing Aura\n");
+        if (hasRSkill()) sb.append("R: Chain Lightning\n");
+        if (hasDoubleJump()) sb.append("Ability: Double Jump\n");
+        if (hasDash()) sb.append("Ability: Dash (Shift)\n");
+
+        sb.append("\n=== TOTAL BONUSES ===\n");
+        sb.append("Health: +").append(totalHealthBonus).append(" HP\n");
+        sb.append("Speed: +").append((int)(totalSpeedBonus * 100)).append("%\n");
+        sb.append("Attack: +").append(totalAttackBonus).append(" DMG\n");
+        sb.append("\nSkills Unlocked: ").append(unlockedCount).append("/").append(nodes.size()).append("\n");
+
+        return sb.toString();
+    }
+
+    public void updateSkillAvailability() {
+        for (SkillNode node : nodes.values()) {
+            boolean canUnlock = canUnlockSkill(node.id);
+        }
+    }
 }

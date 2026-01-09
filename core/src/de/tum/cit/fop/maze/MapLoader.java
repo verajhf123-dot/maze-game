@@ -1,5 +1,6 @@
 package de.tum.cit.fop.maze;
 
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.Vector2;
@@ -12,7 +13,13 @@ import java.util.Properties;
 
 
 
+
 public class MapLoader {
+    public int minX = Integer.MAX_VALUE;
+    public int maxX = Integer.MIN_VALUE;
+    public int minY = Integer.MAX_VALUE;
+    public int maxY = Integer.MIN_VALUE;
+
 
     public static class LevelData {
         public List<Wall> walls = new ArrayList<>();
@@ -22,6 +29,7 @@ public class MapLoader {
     }
 
     public LevelData loadLevel(String internalPath) {
+
         LevelData data = new LevelData();
         Properties props = new Properties();
 
@@ -48,6 +56,12 @@ public class MapLoader {
 
                     int x = Integer.parseInt(coords[0].trim());
                     int y = Integer.parseInt(coords[1].trim());
+
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+
                     int type = Integer.parseInt(value);
 
                     float pixelX = x * Wall.TILE_SIZE;
@@ -79,6 +93,9 @@ public class MapLoader {
             System.err.println("Error loading map file: " + internalPath);
             e.printStackTrace();
         }
+
+        System.out.println("Map bounds: x=" + minX + ".." + maxX + " y=" + minY + ".." + maxY);
+
 
         return data;
     }
