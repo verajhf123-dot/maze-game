@@ -687,6 +687,7 @@ public class GameScreen implements Screen {
     private void checkTrapActivation() {
         if (player != null && traps != null) {
             for (Trap trap : traps) {
+
                 boolean wasActivated = trap.isActivated();
                 trap.checkActivation(player);
                 boolean isActivatedNow = trap.isActivated();
