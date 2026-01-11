@@ -10,9 +10,9 @@ public class ExperienceSystem {
     private int totalExp = 0;
     private int skillPointsGained = 0;
 
-    private int healthBonusPerLevel = 10;
-    private int attackBonusPerLevel = 2;
-    private int defenseBonusPerLevel = 1;
+    private int healthBonusPerLevel = 0;
+    private int attackBonusPerLevel = 0;
+    private int defenseBonusPerLevel = 0;
 
     private List<ExpListener> listeners = new ArrayList<>();
 
@@ -74,13 +74,13 @@ public class ExperienceSystem {
     public static int getExpForEnemy(String enemyType) {
         switch (enemyType) {
             case "NineTailedFox":
-                return 50;
-            case "QiongQi":
-                return 75;
-            case "ZhuLong":
-                return 100;
-            default:
                 return 25;
+            case "QiongQi":
+                return 60;
+            case "ZhuLong":
+                return 150;
+            default:
+                return 20;
         }
     }
 
@@ -122,4 +122,25 @@ public class ExperienceSystem {
         skillPointsGained = 0;
         calculateExpForNextLevel();
     }
+
+
+    public void setLevel(int level) {
+        this.currentLevel = level;
+        calculateExpForNextLevel(); // 重新计算升级所需经验
+    }
+
+    public void setCurrentExp(int exp) {
+        this.currentExp = exp;
+        // 简单起见，读取存档时暂且认为 total = current，或者你可以不存 totalExp
+        this.totalExp = exp;
+    }
+
+    public void setSkillPoints(int points) {
+        this.skillPointsGained = points;
+    }
+
+
+
+
+
 }

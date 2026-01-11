@@ -48,6 +48,7 @@ public abstract class Enemy {
 
     protected float pathfindingCooldown = 0.5f;
     protected float currentPathfindingCooldown = 0f;
+    protected float damageCooldown = 0f;
 
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
@@ -117,6 +118,8 @@ public abstract class Enemy {
 
     public void update(float delta) {
         if (!isAlive()) return;
+
+        damageCooldown = Math.max(0f, damageCooldown - delta);
 
         attackTimer = Math.max(0f, attackTimer - delta);
         currentPathfindingCooldown = Math.max(0f, currentPathfindingCooldown - delta);
@@ -271,7 +274,10 @@ public abstract class Enemy {
     }
 
     public void takeDamage(float damage) {
+        if (damageCooldown > 0) return;
         health -= damage;
+        damageCooldown = 0.3f;
+
         if (health <= 0) {
             onDeath();
         } else {
@@ -343,10 +349,10 @@ public abstract class Enemy {
 
     public void adjustDifficulty(int level) {
 
-        this.maxHealth = 30 + (level * 10);
+        this.maxHealth = 30 + (level * 15);
         this.health = this.maxHealth;
-        this.attackDamage = 5 + (level * 1.5f);
-        this.speed = 80f + (level * 2f);
+        this.attackDamage = 6 + (level * 2.5f);
+        this.speed = 90f + (level * 2f);
 
         this.retreatHealthThreshold = Math.max(0.1f, 0.3f - (level * 0.02f));
 

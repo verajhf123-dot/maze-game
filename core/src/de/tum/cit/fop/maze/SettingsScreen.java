@@ -16,16 +16,25 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.audio.Sound;
 
 public class SettingsScreen implements Screen {
 
     private final MazeRunnerGame game;
     private final SettingsManager settings;
     private Stage stage;
+    private Sound buttonSound;
 
     public SettingsScreen(MazeRunnerGame game, SettingsManager settings) {
         this.game = game;
         this.settings = settings;
+
+        try {
+            buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
+        } catch (Exception e) {
+            Gdx.app.log("SettingsScreen", "Button sound not found!");
+        }
+
     }
 
     @Override
@@ -73,6 +82,7 @@ public class SettingsScreen implements Screen {
         backButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play(settings.getVolume());
                 settings.save(); // 退出时确保保存文件
                 game.goToMenu();
             }
@@ -96,6 +106,7 @@ public class SettingsScreen implements Screen {
         keyButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                if (buttonSound != null) buttonSound.play(settings.getVolume());
                 // 1. 改变按钮文字，提示用户输入
                 keyButton.setText("Press any key...");
 
@@ -144,5 +155,9 @@ public class SettingsScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
+        if (buttonSound != null) {
+            buttonSound.dispose();
+        }
     }
+
 }

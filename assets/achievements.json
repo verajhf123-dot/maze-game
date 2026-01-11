@@ -1,0 +1,20 @@
+[
+  {
+    "id": "MONSTER_SLAYER",
+    "name": "Monster Slayer",
+    "description": "Defeat 10 mythical enemies in your journey.",
+    "requirement": 10
+  },
+  {
+    "id": "EXP_MASTER",
+    "name": "Spirit Master",
+    "description": "Accumulate 1,000 Experience Points (XP).",
+    "requirement": 1000
+  },
+  {
+    "id": "FIRST_BLOOD",
+    "name": "First Blood",
+    "description": "Defeat your first enemy and begin your path.",
+    "requirement": 1
+  }
+]

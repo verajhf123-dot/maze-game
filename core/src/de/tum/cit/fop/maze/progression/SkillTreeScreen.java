@@ -21,16 +21,19 @@ public class SkillTreeScreen implements Screen {
     private final SkillTree skillTree;
     private final PlayerStats playerStats;
     private final ExperienceSystem expSystem;
+    private final Screen previousScreen;
 
     private Table skillTable;
     private Label skillPointsLabel;
     private Label statsLabel;
 
-    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats) {
+
+    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats,Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
         this.skillTree = playerStats.getSkillTree();
         this.expSystem = playerStats.getExpSystem();
+        this.previousScreen = previousScreen;
         this.stage = new Stage(new ScreenViewport(), game.getSpriteBatch());
     }
 
@@ -317,7 +320,8 @@ public class SkillTreeScreen implements Screen {
     private void returnToGame() {
         // Return to current game level
         // You might want to track the current level
-        game.goToGame(1); // Default to level 1 for now
+        game.setScreen(previousScreen);// Default to level 1 for now
+        this.dispose();
     }
 
     @Override

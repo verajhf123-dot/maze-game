@@ -282,11 +282,20 @@ public class PlayerStats {
         return hasExitKey;
     }
 
+
     public void useKey() {
         if (hasExitKey) {
             hasExitKey = false;
             addScore(1000);
             System.out.println("Key has been used!");
+        }
+    }
+
+
+    public void setHasKey(boolean hasKey) {
+        this.hasExitKey = hasKey;
+        if (hasKey) {
+            System.out.println("CHEAT: Key added via Console!");
         }
     }
 
@@ -324,4 +333,12 @@ public class PlayerStats {
             skillManager.update(delta);
         }
     }
+
+    public void setCurrentHealth(int health) {
+        this.health = health;
+        // 简单的安全检查
+        if (this.health > maxHealth) this.health = maxHealth;
+    }
+
+
 }
