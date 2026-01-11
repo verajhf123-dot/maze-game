@@ -7,6 +7,7 @@ import de.tum.cit.fop.maze.enemies.Enemy;
 import com.badlogic.gdx.math.Vector2;
 
 public class SkillManager {
+
     private Player player;
     private PlayerStats stats;
     private SkillTree skillTree;

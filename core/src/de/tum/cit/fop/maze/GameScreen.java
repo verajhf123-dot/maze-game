@@ -590,30 +590,26 @@ public class GameScreen implements Screen {
             }
         }
 
-        // 技能快捷键 Q/E/R
         if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
             useSkill1();
         }
-
         if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
             useSkill2();
         }
-
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
             useSkill3();
         }
 
         // Shift冲刺（需要持续检测）
-        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)) {
+        if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) ||
+                Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)) {
             if (player.getStats().getSkillManager() != null &&
                     player.getStats().getSkillManager().canDash()) {
-                // 获取移动方向
                 float dirX = 0, dirY = 0;
                 if (controller.up) dirY = 1;
                 if (controller.down) dirY = -1;
                 if (controller.left) dirX = -1;
                 if (controller.right) dirX = 1;
-
                 if (dirX != 0 || dirY != 0) {
                     player.getStats().getSkillManager().performDash(dirX, dirY);
                 }
