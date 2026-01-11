@@ -63,17 +63,47 @@ public class MenuScreen implements Screen {
         table.add(new Label("Maze Runner", game.getSkin(), "title")).padBottom(80).row();
 
 
-        if(SaveManager.hasSaveFile()){
+        if (SaveManager.hasSaveFile()) {
             TextButton button = new TextButton("Continued", game.getSkin());
             table.add(button).width(300).padBottom(15).row();
             button.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
                     if (buttonSound != null) buttonSound.play();
+
                     SaveData data = SaveManager.loadGame();
                     if (data != null) {
-                        Gdx.app.log("MenuScreen", "Loading Level: " + data.getCurrentLevel());
-                        game.goToGame(data.getCurrentLevel());
+                        Gdx.app.log("MenuScreen", "Loading Save Game...");
+
+                        // 1. 重建 PlayerStats 对象
+                        PlayerStats loadedStats = new PlayerStats();
+
+                        // 2. 恢复基础属性 (从 SaveData 读入)
+                        loadedStats.setCurrentHealth(data.getCurrentHealth());
+
+                        // 3. 恢复经验值系统
+                        if (loadedStats.getExpSystem() != null) {
+                            loadedStats.getExpSystem().setLevel(data.getCharLevel());
+                            loadedStats.getExpSystem().setCurrentExp(data.getCurrentExp());
+                            loadedStats.getExpSystem().setSkillPoints(data.getSkillPoints());
+                        }
+
+                        // 4. 恢复技能树 (强制解锁已学的技能)
+                        if (data.getUnlockedSkillIds() != null) {
+                            for (String skillId : data.getUnlockedSkillIds()) {
+                                loadedStats.getSkillTree().forceUnlock(skillId);
+                            }
+                        }
+
+                        // 5. 重新计算属性加成 (这步很重要，根据等级和技能刷新 maxHealth 等)
+                        loadedStats.applySkillEffects();
+
+                        Gdx.app.log("MenuScreen", "Loaded Level: " + data.getCurrentLevelMap() + ", Char Level: " + data.getCharLevel());
+
+                        // 6. 带着满血复活(或者残血复活)的数据进入游戏！
+                        // 注意：这里传的是 loadedStats，不再是 null
+                        game.goToGame(data.getCurrentLevelMap(), loadedStats);
+
                     } else {
                         Gdx.app.log("MenuScreen", "Error loading save file.");
                     }
@@ -94,7 +124,7 @@ public class MenuScreen implements Screen {
                 Preferences prefs = Gdx.app.getPreferences("MazeRunnerGame");
                 int maxLevel = prefs.getInteger("maxLevel", 1);
                 game.resetGlobalScore();
-                game.goToGame(1);
+                game.goToGame(1,null);
             }
         });
 
@@ -180,7 +210,7 @@ public class MenuScreen implements Screen {
             levelButton.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, Actor actor) {
-                    game.goToGame(level);
+                    game.goToGame(level,null);
                 }
             });
         }

@@ -9,11 +9,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.audio.Sound;
 
 
 public class HighScoreScreen implements Screen {
     private Stage stage;
     private MazeRunnerGame game;
+    private Sound buttonSound;
 
     public HighScoreScreen(MazeRunnerGame game) {
         this.game = game;
@@ -22,6 +24,11 @@ public class HighScoreScreen implements Screen {
         Table table = new Table();
         table.setFillParent(true);
         stage.addActor(table);
+        try {
+            buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
+        } catch (Exception e) {
+            Gdx.app.log("HelpScreen", "Sound file not found!");
+        }
 
 
         table.add(new Label("--- Top 5 Records ---", game.getSkin(), "title")).padBottom(30).row();
@@ -39,6 +46,7 @@ public class HighScoreScreen implements Screen {
         back.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                if (buttonSound != null) buttonSound.play();
                 game.setScreen(new MenuScreen(game, game.getSettingsManager()));
             }
         });
@@ -52,7 +60,12 @@ public class HighScoreScreen implements Screen {
         stage.draw();
     }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
-    @Override public void dispose() { stage.dispose(); }
+    @Override public void dispose() {
+        stage.dispose();
+        if (buttonSound != null) {
+            buttonSound.dispose();
+        }
+    }
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}

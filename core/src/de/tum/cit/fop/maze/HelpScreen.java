@@ -10,6 +10,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import com.badlogic.gdx.audio.Sound;
 
 
 
@@ -17,10 +18,16 @@ public class HelpScreen implements Screen {
 
     private final MazeRunnerGame game;
     private final Stage stage;
+    private Sound buttonSound;
 
     public HelpScreen(MazeRunnerGame game) {
         this.game = game;
         this.stage = new Stage(new ScreenViewport(), game.getSpriteBatch());
+        try {
+            buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
+        } catch (Exception e) {
+            Gdx.app.log("HelpScreen", "Sound file not found!");
+        }
     }
 
     @Override
@@ -34,17 +41,22 @@ public class HelpScreen implements Screen {
         table.add(new Label("HOW TO PLAY", game.getSkin(), "title")).padBottom(40).row();
 
         String instructions =
-                "CONTROLS:\n" +
-                        "Move: WASD or Arrow Keys\n" +
-                        "Run: Hold SHIFT\n" +
-                        "Pause: ESC\n" +
-                        "Zoom: I / O\n\n" +
-                        "OBJECTIVE:\n" +
-                        "1. Find the Key to unlock the Exit.\n" +
-                        "2. Avoid monsters and traps.\n" +
-                        "3. Reach the Exit to win!";
+                "--- CONTROLS ---\n" +
+                        " Move:  W, A, S, D\n" +
+                        " Attack: SPACE (360° Omnidirectional Strike)\n" + // 突出全方位攻击
+                        " Sprint: Hold SHIFT (Requires Dash Skill)\n" +
+                        " Skills: Q (Fireball), E (Heal), R (Lightning)\n" +
+                        " Menus:  T (Skill Tree), ~ (Dev Console)\n" +   // 加入控制台说明
+                        " Pause:  ESC\n\n" +
 
+                        "--- HOW TO PLAY ---\n" +
+                        "1. HUNT: Defeat mythical beasts to gain XP.\n" +
+                        "2. ASCEND: Level up to earn Skill Points.\n" +
+                        "3. EVOLVE: Press T to unlock new abilities.\n" +
+                        "4. ACHIEVE: Reach secret milestones to unlock Medals.\n" + // 突出成就系统
+                        "5. GOAL: Find the Spirit Key & reach the Exit Portal.";
         Label infoLabel = new Label(instructions, game.getSkin());
+        infoLabel.setAlignment(com.badlogic.gdx.utils.Align.center);
         table.add(infoLabel).padBottom(40).row();
 
 
@@ -52,6 +64,7 @@ public class HelpScreen implements Screen {
         backButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (buttonSound != null) buttonSound.play();
                 game.goToMenu();
             }
         });
@@ -76,6 +89,9 @@ public class HelpScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
+        if (buttonSound != null) {
+            buttonSound.dispose();
+        }
     }
 
     //这几个方法暂时用不到，留空即可

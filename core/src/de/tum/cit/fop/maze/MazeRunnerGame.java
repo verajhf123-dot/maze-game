@@ -156,11 +156,11 @@ public class MazeRunnerGame extends Game {
     }
 
     public void goToGame() {
-        goToGame(1);
+        goToGame(1,null);
     }
 
-    public void goToGame(int levelNumber) {
-        this.setScreen(new GameScreen(this, levelNumber));
+    public void goToGame(int levelNumber,PlayerStats stats) {
+        this.setScreen(new GameScreen(this, levelNumber, stats));
 
         if (menuScreen != null) {
             menuScreen.dispose();

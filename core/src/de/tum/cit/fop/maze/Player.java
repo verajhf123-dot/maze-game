@@ -45,9 +45,18 @@ public class Player implements CollidableEntity {
     private float invincibleTimer = 0f;
 
 
+    private boolean isAttacking = false;
+    private float attackTimer = 0f;
+    private float attackCooldownTimer = 0f;
+    private static final float ATTACK_DURATION = 0.2f; // 攻击判定存在 0.2秒
+    private static final float ATTACK_COOLDOWN = 0.5f; // 0.5秒攻击一次
+    private Rectangle attackHitbox; // 攻击判定框
+    private int facingDirection = 0; // 0=下, 1=右, 2=上, 3=左
 
 
-    public Player(float x, float y) {
+
+
+    public Player(float x, float y,PlayerStats inheritedStats) {
         this.texture = new Texture("character.png");
         TextureRegion[][] tmp = TextureRegion.split(texture, 16, 32);
 
@@ -67,11 +76,26 @@ public class Player implements CollidableEntity {
         // 默认初始面朝下
         this.currentFrame = downFrame;
 
-        // ... 后面的代码保持不变 ...
+
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
         this.stats = new PlayerStats();
         this.hitbox = new Rectangle(x, y, 14, 14);
+
+
+        this.attackHitbox = new Rectangle(0, 0, 40, 40);
+
+        if (inheritedStats != null) {
+            this.stats = inheritedStats;
+            this.stats.setPlayer(this); // 重要：更新 Stats 里的 player 引用
+            System.out.println("Player inherited stats! Level: " + stats.getExpSystem().getCurrentLevel());
+        } else {
+            this.stats = new PlayerStats();
+            this.stats.setPlayer(this); // 记得也要初始化 skillManager
+        }
+
+
+
     }
 
 
@@ -102,6 +126,12 @@ public class Player implements CollidableEntity {
                 speedBuffMultiplier = 1.0f; // 时间到，恢复正常
                 System.out.println("Speed Buff Ended.");
             }
+        }
+
+        if (attackCooldownTimer > 0) attackCooldownTimer -= delta;
+        if (isAttacking) {
+            attackTimer -= delta;
+            if (attackTimer <= 0) isAttacking = false;
         }
 
 
@@ -160,8 +190,43 @@ public class Player implements CollidableEntity {
         if (position.y < 0) position.y = 0;
         hitbox.setPosition(position.x, position.y);
 
+        updateAttackHitboxPosition();
+
 
     }
+
+    public void performAttack() {
+        if (attackCooldownTimer <= 0 && !isAttacking) {
+            isAttacking = true;
+            attackTimer = ATTACK_DURATION;
+            attackCooldownTimer = ATTACK_COOLDOWN;
+            System.out.println("Player Attacked! Dir: " + facingDirection);
+        }
+    }
+
+
+    private void updateAttackHitboxPosition() {
+        float range = 60f;
+        float pX = hitbox.x + hitbox.width / 2;
+        float pY = hitbox.y + hitbox.height / 2;
+
+        attackHitbox.set(
+                pX - range / 2,
+                pY - range / 2,
+                range,
+                range
+        );
+    }
+
+
+
+
+
+
+
+
+
+
 
     public void triggerDamageVFX() {
         this.damageColorTimer = 1.0f; // 设置特效持续时间为1秒
@@ -279,6 +344,14 @@ public class Player implements CollidableEntity {
 
     public void dispose() {
         texture.dispose();
+    }
+
+    public boolean isAttacking() {
+        return isAttacking;
+    }
+
+    public Rectangle getAttackHitbox() {
+        return attackHitbox;
     }
 }
 

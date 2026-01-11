@@ -118,7 +118,7 @@ public class SkillManager {
     private boolean castFireball(float damage) {
         if (player == null) return false;
 
-        System.out.println("🔥 Casting Fireball! Damage: " + damage);
+        System.out.println(" Casting Fireball! Damage: " + damage);
 
         // In a full implementation, this would create a projectile
         // For now, we'll apply damage to nearest enemy

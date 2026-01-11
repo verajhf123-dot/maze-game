@@ -56,4 +56,15 @@ public abstract class Item {
     }
 
     public abstract void onPickup(Object entity);
+
+    public float getX() {
+        return bounds.x;
+    }
+
+    public float getY() {
+        return bounds.y;
+    }
+
+
+
 }

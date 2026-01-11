@@ -535,4 +535,45 @@ public class SkillTree {
             boolean canUnlock = canUnlockSkill(node.id);
         }
     }
+
+    // ==========================================
+    // 🔥 新增：用于存档和读档的方法
+    // ==========================================
+
+    /**
+     * 获取所有已解锁技能的 ID 列表 (用于存档)
+     */
+    public java.util.List<String> getUnlockedSkillIds() {
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        // 遍历所有技能节点，如果已解锁，就记下它的 ID
+        // getAllNodes() 是你已经有的方法
+        for (SkillNode node : getAllNodes().values()) {
+            if (node.unlocked) {
+                ids.add(node.id);
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * 强制解锁技能 (用于读档，不扣点数，不检查前置条件)
+     * 这个方法会在加载游戏时被调用，用于恢复玩家之前学的技能
+     */
+    public void forceUnlock(String skillId) {
+        // 从 Map 中找到这个技能
+        SkillNode node = getAllNodes().get(skillId);
+        if (node != null) {
+            node.unlocked = true;
+
+            // 🔥 重要：解锁后不仅要把 unlocked 设为 true，还要把属性加成加上去！
+            applySkillBonuses(node);
+            activateSpecialAbilities(node);
+
+            System.out.println("Restored skill from save: " + node.name);
+        }
+    }
+
+
+
+
 }
