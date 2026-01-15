@@ -5,10 +5,13 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.MazeRunnerGame;
@@ -28,6 +31,12 @@ public class SkillTreeScreen implements Screen {
     private Label skillPointsLabel;
     private Label statsLabel;
 
+    private SpriteBatch batch;
+    private Texture menuBg;
+
+
+
+    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats,Screen previousScreen) {
     public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats, Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
@@ -43,6 +52,9 @@ public class SkillTreeScreen implements Screen {
 
     @Override
     public void show() {
+        batch = new SpriteBatch();
+        menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
+
         Gdx.input.setInputProcessor(stage);
 
         Table mainTable = new Table();
@@ -102,19 +114,28 @@ public class SkillTreeScreen implements Screen {
         this.dispose();
     }
 
+
     @Override
     public void render(float delta) {
+        // 1) 清屏（可以留黑，不影响，因为马上会画背景图）
+        ScreenUtils.clear(0, 0, 0, 1);
         // ESC or T key to go back
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             returnToGame();
         }
 
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        // 2) 先画背景图（一定要在 stage.draw 之前）
+        batch.begin();
+        batch.draw(menuBg, 0, 0,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight());
+        batch.end();
 
+        // 3) 再画 UI（按钮、文字）
         stage.act(delta);
         stage.draw();
     }
+
 
     @Override
     public void resize(int width, int height) {

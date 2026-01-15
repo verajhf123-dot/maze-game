@@ -135,6 +135,9 @@ public class GameScreen implements Screen {
     private DeveloperConsole console; // 声明控制台
 
     private AchievementManager achievementManager;
+    private Texture[] floorVariants;
+    private byte[][] floorPick;
+
 
 
     /**
@@ -374,9 +377,18 @@ public class GameScreen implements Screen {
         batch.begin();
         for (int x = 0; x < mapWidthInTiles; x++) {
             for (int y = 0; y < mapHeightInTiles; y++) {
-                batch.draw(floorTexture, x * Wall.TILE_SIZE, y * Wall.TILE_SIZE, Wall.TILE_SIZE, Wall.TILE_SIZE);
+
+                Texture tex = floorVariants[floorPick[x][y]];  // 0= floor.png, 1=flower, 2=grass
+                batch.draw(
+                        tex,
+                        x * Wall.TILE_SIZE,
+                        y * Wall.TILE_SIZE,
+                        Wall.TILE_SIZE,
+                        Wall.TILE_SIZE
+                );
             }
         }
+
         batch.end();
 
         // --- 2. ShapeRenderer (调试框/无图物体) ---
@@ -1012,7 +1024,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        floorTexture = new Texture(Gdx.files.internal("floor.png"));
+
         wallTexture = new Texture(Gdx.files.internal("wall.png"));
 
 
@@ -1101,6 +1113,37 @@ public class GameScreen implements Screen {
         mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
         mapWidthInTiles = maxX + 1;
         mapHeightInTiles = maxY + 1;
+
+        // ===== 地板变体加载 =====
+        floorVariants = new Texture[] {
+                new Texture(Gdx.files.internal("floor.png")),          // 基础地板
+                new Texture(Gdx.files.internal("floor_flower.png")),   // 花地砖
+                new Texture(Gdx.files.internal("floor_grass.png"))     // 草地砖
+        };
+
+// 每个 tile 用哪一种地板
+        floorPick = new byte[mapWidthInTiles][mapHeightInTiles];
+
+// 固定随机：同一关卡每次进入分布一
+// 在地板上铺上一些花和草
+        Random rngg = new Random(levelNumber * 99991L);
+
+        for (int x = 0; x < mapWidthInTiles; x++) {
+            for (int y = 0; y < mapHeightInTiles; y++) {
+
+                int idx = 0; // 默认 floor.png
+
+                float r = rngg.nextFloat();
+                if (r < 0.06f) {
+                    idx = 1; // 6% 花
+                } else if (r < 0.12f) {
+                    idx = 2; // 6% 草
+                }
+
+                floorPick[x][y] = (byte) idx;
+            }
+        }
+
 
         this.keys = new ArrayList<>(); // 初始化列表
 

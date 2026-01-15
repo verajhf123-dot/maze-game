@@ -3,11 +3,14 @@ package de.tum.cit.fop.maze;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.audio.Sound;
 
@@ -16,6 +19,10 @@ public class HighScoreScreen implements Screen {
     private Stage stage;
     private MazeRunnerGame game;
     private Sound buttonSound;
+    private SpriteBatch batch;
+    private Texture menuBg;
+
+
 
     public HighScoreScreen(MazeRunnerGame game) {
         this.game = game;
@@ -53,10 +60,27 @@ public class HighScoreScreen implements Screen {
         table.add(back).padTop(30);
     }
 
-    @Override public void show() { Gdx.input.setInputProcessor(stage); }
-    @Override public void render(float delta) {
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        stage.act();
+    @Override public void show() {
+
+        batch = new SpriteBatch();
+        menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
+
+
+    }
+    @Override
+    public void render(float delta) {
+        // 1) 清屏（可以留黑，不影响，因为马上会画背景图）
+        ScreenUtils.clear(0, 0, 0, 1);
+
+        // 2) 先画背景图（一定要在 stage.draw 之前）
+        batch.begin();
+        batch.draw(menuBg, 0, 0,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight());
+        batch.end();
+
+        // 3) 再画 UI（按钮、文字）
+        stage.act(delta);
         stage.draw();
     }
     @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
