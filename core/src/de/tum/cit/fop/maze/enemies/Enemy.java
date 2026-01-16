@@ -58,9 +58,7 @@ public abstract class Enemy {
     }
 
     public Texture getTexture() {return texture;}
-    public Color getFallbackBodyColor(){
-        return Color.RED;
-    }
+
 
     protected Texture safeLoadTexture(String path) {
         if (Gdx.files.internal(path).exists()) {

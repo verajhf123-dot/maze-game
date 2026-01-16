@@ -168,7 +168,7 @@ public class SkillManager {
         if (gameScreen != null) {
             // In a full implementation, this would chain between multiple enemies
             // For now, damage all enemies in range
-            for (Enemy enemy : gameScreen.getEnemies()) {
+            for (Enemy enemy : gameScreen.getEnemiesList()) {
                 if (enemy.isAlive()) {
                     float distance = player.getPosition().dst(enemy.getPosition());
                     if (distance <= 150f) { // 150 pixel range
@@ -207,7 +207,7 @@ public class SkillManager {
         Enemy nearest = null;
         float nearestDistance = Float.MAX_VALUE;
 
-        for (Enemy enemy : gameScreen.getEnemies()) {
+        for (Enemy enemy : gameScreen.getEnemiesList()) {
             if (enemy.isAlive()) {
                 float distance = player.getPosition().dst(enemy.getPosition());
                 if (distance <= range && distance < nearestDistance) {
