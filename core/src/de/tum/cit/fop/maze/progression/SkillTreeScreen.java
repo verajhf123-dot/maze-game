@@ -27,17 +27,17 @@ public class SkillTreeScreen implements Screen {
     private final ExperienceSystem expSystem;
     private final Screen previousScreen;
 
-    // 先声明，在构造函数中初始化
     private Label skillPointsLabel;
     private Label statsLabel;
-
     private SpriteBatch batch;
     private Texture menuBg;
+    private Texture hpIcon;
+    private Texture speedIcon;
+    private Texture atkIcon;
 
-
+    private static final Color MINT_COLOR = new Color(0.96f, 1.0f, 0.98f, 1.0f);
 
     public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats,Screen previousScreen) {
-    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats, Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
         this.skillTree = playerStats.getSkillTree();
@@ -45,7 +45,6 @@ public class SkillTreeScreen implements Screen {
         this.previousScreen = previousScreen;
         this.stage = new Stage(new ScreenViewport(), game.getSpriteBatch());
 
-        // 在构造函数中初始化标签
         this.skillPointsLabel = new Label("", game.getSkin());
         this.statsLabel = new Label("", game.getSkin());
     }
@@ -53,7 +52,11 @@ public class SkillTreeScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
+        menuBg = new Texture(Gdx.files.internal("sktbg3.png"));
+
+        hpIcon = new Texture(Gdx.files.internal("SkillTree/HP.png"));
+        speedIcon = new Texture(Gdx.files.internal("SkillTree/speed.png"));
+        atkIcon = new Texture(Gdx.files.internal("SkillTree/attack.png"));
 
         Gdx.input.setInputProcessor(stage);
 
@@ -63,18 +66,64 @@ public class SkillTreeScreen implements Screen {
 
         // Title
         Label title = new Label("SKILL TREE", game.getSkin(), "title");
+        title.setColor(new Color(0.96f, 0.96f, 0.86f, 1f));
+        title.setFontScale(1.2f);
         mainTable.add(title).padBottom(40).row();
 
+        Table statsTable = new Table();
+        statsTable.defaults().pad(70);
+
+        float iconSize = 500f;
+
+        // HP 图标和数值
+        Table hpContainer = new Table();
+        Image hpImage = new Image(hpIcon);
+        hpImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        hpContainer.add(hpImage).size(iconSize, iconSize).row();
+        Label hpLabel = new Label("HP +" + (int)skillTree.getTotalHealthBonus(), game.getSkin());
+        hpLabel.setColor(Color.RED);
+        hpLabel.setFontScale(1.5f);
+        hpContainer.add(hpLabel);
+
+        // Speed 图标和数值
+        Table speedContainer = new Table();
+        Image speedImage = new Image(speedIcon);
+        speedImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        speedContainer.add(speedImage).size(iconSize, iconSize).row();
+        Label speedLabel = new Label("Speed +" + (int)(skillTree.getTotalSpeedBonus() * 100) + "%", game.getSkin());
+        speedLabel.setColor(MINT_COLOR);
+        speedLabel.setFontScale(1.5f);
+        speedContainer.add(speedLabel);
+
+        // ATK 图标和数值
+        Table atkContainer = new Table();
+        Image atkImage = new Image(atkIcon);
+        atkImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        atkContainer.add(atkImage).size(iconSize, iconSize).row();
+        Label atkLabel = new Label("ATK +" + (int)skillTree.getTotalAttackBonus(), game.getSkin());
+        atkLabel.setColor(Color.ORANGE);
+        atkLabel.setFontScale(1.5f);
+        atkContainer.add(atkLabel);
+
+        // 将三个容器添加到一行
+        statsTable.add(hpContainer);
+        statsTable.add(speedContainer);
+        statsTable.add(atkContainer);
+
+        mainTable.add(statsTable).padBottom(30).row();
+
         // 当前属性加成
-        updateStatsLabel();
-        mainTable.add(statsLabel).padBottom(30).row();
+        //updateStatsLabel();
+        //mainTable.add(statsLabel).padBottom(30).row();
 
         // 技能点信息
         updateSkillPointsLabel();
+        skillPointsLabel.setFontScale(1.5f);
         mainTable.add(skillPointsLabel).padBottom(30).row();
 
         // 提示信息
         Label hintLabel = new Label("Press T or ESC to return", game.getSkin());
+        hintLabel.setFontScale(1.3f);
         mainTable.add(hintLabel).padTop(20);
     }
 
@@ -136,7 +185,6 @@ public class SkillTreeScreen implements Screen {
         stage.draw();
     }
 
-
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
@@ -145,6 +193,11 @@ public class SkillTreeScreen implements Screen {
     @Override
     public void dispose() {
         stage.dispose();
+        if (hpIcon != null) hpIcon.dispose();
+        if (speedIcon != null) speedIcon.dispose();
+        if (atkIcon != null) atkIcon.dispose();
+        if (menuBg != null) menuBg.dispose();
+        if (batch != null) batch.dispose();
     }
 
     @Override

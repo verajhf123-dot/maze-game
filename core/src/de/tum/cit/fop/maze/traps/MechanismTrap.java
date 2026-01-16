@@ -1,23 +1,16 @@
 package de.tum.cit.fop.maze.traps;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.Animation;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import de.tum.cit.fop.maze.Player;
 
 public class MechanismTrap extends Trap {
     private Texture inactiveTexture;
     private Texture activeTexture;
-    private Animation<TextureRegion> activationAnim;
-    private float animStateTime;
     private boolean isAnimating;
-    private float damage = 30f;
-    private static Texture fallbackTexture;
-    private boolean hasTexture = false;
+    private float animTimer;
+    private float animDuration = 0.3f;
 
     public MechanismTrap(float x, float y) {
         super(x, y, 16, 16);
@@ -28,106 +21,58 @@ public class MechanismTrap extends Trap {
     }
 
     private void loadTextures() {
-        try{
-        inactiveTexture = new Texture(Gdx.files.internal("traps/mechanism_inactive.png"));
-        activeTexture = new Texture(Gdx.files.internal("traps/mechanism_active.png"));
-        if (Gdx.files.internal("traps/mechanism_inactive.png").exists()) {
-            inactiveTexture = new Texture(Gdx.files.internal("traps/mechanism_inactive.png"));
-            hasTexture = true;
-        }
-
-        if (Gdx.files.internal("traps/mechanism_active.png").exists()) {
-            activeTexture = new Texture(Gdx.files.internal("traps/mechanism_active.png"));
-        }
-
-        // 创建激活动画
-        Texture animSheet = new Texture(Gdx.files.internal("traps/mechanism_anim.png"));
-        TextureRegion[][] frames = TextureRegion.split(animSheet, 32, 32);
-        TextureRegion[] animFrames = new TextureRegion[3];
-        System.arraycopy(frames[0], 0, animFrames, 0, 3);
-        activationAnim = new Animation<>(0.1f, animFrames);
-    }catch(Exception e){
-            System.out.println("MechanismTrap textures missing, using fallback box.");
-        }
-        if(fallbackTexture ==null){
-            Pixmap p =new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-            p.setColor(Color.WHITE);
-            p.fill();
-            fallbackTexture = new Texture(p);
-            p.dispose();
-        }
-        if (Gdx.files.internal("traps/mechanism_anim.png").exists()) {
-            Texture animSheet = new Texture(Gdx.files.internal("traps/mechanism_anim.png"));
-            TextureRegion[][] frames = TextureRegion.split(animSheet, 32, 32);
-            TextureRegion[] animFrames = new TextureRegion[3];
-            System.arraycopy(frames[0], 0, animFrames, 0, 3);
-            activationAnim = new Animation<>(0.1f, animFrames);
+        try {
+            inactiveTexture = new Texture(Gdx.files.internal("traps/mti.png"));
+            activeTexture = new Texture(Gdx.files.internal("traps/mta.png"));
+            System.out.println("MechanismTrap textures loaded successfully.");
+        } catch (Exception e) {
+            System.err.println("Error loading MechanismTrap textures: " + e.getMessage());
         }
     }
 
+
     @Override
     public void render(SpriteBatch batch) {
-        if (inactiveTexture != null || activeTexture != null) {
-            // 有贴图
-            if (isAnimating && activationAnim != null) {
-                batch.draw(
-                        activationAnim.getKeyFrame(animStateTime, false),
-                        bounds.x, bounds.y
-                );
-            } else if (activated && activeTexture != null) {
-                batch.draw(activeTexture, bounds.x, bounds.y);
+        float drawX = bounds.x;
+        float drawY = bounds.y;
+        float drawWidth = bounds.width;   // 使用 bounds 的宽度
+        float drawHeight = bounds.height; // 使用 bounds 的高度
+
+        if (isAnimating) {
+            boolean showActive = ((int)(animTimer / 0.1f)) % 2 == 0;
+            if (showActive && activeTexture != null) {
+                batch.draw(activeTexture, drawX, drawY, drawWidth, drawHeight);
             } else if (inactiveTexture != null) {
-                batch.draw(inactiveTexture, bounds.x, bounds.y);
+                batch.draw(inactiveTexture, drawX, drawY, drawWidth, drawHeight);
             }
-        if(inactiveTexture != null){
-            if (isAnimating) {
-                TextureRegion frame = activationAnim.getKeyFrame(animStateTime, false);
-                batch.draw(frame, bounds.x, bounds.y);
-            } else if (activated) {
-                batch.draw(activeTexture, bounds.x, bounds.y);
-            } else {
-                batch.draw(inactiveTexture, bounds.x, bounds.y);
-            }
-        }else {
-            batch.setColor(activated ? Color.ORANGE : Color.GRAY);
-            batch.draw(fallbackTexture, bounds.x, bounds.y, bounds.width, bounds.height);
-            batch.setColor(Color.WHITE);
+        } else if (activated && activeTexture != null) {
+            batch.draw(activeTexture, drawX, drawY, drawWidth, drawHeight);
+        } else if (inactiveTexture != null) {
+            batch.draw(inactiveTexture, drawX, drawY, drawWidth, drawHeight);
         }
-
-        }
-
-
     }
 
     // 修改后的 activate 方法
     @Override
     public void activate(Player player) {
-
         int currentLevel = (int) player.getStats().getExpSystem().getCurrentLevel();
-
         float trapDamage = 10 + (currentLevel * 5);
 
         player.takeDamage(trapDamage);
 
+        // 触发简单动画
         isAnimating = true;
-        animStateTime = 0;
+        animTimer = 0;
 
         System.out.println("MechanismTrap Level " + currentLevel + " activated! Damage: " + trapDamage);
     }
 
     @Override
     public void reset() {
+        super.reset();
         activated = false;
         isAnimating = false;
-        animStateTime = 0;
-    }
-    public void dispose() {
-        if (inactiveTexture != null) {
-            inactiveTexture.dispose();
-        }
-        if (activeTexture != null) {
-            activeTexture.dispose();
-        }
+        animTimer = 0;
     }
 
     @Override
@@ -135,13 +80,21 @@ public class MechanismTrap extends Trap {
         super.update(delta);
 
         if (isAnimating) {
-            animStateTime += delta;
-            if (activationAnim!= null &&activationAnim.isAnimationFinished(animStateTime)) {
+            animTimer += delta;
+            if (animTimer >= animDuration) {
                 isAnimating = false;
-            }
-            if(activationAnim==null){
-                isAnimating = false;
+                animTimer = 0;
             }
         }
+    }
+
+    @Override
+    public boolean hasTexture() {
+        return true;  // 告诉 GameScreen 我们有贴图，不要绘制色块
+    }
+
+    public void dispose() {
+        if (inactiveTexture != null) inactiveTexture.dispose();
+        if (activeTexture != null) activeTexture.dispose();
     }
 }

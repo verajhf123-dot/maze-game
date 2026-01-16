@@ -342,6 +342,12 @@ public class Player implements CollidableEntity {
         return position;
     }
 
+    public String getDebugInfo() {
+        return "Player pos: (" + position.x + "," + position.y +
+                "), hitbox: " + hitbox +
+                ", health: " + getHealth();
+    }
+
     public void dispose() {
         texture.dispose();
     }
