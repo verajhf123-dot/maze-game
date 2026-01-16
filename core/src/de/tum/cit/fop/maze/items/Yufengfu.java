@@ -10,7 +10,7 @@ public class Yufengfu extends Item {
                 x,
                 y,
                 16f,
-                "items/yufengfu.png",
+                "item_Yufengfu.png",
                 Color.CYAN
         );
     }
