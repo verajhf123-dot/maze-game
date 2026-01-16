@@ -94,6 +94,12 @@ public class Player implements CollidableEntity {
             this.stats.setPlayer(this); // 记得也要初始化 skillManager
         }
 
+        System.out.println("Texture size: " + texture.getWidth() + "x" + texture.getHeight());
+        System.out.println("Split rows: " + tmp.length + ", cols: " + tmp[0].length);
+        System.out.println("Frame size: 16x32");
+        System.out.println("Width%16=" + (texture.getWidth() % 16) + ", Height%32=" + (texture.getHeight() % 32));
+
+
 
 
     }

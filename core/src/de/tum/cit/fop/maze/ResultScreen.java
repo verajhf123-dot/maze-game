@@ -88,10 +88,12 @@ public class ResultScreen implements Screen {
         // 新增：加载背景资源
         batch = new SpriteBatch();
         try {
-            menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
+            String bgPath = isVictory ? "victory.png" : "defeated.png"; // 失败背景
+            menuBg = new Texture(Gdx.files.internal(bgPath));
         } catch (Exception e) {
             Gdx.app.log("ResultScreen", "Background texture not found!");
         }
+
 
         // 初始化按钮样式
         createButtonStyle();

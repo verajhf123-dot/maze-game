@@ -28,7 +28,7 @@ import de.tum.cit.fop.maze.enemies.QiongQi;
 import de.tum.cit.fop.maze.enemies.ZhuLong;
 
 import java.util.List;
-import de.tum.cit.fop.maze.Exit;
+
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable; // 需要导入
 import de.tum.cit.fop.maze.ai.AStarPathFinder;
@@ -43,20 +43,11 @@ import de.tum.cit.fop.maze.progression.SkillManager;
 
 import java.util.Random;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.ArrayList;
 import de.tum.cit.fop.maze.items.Item;
 import de.tum.cit.fop.maze.items.Xiandan;
 import de.tum.cit.fop.maze.items.Yufengfu;
 import de.tum.cit.fop.maze.items.Jingangfu;
-
-
-
-
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.utils.Array;
-
-import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
 
 /**
  * The GameScreen class is responsible for rendering the gameplay screen.
@@ -1544,6 +1535,7 @@ public class GameScreen implements Screen {
             player.getStats().heal(100);
         }
         player.syncPositionToHitbox();
+
     }
 
 
