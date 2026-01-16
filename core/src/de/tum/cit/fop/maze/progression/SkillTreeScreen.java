@@ -35,8 +35,6 @@ public class SkillTreeScreen implements Screen {
     private Texture menuBg;
 
 
-
-    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats,Screen previousScreen) {
     public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats, Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
@@ -107,11 +105,13 @@ public class SkillTreeScreen implements Screen {
         // Return to current game level
         if (previousScreen != null) {
             game.setScreen(previousScreen);
+            this.dispose();
         } else {
+            Gdx.app.error("SkillTreeScreen", "No previous screen found to return to!");
             // Fallback to level 1 if no previous screen
-            game.goToGame(1, playerStats);
+
         }
-        this.dispose();
+
     }
 
 
@@ -144,7 +144,19 @@ public class SkillTreeScreen implements Screen {
 
     @Override
     public void dispose() {
-        stage.dispose();
+        if (stage != null) {
+            stage.dispose();
+        }
+        // 销毁背景图片
+        if (menuBg != null) {
+            menuBg.dispose();
+        }
+        // 销毁画笔
+        if (batch != null) {
+            batch.dispose();
+        }
+
+
     }
 
     @Override
