@@ -11,11 +11,12 @@ import de.tum.cit.fop.maze.Player;
 
 public class Fog extends Trap {
     private Texture fogTexture;
+    private Texture fogImageTexture;
     private ParticleEffect fogEffect;
     private Circle effectArea;
     private boolean effectActive;
     private float effectDuration = 5f;
-    private float currentEffectTime;
+    private float currentEffectTime = 0f;
     private static Texture fallbackTexture;
 
     public Fog(float x, float y) {

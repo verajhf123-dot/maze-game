@@ -28,9 +28,13 @@ public abstract class Trap {
         }
     }
 
+
     public abstract void render(SpriteBatch batch);
     public abstract void activate(Player player);
-    public abstract void reset();
+    public void reset() {
+        activated = false;
+        currentCooldown = 0;
+    }
 
     public void checkActivation(Player player) {
         if (currentCooldown <= 0 && bounds.overlaps(player.getHitbox())) {

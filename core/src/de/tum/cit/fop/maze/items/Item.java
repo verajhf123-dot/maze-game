@@ -20,13 +20,36 @@ public abstract class Item {
         this.bounds = new Rectangle(x, y, size, size);
         this.fallbackColor = fallbackColor;
 
+        if (texturePath != null) {
+            texturePath = texturePath.trim();
+        }
+
+        if (texturePath != null && !texturePath.isEmpty()
+                && Gdx.files.internal(texturePath).exists()) {
+            texture = new Texture(texturePath);
+        }
+
+
         // 加载物品图片（可选）
         if (texturePath != null && Gdx.files.internal(texturePath).exists()) {
             texture = new Texture(texturePath);
         }
+        System.out.println("Item created: " + texturePath + " exists="
+                + (texturePath != null && Gdx.files.internal(texturePath).exists())
+                + " bounds=" + bounds);
+        System.out.println("Create Item: " + getClass().getSimpleName()
+                + ", texturePath=" + texturePath);
+        if (texture != null) {
+            System.out.println("Loaded texture size: " + texture.getWidth() + "x" + texture.getHeight());
+        }
+
+
+
     }
 
     public void render(SpriteBatch batch) {
+        System.out.println("Rendering item at " + bounds.x + "," + bounds.y);
+
 
         // ⭐ 这里修改为安全加载 pixel
         if (pixel == null) {
@@ -49,6 +72,7 @@ public abstract class Item {
             batch.draw(pixel, bounds.x, bounds.y, bounds.width, bounds.height);
             batch.setColor(Color.WHITE);
         }
+
     }
 
     public Rectangle getBounds() {

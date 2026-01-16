@@ -105,6 +105,15 @@ public class Player implements CollidableEntity {
             this.stats = new PlayerStats();
             this.stats.setPlayer(this);
         }
+
+        System.out.println("Texture size: " + texture.getWidth() + "x" + texture.getHeight());
+        System.out.println("Split rows: " + tmp.length + ", cols: " + tmp[0].length);
+        System.out.println("Frame size: 16x32");
+        System.out.println("Width%16=" + (texture.getWidth() % 16) + ", Height%32=" + (texture.getHeight() % 32));
+
+
+
+
     }
 
     public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run, List<Wall> walls) {

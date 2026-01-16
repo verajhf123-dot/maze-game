@@ -28,7 +28,7 @@ import de.tum.cit.fop.maze.enemies.QiongQi;
 import de.tum.cit.fop.maze.enemies.ZhuLong;
 
 import java.util.List;
-import de.tum.cit.fop.maze.Exit;
+
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable; // 需要导入
 import de.tum.cit.fop.maze.ai.AStarPathFinder;
@@ -43,20 +43,11 @@ import de.tum.cit.fop.maze.progression.SkillManager;
 
 import java.util.Random;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.ArrayList;
 import de.tum.cit.fop.maze.items.Item;
 import de.tum.cit.fop.maze.items.Xiandan;
 import de.tum.cit.fop.maze.items.Yufengfu;
 import de.tum.cit.fop.maze.items.Jingangfu;
-
-
-
-
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.utils.Array;
-
-import static com.badlogic.gdx.scenes.scene2d.InputEvent.Type.exit;
 
 /**
  * The GameScreen class is responsible for rendering the gameplay screen.
@@ -448,22 +439,24 @@ public class GameScreen implements Screen {
         // 绘制无贴图的敌人方块
         for (Enemy enemy : enemies) {
             if (!enemy.isAlive()) continue;
-            if (enemy.getTexture() != null) continue; // 有贴图的这里不画
-
-            shapeRenderer.setColor(enemy.getFallbackBodyColor());
-            shapeRenderer.rect(enemy.getX(), enemy.getY(), enemy.getWidth(), enemy.getHeight());
+            Texture texture = enemy.getTexture();
+            if (texture != null) {
+                batch.draw(texture, enemy.getX(), enemy.getY(),
+                        enemy.getWidth(), enemy.getHeight());
+            }
+            // 如果纹理为null，直接跳过（不绘制）
         }
 
         // 绘制无贴图的陷阱
-        if (traps != null) {
-            for (Trap trap : traps) {
-                if (!trap.hasTexture()) {
-                    shapeRenderer.setColor(trap.isActivated() ? Color.ORANGE : Color.GRAY);
-                    Rectangle b = trap.getBounds();
-                    shapeRenderer.rect(b.x, b.y, b.width, b.height);
-                }
-            }
-        }
+//        if (traps != null) {
+//            for (Trap trap : traps) {
+//                if (!trap.hasTexture()) {
+//                    shapeRenderer.setColor(trap.isActivated() ? Color.ORANGE : Color.GRAY);
+//                    Rectangle b = trap.getBounds();
+//                    shapeRenderer.rect(b.x, b.y, b.width, b.height);
+//                }
+//            }
+//        }
         shapeRenderer.end();
 
 
@@ -521,26 +514,26 @@ public class GameScreen implements Screen {
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled); // 实心模式
 
-        if (traps != null) {
-            for (Trap trap : traps) {
-
-                Rectangle b = trap.getBounds();
-
-                if (trap instanceof Fog) {
-
-                    shapeRenderer.setColor(1f, 1f, 1f, 0.4f);
-                }
-                else if (trap instanceof MechanismTrap) {
-                    if (trap.isActivated()) {
-
-                        shapeRenderer.setColor(1f, 0f, 0f, 1f);
-                    } else {
-                        shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f);
-                    }
-                }
-                shapeRenderer.rect(b.x, b.y, b.width, b.height);
-            }
-        }
+//        if (traps != null) {
+//            for (Trap trap : traps) {
+//
+//                Rectangle b = trap.getBounds();
+//
+//                if (trap instanceof Fog) {
+//
+//                    shapeRenderer.setColor(1f, 1f, 1f, 0.4f);
+//                }
+//                else if (trap instanceof MechanismTrap) {
+//                    if (trap.isActivated()) {
+//
+//                        shapeRenderer.setColor(1f, 0f, 0f, 1f);
+//                    } else {
+//                        shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f);
+//                    }
+//                }
+//                shapeRenderer.rect(b.x, b.y, b.width, b.height);
+//            }
+//        }
 
 
         if (items != null) {
@@ -746,6 +739,15 @@ public class GameScreen implements Screen {
                 if (attackSound != null) attackSound.play();
                 player.triggerDamageVFX();
 
+            }
+        }
+
+        // 在碰撞检测部分
+        for (Enemy enemy : enemies) {
+            if (enemy instanceof NineTailedFox && enemy.isAlive()) {
+                NineTailedFox fox = (NineTailedFox) enemy;
+                System.out.println("Fox state: Form=" + fox.getCurrentForm() +
+                        ", HasEncountered=" + fox.hasEncounteredPlayer());
             }
         }
 
@@ -1409,6 +1411,16 @@ public class GameScreen implements Screen {
                 newEnemy.setWalkableGrid(walkableGrid);
                 newEnemy.setPathFinder(pathFinder);
 
+                // 确保为每个敌人设置目标玩家
+                newEnemy.setTargetPlayer(player);
+
+                // 如果是九尾狐，重置其接触状态
+                if (newEnemy instanceof NineTailedFox) {
+                    NineTailedFox fox = (NineTailedFox) newEnemy;
+                    fox.resetEncounterState(); // 重置接触状态
+                    System.out.println("INIT: NineTailedFox created, player set, state reset");
+                }
+
                 upgradedEnemies.add(newEnemy);
             }
         }
@@ -1425,6 +1437,14 @@ public class GameScreen implements Screen {
                     if (e != null) {
                         e.adjustDifficulty(levelNumber);
                         e.setPathFinder(pathFinder);
+                        e.setTargetPlayer(player); // 为新增的敌人也设置目标玩家
+
+                        // 如果是九尾狐，重置其接触状态
+                        if (e instanceof NineTailedFox) {
+                            NineTailedFox fox = (NineTailedFox) e;
+                            fox.resetEncounterState();
+                        }
+
                         enemies.add(e);
                     }
                 }
@@ -1432,6 +1452,16 @@ public class GameScreen implements Screen {
         }
 
         System.out.println("Enemies initialized: " + enemies.size);
+
+        // 再次确保所有敌人都设置了目标玩家（双重保险）
+        for (Enemy enemy : enemies) {
+            enemy.setTargetPlayer(player);
+            if (enemy instanceof NineTailedFox) {
+                System.out.println("INIT: NineTailedFox found and player set");
+            }
+        }
+
+        System.out.println("INIT: Total enemies = " + enemies.size);
     }
 
 
@@ -1505,6 +1535,7 @@ public class GameScreen implements Screen {
             player.getStats().heal(100);
         }
         player.syncPositionToHitbox();
+
     }
 
 
@@ -1706,6 +1737,14 @@ public class GameScreen implements Screen {
 
     public Array<Enemy> getEnemies() {
         return enemies;
+    }
+
+    public List<Enemy> getEnemiesList() {
+        List<Enemy> enemyList = new ArrayList<>();
+        for (int i = 0; i < enemies.size; i++) {
+            enemyList.add(enemies.get(i));
+        }
+        return enemyList;
     }
 
     public AStarPathFinder getPathFinder() {
