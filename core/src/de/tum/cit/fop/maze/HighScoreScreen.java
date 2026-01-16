@@ -2,14 +2,17 @@ package de.tum.cit.fop.maze;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.audio.Sound;
@@ -21,6 +24,8 @@ public class HighScoreScreen implements Screen {
     private Sound buttonSound;
     private SpriteBatch batch;
     private Texture menuBg;
+    private Texture scroll;
+    private Texture ButtonBg;
 
 
 
@@ -28,28 +33,78 @@ public class HighScoreScreen implements Screen {
         this.game = game;
         stage = new Stage(new ScreenViewport());
 
-        Table table = new Table();
-        table.setFillParent(true);
-        stage.addActor(table);
+
+
+        //Root Table;
+
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+        stage.addActor(rootTable);
+
+        //Scroll table;
+        Table scrollTable = new Table(); // 这个才是放内容的
+
+        try {
+            scroll = new Texture(Gdx.files.internal("scroll.png"));
+            // 把卷轴背景设置给这个内部的 Table，而不是全屏的 rootTable
+            scrollTable.setBackground(new TextureRegionDrawable(scroll));
+        } catch (Exception e) {
+            Gdx.app.log("HighScore", "Scroll texture not found.");
+        }
+
+
+        Label titleLabel = new Label("Top 5 Records", game.getSkin(), "title");
+        titleLabel.setFontScale(0.75f);
+        scrollTable.add(titleLabel).padBottom(25).row();
+
+       // Add Tables
+        String[] scores = HighScoreManager.getTopScores();
+        if (scores.length == 0) {
+            Label noRec = new Label("No records yet, go play!", game.getSkin());
+            noRec.setColor(Color.WHITE); // 用深褐色
+            noRec.setFontScale(0.9f);
+            scrollTable.add(noRec).row();
+        } else {
+            for (int i = 0; i < scores.length; i++) {
+                Label scoreLabel = new Label((i+1) + ". Score: " + scores[i], game.getSkin());
+                scoreLabel.setColor(Color.WHITE); // 用深褐色
+                scoreLabel.setFontScale(1.1f); // 分数稍微小一点点
+                scrollTable.add(scoreLabel).padBottom(10).row();
+            }
+        }
+
+
         try {
             buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
         } catch (Exception e) {
             Gdx.app.log("HelpScreen", "Sound file not found!");
         }
+        TextButton.TextButtonStyle btnStyle = new TextButton.TextButtonStyle();
+        BitmapFont baseFont = game.getSkin().getFont("font");
+        if (baseFont == null) baseFont = new BitmapFont();
+        btnStyle.font = baseFont;
+
+        btnStyle.fontColor = Color.WHITE;
+        btnStyle.downFontColor = Color.LIGHT_GRAY;
 
 
-        table.add(new Label("--- Top 5 Records ---", game.getSkin(), "title")).padBottom(30).row();
+        try {
+            ButtonBg = new Texture(Gdx.files.internal("button2.png"));
 
-        String[] scores = HighScoreManager.getTopScores();
-        if (scores.length == 0) {
-            table.add(new Label("No records yet, go play!", game.getSkin())).row();
-        } else {
-            for (int i = 0; i < scores.length; i++) {
-                table.add(new Label((i+1) + ". Score: " + scores[i], game.getSkin())).padBottom(10).row();
-            }
+            TextureRegionDrawable drawable = new TextureRegionDrawable(ButtonBg);
+
+            btnStyle.up = drawable;
+            btnStyle.down = drawable.tint(Color.LIGHT_GRAY);
+
+        } catch (Exception e) {
+            Gdx.app.log("HighScore", "Button texture (button2.png) not found!");
+            btnStyle = game.getSkin().get(TextButton.TextButtonStyle.class);
+            btnStyle.fontColor = Color.BLACK;
         }
 
-        TextButton back = new TextButton("Back to Menu", game.getSkin());
+
+        TextButton back = new TextButton("Back to Menu",btnStyle);
+        back.getLabel().setFontScale(1.1f);
         back.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
@@ -57,10 +112,14 @@ public class HighScoreScreen implements Screen {
                 game.setScreen(new MenuScreen(game, game.getSettingsManager()));
             }
         });
-        table.add(back).padTop(30);
+        scrollTable.add(back).width(420).height(110).padTop(50).padBottom(40);
+
+
+        rootTable.add(scrollTable).width(500).height(650);
     }
 
     @Override public void show() {
+        Gdx.input.setInputProcessor(stage);
 
         batch = new SpriteBatch();
         menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
@@ -89,6 +148,10 @@ public class HighScoreScreen implements Screen {
         if (buttonSound != null) {
             buttonSound.dispose();
         }
+        if (batch != null) batch.dispose();
+        if (menuBg != null) menuBg.dispose();
+        if (scroll != null) scroll.dispose();
+        if (ButtonBg != null) ButtonBg.dispose();
     }
     @Override public void pause() {}
     @Override public void resume() {}
