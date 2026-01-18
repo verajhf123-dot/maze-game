@@ -106,6 +106,14 @@ public class GameScreen implements Screen {
 
     private Texture floorTexture;
     private Texture wallTexture;
+    private Texture treeTexture;
+    private Texture tree2Texture;
+    private Texture rockTexture;
+
+    // 0=无, 1=tree, 2=tree2, 3=rock
+    private byte[][] decoPick;
+
+
 
 
     private Music mapMusic;
@@ -134,6 +142,7 @@ public class GameScreen implements Screen {
     private Texture buttonBg;
     private TextButton.TextButtonStyle commonButtonStyle;
     private Texture keyIconTexture;
+
 
     // 新增：HUD 背景框 Texture
     private Texture hudFrameTexture;
@@ -428,29 +437,7 @@ public class GameScreen implements Screen {
 
         batch.end();
 
-        // --- 2. ShapeRenderer (调试框/无图物体) ---
-        // 这一层在贴图层下面，如果有贴图会被盖住，这很好
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        if (door != null) {
-            shapeRenderer.setColor(Color.BLUE);
-            shapeRenderer.rect(door.getX(), door.getY(), door.getWidth(), door.getHeight());
-        }
-
-        // 绘制无贴图的敌人方块
-        for (Enemy enemy : enemies) {
-            if (!enemy.isAlive()) continue;
-            Texture texture = enemy.getTexture();
-            if (texture != null) {
-                batch.draw(texture, enemy.getX(), enemy.getY(),
-                        enemy.getWidth(), enemy.getHeight());
-            }
-            // 如果纹理为null，直接跳过（不绘制）
-        }
-
-
-        shapeRenderer.end();
 
 
         // --- 3. SpriteBatch (实体贴图) ---
@@ -459,11 +446,57 @@ public class GameScreen implements Screen {
         batch.begin();
 
         // Layer A: 墙壁
+
+        // ===== Layer A: 墙（先全部画墙）=====
         if (walls != null) {
             for (Wall wall : walls) {
-                batch.draw(wallTexture, wall.worldX, wall.worldY, Wall.TILE_SIZE, Wall.TILE_SIZE);
+                batch.draw(wallTexture,
+                        wall.worldX, wall.worldY,
+                        Wall.TILE_SIZE, Wall.TILE_SIZE);
             }
         }
+
+// ===== Layer A-Overlay: 装饰（再画树/石头）=====
+        if (walls != null && decoPick != null) {
+            for (Wall wall : walls) {
+                int gx = wall.gridX;
+                int gy = wall.gridY;
+                if (gx < 0 || gx >= mapWidthInTiles || gy < 0 || gy >= mapHeightInTiles) continue;
+
+                byte type = decoPick[gx][gy];
+
+                // 1) rock：覆盖整个墙（完全1:1贴合tile）
+                if (type == 3 && rockTexture != null) {
+                    batch.draw(rockTexture,
+                            wall.worldX, wall.worldY,
+                            Wall.TILE_SIZE, Wall.TILE_SIZE);
+                }
+
+                // 2) tree：放大（跨tile），你说 tree 要改 size
+                else if (type == 1 && treeTexture != null) {
+                    float w = Wall.TILE_SIZE * 2.0f;  // 你想更大就调这里
+                    float h = Wall.TILE_SIZE * 3.0f;
+
+                    batch.draw(treeTexture,
+                            wall.worldX - Wall.TILE_SIZE * 0.5f, // 居中一点
+                            wall.worldY,                          // 底部贴墙
+                            w, h);
+                }
+
+                // 3) tree2：也放大，但可以和 tree 不一样大小（更自然）
+                else if (type == 2 && tree2Texture != null) {
+                    float w = Wall.TILE_SIZE * 2.5f;
+                    float h = Wall.TILE_SIZE * 3.2f;
+
+                    batch.draw(tree2Texture,
+                            wall.worldX - Wall.TILE_SIZE * 0.75f,
+                            wall.worldY,
+                            w, h);
+                }
+            }
+        }
+
+
 
         // Layer B: 陷阱 (画在地上，人可以踩上去) -> ✅ 你的Trap逻辑是对的
         if (traps != null) {
@@ -1122,6 +1155,33 @@ public class GameScreen implements Screen {
 
             wallTexture = new Texture(Gdx.files.internal("wall.png"));
 
+            try {
+                treeTexture = new Texture(Gdx.files.internal("tree.png"));
+                treeTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            } catch (Exception e) {
+                Gdx.app.log("GameScreen", "No tree.png found: " + e.getMessage());
+                treeTexture = null;
+            }
+
+            try {
+                tree2Texture = new Texture(Gdx.files.internal("tree2.png"));
+                tree2Texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            } catch (Exception e) {
+                Gdx.app.log("GameScreen", "No tree2.png found: " + e.getMessage());
+                tree2Texture = null;
+            }
+
+            try {
+                rockTexture = new Texture(Gdx.files.internal("rock.png"));
+                rockTexture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+            } catch (Exception e) {
+                Gdx.app.log("GameScreen", "No rock.png found: " + e.getMessage());
+                rockTexture = null;
+            }
+
+
+
+
             // 新增：加载 HUD 背景框纹理
             try {
                 hudFrameTexture = new Texture(Gdx.files.internal("scroll_1.png"));
@@ -1212,6 +1272,24 @@ public class GameScreen implements Screen {
             mapWidthInTiles = maxX + 1;
             mapHeightInTiles = maxY + 1;
 
+            //美化墙
+            decoPick = new byte[mapWidthInTiles][mapHeightInTiles];
+            Random rng = new Random(levelNumber * 1357911L);
+
+            for (Wall w : walls) {
+                int x = w.gridX, y = w.gridY;
+                if (x < 0 || x >= mapWidthInTiles || y < 0 || y >= mapHeightInTiles) continue;
+
+                float r = rng.nextFloat();
+
+                // 你可以随便调比例
+                if (r < 0.06f) decoPick[x][y] = 1;       // 6% tree
+                else if (r < 0.10f) decoPick[x][y] = 2;  // 4% tree2
+                else if (r < 0.16f) decoPick[x][y] = 3;  // 6% rock
+            }
+
+
+
             // ===== 地板变体加载 =====
             floorVariants = new Texture[]{
                     new Texture(Gdx.files.internal("floor.png")),          // 基础地板
@@ -1259,16 +1337,16 @@ public class GameScreen implements Screen {
                 Vector2 pos = getRandomEmptyTile();
                 float worldX = pos.x * Wall.TILE_SIZE;
                 float worldY = pos.y * Wall.TILE_SIZE;
-                double rng = Math.random();
+                double rnggg = Math.random();
 
                 if (levelNumber <= 2) {
-                    if (rng < 0.7) items.add(new Xiandan(worldX, worldY)); // 70% 血
+                    if (rnggg < 0.7) items.add(new Xiandan(worldX, worldY)); // 70% 血
                     else items.add(new Yufengfu(worldX, worldY));          // 30% 跑
                 }
                 // Lv 3+: 开始出现无敌符，血瓶比例依然要高，因为玩家掉血快
                 else {
-                    if (rng < 0.5) items.add(new Xiandan(worldX, worldY));       // 50% 血
-                    else if (rng < 0.8) items.add(new Yufengfu(worldX, worldY)); // 30% 跑
+                    if (rnggg < 0.5) items.add(new Xiandan(worldX, worldY));       // 50% 血
+                    else if (rnggg < 0.8) items.add(new Yufengfu(worldX, worldY)); // 30% 跑
                     else items.add(new Jingangfu(worldX, worldY));               // 20% 无敌
                 }
             }
@@ -1292,6 +1370,7 @@ public class GameScreen implements Screen {
                 pixmap.dispose();
 
             }
+
 
             buildCollisionMap(maxX + 1, maxY + 1);
             // ========== 新增：初始化PathFinder ==========
