@@ -164,41 +164,44 @@ public class SkillTreeScreen implements Screen {
         mainTable.add(hintLabel).padTop(20);
     }
 
-    // 新增：处理升级的核心逻辑
     private void attemptUpgrade(String type) {
-        if (expSystem.getSkillPoints() > 0) {
-            boolean success = false;
+        String skillId = "";
 
-            // 注意：这里需要调用你 SkillTree 类中具体的升级方法
-            // 因为我看不到你的 SkillTree 代码，所以我写了通用的逻辑。
-            // 如果你的方法名不一样（比如叫 unlockNode），请在这里修改！
-            switch (type) {
-                case "HP":
-                    // 假设你的 SkillTree 有 addHealth 或类似的方法
-                    // skillTree.unlockHealthNode();
-                    // 如果没有特定方法，这里只是模拟成功：
-                    success = true;
-                    System.out.println("Upgraded HP!");
-                    break;
-                case "SPEED":
-                    // skillTree.unlockSpeedNode();
-                    success = true;
-                    System.out.println("Upgraded Speed!");
-                    break;
-                case "ATK":
-                    // skillTree.unlockAttackNode();
-                    success = true;
-                    System.out.println("Upgraded Attack!");
-                    break;
-            }
+        // 1. 将按钮类型映射为 SkillTree.java 中定义的 ID
+        switch (type) {
+            case "HP":
+                skillId = "health_boost";
+                break;
+            case "SPEED":
+                skillId = "speed_boost";
+                break;
+            case "ATK":
+                skillId = "attack_boost";
+                break;
+            default:
+                System.out.println("Unknown upgrade type: " + type);
+                return;
+        }
 
-            if (success) {
-                expSystem.useSkillPoint(); // 扣除技能点
-                updateAllStatsLabels();      // 刷新界面数值
-                updateSkillPointsLabel();    // 刷新剩余技能点
-            }
+        // 2. 尝试解锁
+        // skillTree.unlockSkill() 内部会自动检查：
+        //    a. 你的 XP 是否足够 (不够返回 false)
+        //    b. 自动扣除 XP
+        //    c. 是否已经解锁过 (防止重复购买)
+        boolean success = skillTree.unlockSkill(skillId);
+
+        // 3. 根据结果刷新界面
+        if (success) {
+            System.out.println("Successfully upgraded: " + type);
+
+            // 刷新属性面板
+            updateAllStatsLabels();
+
+            // 刷新右上角的 XP 显示 (之前叫 SkillPointsLabel)
+            updateSkillPointsLabel();
         } else {
-            System.out.println("Not enough skill points!");
+            // 如果失败（XP不够或者已经解锁过了），可以在这里加提示音或者弹窗
+            System.out.println("Cannot upgrade " + type + " (Not enough XP or already unlocked)");
         }
     }
 
@@ -212,9 +215,9 @@ public class SkillTreeScreen implements Screen {
 
     private void updateSkillPointsLabel() {
         if (expSystem != null) {
-            String text = "XP: " + expSystem.getCurrentExp() +
-                    " | Skill Points: " + expSystem.getSkillPoints() +
-                    " | Level: " + expSystem.getCurrentLevel();
+            // ▼▼▼ 修改：只显示当前 XP ▼▼▼
+            String text = "Current XP: " + expSystem.getCurrentExp();
+            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
             skillPointsLabel.setText(text);
         } else {
             skillPointsLabel.setText("XP System not available");
@@ -222,12 +225,21 @@ public class SkillTreeScreen implements Screen {
     }
 
     private void returnToGame() {
-        // 确保正确返回到之前的屏幕
         if (previousScreen != null) {
+            // 如果 previousScreen 是 GameScreen，尝试恢复它的状态
+            if (previousScreen instanceof de.tum.cit.fop.maze.GameScreen) {
+                // 需要在 GameScreen 里加一个 public 方法叫 resumeFromSkillTree() 或者直接访问
+                // 这里我们用一种简单粗暴的方法，依靠 GameScreen 的 show() 逻辑
+                // 但最好是在这里把 GameScreen 的状态改回 RUNNING
+
+                // 假设你没法直接访问 GameScreen 的私有变量，
+                // 那么在 GameScreen.java 的 show() 方法里，你需要确保状态被重置。
+            }
+
             game.setScreen(previousScreen);
             this.dispose();
         } else {
-            Gdx.app.error("SkillTreeScreen", "No previous screen found to return to!");
+            game.goToGame(1, playerStats);
         }
     }
 
@@ -240,6 +252,7 @@ public class SkillTreeScreen implements Screen {
         // ESC or T key to go back
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             returnToGame();
+            return;
         }
 
         // 2) 画背景

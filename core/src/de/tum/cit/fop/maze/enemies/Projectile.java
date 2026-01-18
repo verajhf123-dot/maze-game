@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
 import de.tum.cit.fop.maze.Player;
 import de.tum.cit.fop.maze.GameScreen;
 
@@ -29,6 +30,19 @@ public class Projectile {
         this.damage = damage;
         this.active = true;
         this.color = color;
+    }
+
+    public Projectile(float x, float y, float directionX, float directionY, float speed, float damage, Texture texture, float width, float height) {
+        this.position = new Vector2(x, y);
+        this.velocity = new Vector2(directionX, directionY).nor().scl(speed);
+
+        // 现在这里的 width 和 height 就能对应上参数里的数值了
+        this.bounds = new Rectangle(x, y, width, height);
+
+        this.speed = speed;
+        this.damage = damage;
+        this.active = true;
+        this.texture = texture;
     }
 
     public Projectile(float x, float y, Vector2 direction, float speed, float damage, Color color) {
@@ -81,5 +95,18 @@ public class Projectile {
         if (texture != null) {
             texture.dispose();
         }
+    }
+
+    public boolean checkEnemyHit(Array<Enemy> enemies) {
+        if (!active) return false;
+
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive() && bounds.overlaps(enemy.getBounds())) {
+                enemy.takeDamage(damage); // 造成伤害
+                active = false;           // 火球消失
+                return true;              // 击中了一个就返回
+            }
+        }
+        return false;
     }
 }
