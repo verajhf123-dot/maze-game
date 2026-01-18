@@ -73,8 +73,10 @@ public class DeveloperConsole {
 
         // 指令 4: Kill All
         commandMap.put("killall", () -> {
-            gameScreen.getEnemies().clear();
-            System.out.println(" Command executed: All enemies killed!");
+            for (de.tum.cit.fop.maze.enemies.Enemy e : gameScreen.getEnemies()) {
+                e.takeDamage(99999); // 造成巨大伤害，强制死亡
+            }
+            System.out.println("Command executed: All enemies killed (XP granted)!");
         });
 
         commandMap.put("level_up", () -> {

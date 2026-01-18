@@ -35,21 +35,6 @@ public class PlayerStats {
         skillTree = new SkillTree(expSystem);
         skillManager = null;
 
-        expSystem.addListener(new ExperienceSystem.ExpListener() {
-            @Override
-            public void onExpGained(int amount, int total) { }
-            @Override
-            public void onLevelUp(int newLevel, int skillPoints) {
-                System.out.println("=== LEVEL UP! ===");
-                if (player != null) {
-                    int healAmount = getMaxHealth() / 4;
-                    heal(healAmount);
-                }
-                updateStatsFromLevel();
-            }
-            @Override
-            public void onSkillPointsChanged(int points) {}
-        });
         updateStatsFromLevel();
     }
 
@@ -63,19 +48,28 @@ public class PlayerStats {
     public SkillTree getSkillTree() { return skillTree; }
 
     private void updateStatsFromLevel() {
-        int levelHealthBonus = expSystem.getHealthBonus();
-        float skillHealthBonus = skillTree != null ? skillTree.getTotalHealthBonus() : 0;
-        maxHealth = baseMaxHealth + levelHealthBonus + (int)skillHealthBonus;
+        // ▼▼▼ 修改：不再获取 expSystem.getHealthBonus()，只看技能树加成 ▼▼▼
+        float skillHealthBonus = 0;
+        if (skillTree != null) {
+            skillHealthBonus = skillTree.getTotalHealthBonus();
+        }
+
+        maxHealth = baseMaxHealth + (int)skillHealthBonus;
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         if (skillTree != null) {
             canDoubleJump = skillTree.hasDoubleJump();
             canDash = skillTree.hasDash();
             fireResistance = skillTree.hasFireResistance();
             poisonResistance = skillTree.hasPoisonResistance();
-            criticalChance = skillTree.getTotalCritChance();
-            dodgeChance = skillTree.getTotalDodgeChance();
         }
-        if (health > maxHealth) health = maxHealth;
+
+        criticalChance = skillTree != null ? skillTree.getTotalCritChance() : 0.0f;
+        dodgeChance = skillTree != null ? skillTree.getTotalDodgeChance() : 0.0f;
+
+        if (health > maxHealth) {
+            health = maxHealth;
+        }
     }
 
     private float calculateDefenseBonus() {
@@ -124,17 +118,23 @@ public class PlayerStats {
     public void takeDamage(int damage) { takeDamage((float)damage, DAMAGE_TYPE_PHYSICAL); }
 
     public float getActualAttackDamage() {
-        float base = 10f;
-        float bonus = expSystem.getAttackBonus() + (skillTree != null ? skillTree.getTotalAttackBonus() : 0);
-        float total = base + bonus;
-        if (skillManager != null) total = skillManager.applySkillBonusesToDamage(total);
-        return total;
+        float baseDamage = 10f;
+        // float levelBonus = expSystem.getAttackBonus(); // <--- 删掉这行
+        float skillBonus = skillTree != null ? skillTree.getTotalAttackBonus() : 0;
+
+        float totalDamage = baseDamage + skillBonus; // <--- 这里不加 levelBonus
+
+        if (skillManager != null) {
+            totalDamage = skillManager.applySkillBonusesToDamage(totalDamage);
+        }
+        return totalDamage;
     }
 
     public void applySkillEffects() { updateStatsFromLevel(); }
 
     public void gainExpFromKill(String enemyType) {
-        expSystem.gainExp(ExperienceSystem.getExpForEnemy(enemyType));
+        int amount = ExperienceSystem.getExpForEnemy(enemyType);
+        expSystem.gainExp(amount);
     }
 
     public boolean unlockSkill(String skillId) {
@@ -155,7 +155,7 @@ public class PlayerStats {
     }
 
     public void resetProgression() {
-        expSystem.reset();
+        expSystem.setCurrentExp(0);
         if (skillTree != null) skillTree.reset();
         updateStatsFromLevel();
         health = maxHealth;
