@@ -222,7 +222,7 @@ public class SkillTreeScreen implements Screen {
     }
 
     private void returnToGame() {
-        // Return to current game level
+        // 确保正确返回到之前的屏幕
         if (previousScreen != null) {
             game.setScreen(previousScreen);
             this.dispose();
