@@ -53,6 +53,9 @@ public class Player implements CollidableEntity {
 
     public Player(float x, float y, PlayerStats inheritedStats) {
         this.texture = new Texture("character.png");
+        this.texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
+
 
         // === 🔥 核心修改：分开切图 🔥 ===
 
@@ -248,6 +251,13 @@ public class Player implements CollidableEntity {
         hurtTimer = 0.25f;
         damageCooldownTimer = DAMAGE_COOLDOWN;
         triggerDamageVFX();
+
+
+        System.out.println("WALK:  " + texture.getWidth() + "x" + texture.getHeight() +
+                "  mod16=" + (texture.getWidth()%16) + " mod32=" + (texture.getHeight()%32));
+
+        System.out.println("ATTACK: mod34=" + (texture.getWidth()%34));
+
     }
     public void heal(float amount) { if (stats != null) stats.heal((int) amount); }
     public void healByPercentage(float percentage) { if (stats != null) heal(stats.getMaxHealth() * percentage); }

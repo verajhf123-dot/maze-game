@@ -536,14 +536,7 @@ public class GameScreen implements Screen {
 //        }
 
 
-        if (items != null) {
-            for (Item item : items) {
-                // 用紫色圆圈代表道具
-                shapeRenderer.setColor(1f, 0f, 1f, 0.7f);
-                // 假设道具大小是 32x32，画在中心
-                shapeRenderer.circle(item.getX() + 16, item.getY() + 16, 10);
-            }
-        }
+
 
         // 1. 画剑气 (如果玩家正在挥剑)
         if (player != null && player.isAttacking()) {
