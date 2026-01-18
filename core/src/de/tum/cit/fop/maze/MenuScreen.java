@@ -206,9 +206,7 @@ public class MenuScreen implements Screen {
 
             // 3. Restore experience system
             if (loadedStats.getExpSystem() != null) {
-                loadedStats.getExpSystem().setLevel(data.getCharLevel());
                 loadedStats.getExpSystem().setCurrentExp(data.getCurrentExp());
-                loadedStats.getExpSystem().setSkillPoints(data.getSkillPoints());
             }
 
             // 4. Restore skill tree

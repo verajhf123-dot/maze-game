@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
 import de.tum.cit.fop.maze.Player;
 import de.tum.cit.fop.maze.GameScreen;
 
@@ -81,5 +82,18 @@ public class Projectile {
         if (texture != null) {
             texture.dispose();
         }
+    }
+
+    public boolean checkEnemyHit(Array<Enemy> enemies) {
+        if (!active) return false;
+
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive() && bounds.overlaps(enemy.getBounds())) {
+                enemy.takeDamage(damage); // 造成伤害
+                active = false;           // 火球消失
+                return true;              // 击中了一个就返回
+            }
+        }
+        return false;
     }
 }

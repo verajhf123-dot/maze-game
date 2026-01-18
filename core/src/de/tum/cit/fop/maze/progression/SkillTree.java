@@ -206,46 +206,20 @@ public class SkillTree {
      */
     public boolean unlockSkill(String skillId) {
         SkillNode node = nodes.get(skillId);
-        if (node == null) {
-            System.err.println("Skill not found: " + skillId);
+        if (node == null) return false;
+        if (node.unlocked) return false;
+
+        // ▼▼▼ 这里调用 spendExp，只要第一步做对了，这就不会红了 ▼▼▼
+        if (expSystem.spendExp(node.cost)) {
+            node.unlocked = true;
+            applySkillBonuses(node);
+            activateSpecialAbilities(node);
+            System.out.println("Skill unlocked: " + node.name);
+            return true;
+        } else {
+            System.out.println("Not enough XP!");
             return false;
         }
-
-        if (node.unlocked) {
-            System.err.println("Skill already unlocked: " + node.name);
-            return false;
-        }
-
-        // Check if player has enough XP
-        if (expSystem.getCurrentExp() < node.cost) {
-            System.err.println("Not enough XP! Need: " + node.cost + ", Have: " + expSystem.getCurrentExp());
-            return false;
-        }
-
-        // Check skill points
-        if (expSystem.getSkillPoints() <= 0) {
-            System.err.println("No skill points available");
-            return false;
-        }
-
-        // Use skill point
-        if (!expSystem.useSkillPoint()) {
-            System.err.println("Failed to use skill point");
-            return false;
-        }
-
-        // Unlock the skill
-        node.unlocked = true;
-
-        // Apply skill bonuses
-        applySkillBonuses(node);
-
-        // Activate special abilities
-        activateSpecialAbilities(node);
-
-        System.out.println("✓ Skill unlocked: " + node.name +
-                (node.bindKey.isEmpty() ? "" : " (" + node.bindKey + " Key)"));
-        return true;
     }
 
     private void applySkillBonuses(SkillNode node) {
@@ -285,9 +259,9 @@ public class SkillTree {
      */
     public boolean canUnlockSkill(String skillId) {
         SkillNode node = nodes.get(skillId);
-        if (node == null) return false;
-        if (node.unlocked) return false;
-        return expSystem.getSkillPoints() >= 1 && expSystem.getCurrentExp() >= node.cost;
+        if (node == null || node.unlocked) return false;
+        // 只要当前钱够，就能解锁
+        return expSystem.getCurrentExp() >= node.cost;
     }
 
     /**
@@ -339,10 +313,44 @@ public class SkillTree {
         return node;
     }
 
-    /**
-     * Update cooldowns and effects
-     */
+    public void updateSkillUnlocks() {
+        if (expSystem == null) return;
+
+        // 获取累计获得的总经验 (Total XP)，而不是当前剩余的 XP
+        int totalXP = expSystem.getTotalExp();
+
+        // 1. 检查 E 技能 (门槛 120)
+        if (totalXP >= 120) {
+            unlockPassive("heal"); // 使用辅助方法解锁，防止重复打印日志
+        }
+
+        // 2. 检查 Q 技能 (门槛 150)
+        if (totalXP >= 150) {
+            unlockPassive("fireball");
+        }
+
+        // 3. 检查 R 技能 (门槛 200)
+        if (totalXP >= 200) {
+            unlockPassive("lightning");
+        }
+    }
+
+    private void unlockPassive(String skillId) {
+        SkillNode node = nodes.get(skillId);
+        if (node != null && !node.unlocked) {
+            node.unlocked = true;
+            // 因为不需要属性加成(HP/ATK)，只是解锁使用权，所以这里不需要 applySkillBonuses
+            // 但如果你的技能带有特殊效果开关，可以保留 activateSpecialAbilities
+            activateSpecialAbilities(node);
+            System.out.println(">>> MILESTONE REACHED: Auto-unlocked " + node.name + "!");
+        }
+    }
+
     public void update(float delta) {
+        // 1. 每次循环都检查一下是否达到解锁门槛
+        updateSkillUnlocks();
+
+        // 2. 原有的冷却时间更新逻辑保持不变
         if (qCooldownTimer > 0) qCooldownTimer -= delta;
         if (eCooldownTimer > 0) eCooldownTimer -= delta;
         if (rCooldownTimer > 0) rCooldownTimer -= delta;

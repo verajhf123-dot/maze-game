@@ -84,7 +84,9 @@ public class SkillManager {
         boolean success = false;
         switch (skill.skillType) {
             case "fireball":
-                success = castFireball(skill.skillValue);
+                // 我们在 GameScreen 里处理生成火球，这里只返回 true 表示技能释放成功（进入冷却）
+                // 具体的发射逻辑移交给了 GameScreen
+                success = true;
                 break;
 
             case "heal":
@@ -124,16 +126,10 @@ public class SkillManager {
     /**
      * Q Skill - Fireball
      */
-    private boolean castFireball(float damage) {
-        if (player == null) return false;
-        System.out.println("🔥 Casting Fireball!");
-
-        // === 🔥 3. 移除直接伤害逻辑 ===
-        // 原来的代码在这里直接 findNearestEnemy 然后 takeDamage。
-        // 现在我们将伤害检测移交给了 GameScreen.java 的 checkSkillCollisions 方法。
-        // 这里只需要返回 true，告诉系统“技能放出来了，快画特效”即可。
-
-        return true;
+    public float calculateFireballDamage(float baseDamage) { // 改名并将返回值改为 float
+        if (player == null) return 0f;
+        // 计算最终伤害（包含天赋加成）
+        return baseDamage * (1 + skillTree.getTotalAttackBonus() * 0.1f);
     }
 
     /**
@@ -293,5 +289,18 @@ public class SkillManager {
     public String getSkillSummary() {
         if (skillTree == null) return "Skill system not initialized";
         return "Skills Active"; // 简化返回，原逻辑没问题
+    }
+
+    public boolean canUseQSkill() {
+        // 调用 SkillTree 的判断逻辑
+        return skillTree != null && skillTree.canUseSkill("Q");
+    }
+
+    public boolean canUseESkill() {
+        return skillTree != null && skillTree.canUseSkill("E");
+    }
+
+    public boolean canUseRSkill() {
+        return skillTree != null && skillTree.canUseSkill("R");
     }
 }
