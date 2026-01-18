@@ -119,7 +119,11 @@ public class GameScreen implements Screen {
     private com.badlogic.gdx.audio.Sound bonusSound;
     private com.badlogic.gdx.audio.Sound buttonSound;
     private com.badlogic.gdx.audio.Sound mechanismSound; // 机关声音
-    private com.badlogic.gdx.audio.Sound keySound;       // 钥匙声音
+    private com.badlogic.gdx.audio.Sound keySound;
+    private com.badlogic.gdx.audio.Sound fireballSound;   // 火球音效 (Q)
+    private com.badlogic.gdx.audio.Sound lightningSound;  // 闪电音效 (R)
+    private com.badlogic.gdx.audio.Sound healSkillSound;  // 治疗音效 (E)
+    private com.badlogic.gdx.audio.Sound swingSound;      // 挥剑空气声 (攻击动作)
     private float fogSoundTimer = 0f;// 迷雾声音的冷却计时器
     private Texture texHpFrame;
     private Texture texHpBar;
@@ -349,6 +353,7 @@ public class GameScreen implements Screen {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
                 if (player != null) {
                     player.performAttack();
+                    if (swingSound != null) swingSound.play(0.5f);
                     // if (attackSound != null) attackSound.play(0.5f);
                 }
             }
@@ -706,6 +711,8 @@ public class GameScreen implements Screen {
             }
         }
 
+        resolveEnemyOverlaps(delta);
+
         for (int i = enemies.size - 1; i >= 0; i--) {
             if (!enemies.get(i).isAlive()) { // 如果怪物死了
 
@@ -974,13 +981,16 @@ public class GameScreen implements Screen {
         font.setColor(0.25f, 0.25f, 0.25f, 1f); // 深灰色
         font.getData().setScale(0.75f);
 
-        font.draw(batch, "LEVEL " + levelNumber, textX, textY); textY -= lineGap;
-        font.draw(batch, "TIME: " + (int) gameTime + "s", textX, textY); textY -= lineGap;
+        font.draw(batch, "LEVEL " + levelNumber, textX, textY);
+        textY -= lineGap;
+        font.draw(batch, "TIME: " + (int) gameTime + "s", textX, textY);
+        textY -= lineGap;
 
         if (player != null && player.getStats() != null) {
             // 显示当前 XP
             int currentXP = player.getStats().getExpSystem().getCurrentExp();
-            font.draw(batch, "SOULS(XP): " + currentXP, textX, textY); textY -= lineGap;
+            font.draw(batch, "SOULS(XP): " + currentXP, textX, textY);
+            textY -= lineGap;
             // 如果想显示总获得 XP，也可以用 getTotalExp()
         }
 
@@ -1000,7 +1010,8 @@ public class GameScreen implements Screen {
 
         font.setColor(0.25f, 0.25f, 0.25f, 1f); // 标题深灰色
         font.getData().setScale(0.8f);
-        font.draw(batch, "--- CONTROLS ---", textX, textY); textY -= lineGap;
+        font.draw(batch, "--- CONTROLS ---", textX, textY);
+        textY -= lineGap;
 
         font.getData().setScale(0.7f);
 
@@ -1056,10 +1067,12 @@ public class GameScreen implements Screen {
 
                 // --- 其他按键 (恢复深灰色) ---
                 font.setColor(0.25f, 0.25f, 0.25f, 1f);
-                font.draw(batch, "SPACE - Attack", textX, textY); textY -= lineGap;
+                font.draw(batch, "SPACE - Attack", textX, textY);
+                textY -= lineGap;
 
                 if (skillTree.hasDash()) {
-                    font.draw(batch, "SHIFT - Dash", textX, textY); textY -= lineGap;
+                    font.draw(batch, "SHIFT - Dash", textX, textY);
+                    textY -= lineGap;
                 }
             }
         }
@@ -1068,28 +1081,50 @@ public class GameScreen implements Screen {
         // ============================================================
         // 4. 罗盘 (保持不变)
         // ============================================================
+        // === 4. 罗盘 (修正版) ===
+        // === 4. 罗盘 (逻辑与比例修正版) ===
         if (exitPosition != null && arrowRegion != null && player != null) {
             batch.setColor(Color.WHITE);
-            font.setColor(Color.WHITE); // 这里的字要白色
 
+            // 1. 计算目标点像素坐标
             float tx = exitPosition.x * Wall.TILE_SIZE;
             float ty = exitPosition.y * Wall.TILE_SIZE;
+
+            // 2. 计算角度
             float dx = tx - player.getPosition().x;
             float dy = ty - player.getPosition().y;
             float currentAngle = MathUtils.atan2(dy, dx) * MathUtils.radDeg;
 
-            batch.draw(arrowRegion, uiW - 80, 80, 16, 16, 32, 32, 1.2f, 1.2f, currentAngle);
+            // 3. 尺寸与中心
+            float imgW = arrowRegion.getRegionWidth();
+            float imgH = arrowRegion.getRegionHeight();
+            float originX = imgW / 2f;
+            float originY = imgH / 2f;
 
-            font.getData().setScale(1.0f);
-            font.setColor(Color.BLACK);
-            font.draw(batch, "EXIT", uiW - 88, 38);
+            // 4. 缩放比例
+            float uiScale = 0.2f;
+
+            // 5. 修正反向问题：使用 + 90f
+            float finalRotation = currentAngle + 90f;
+
+            // 6. 绘制坐标
+            float drawX = uiW - 100;
+            float drawY = 100;
+
+            batch.draw(arrowRegion,
+                    drawX - originX, drawY - originY,
+                    originX, originY,
+                    imgW, imgH,
+                    uiScale, uiScale,
+                    finalRotation
+            );
+
+            // 7. 文字标注 (略微下移，避免遮挡箭头)
+            font.getData().setScale(0.8f);
             font.setColor(Color.WHITE);
-            font.draw(batch, "EXIT", uiW - 90, 40);
+            // 使用 drawX 确保文字相对于箭头居中
+            font.draw(batch, "EXIT", drawX - 20, drawY - 45);
         }
-
-        // 恢复默认
-        font.getData().setScale(1.5f);
-        font.setColor(Color.WHITE);
     }
 
     // 新增：绘制 HUD 背景框的辅助方法
@@ -1183,55 +1218,62 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        // =================================================================
-        // 核心修复：只有在第一次初始化时才加载地图和怪物
-        // 这样从技能树(SkillTree)返回时，就不会重置整个游戏了
-        // =================================================================
         if (!isInitialized) {
+            // --- 1. 资源加载 (保持原样) ---
             if (Gdx.files.internal("fireball.png").exists()) {
                 fireballTexture = new Texture(Gdx.files.internal("fireball.png"));
-            } else {
-                System.out.println("Warning: fireball.png not found!");
             }
-
-            // 2. 初始化列表
             projectiles = new Array<>();
-
             wallTexture = new Texture(Gdx.files.internal("wall.png"));
-
-
             try {
                 healTexture = new Texture(Gdx.files.internal("heal.png"));
-
-            } catch (Exception e) {
-                Gdx.app.log("GameScreen", "Failed to load textures: " + e.getMessage());
-            }
-
-
-            // 新增：加载 HUD 背景框纹理
-            try {
                 hudFrameTexture = new Texture(Gdx.files.internal("scroll_1.png"));
                 keyIconTexture = new Texture(Gdx.files.internal("key.png"));
             } catch (Exception e) {
-                Gdx.app.log("GameScreen", "Failed to load hud_frame.png: " + e.getMessage());
+                Gdx.app.log("GameScreen", "Texture load error: " + e.getMessage());
             }
 
+            // --- 2. 地图全量加载 (核心修改) ---
             MapLoader loader = new MapLoader();
             shapeRenderer = new ShapeRenderer();
 
             String actualPathToLoad;
-
             if (levelNumber > 5 || !Gdx.files.local("maps/level-" + levelNumber + ".properties").exists()) {
-                System.out.println("Entering Endless Mode: Base Map is Level 5");
                 actualPathToLoad = "maps/level-5.properties";
             } else {
                 actualPathToLoad = "maps/level-" + levelNumber + ".properties";
             }
-            MapLoader.LevelData data = loader.loadLevel(actualPathToLoad);
+
+            // 读取地图数据
+            MapLoader.LevelData data = loader.loadLevel(actualPathToLoad,this.levelNumber);
 
             this.walls = data.walls;
             this.entryPosition = data.entryPosition;
             this.exitPosition = data.exitPosition;
+
+            // 🔥 提取敌人 (注意转换 List 到 Array) 🔥
+            this.enemies = new Array<>();
+            if (data.enemies != null) {
+                for (Enemy e : data.enemies) this.enemies.add(e);
+            }
+
+            // 🔥 提取陷阱 🔥
+            this.traps = new Array<>();
+            if (data.traps != null) {
+                for (Trap t : data.traps) this.traps.add(t);
+            }
+
+            // 🔥 提取钥匙并设置 Bonus 🔥
+            this.keys = new ArrayList<>();
+            if (data.keys != null) {
+                this.keys.addAll(data.keys);
+                for (int i = 0; i < this.keys.size(); i++) {
+                    // 只有最后一个是 false (通关钥匙)，其余全是 true (Bonus)
+                    this.keys.get(i).setBonus(i != this.keys.size() - 1);
+                }
+            }
+
+            // --- 3. 初始化门和出口 ---
             if (this.exitPosition != null) {
                 this.exit = new Exit();
                 door = new Door(
@@ -1240,54 +1282,10 @@ public class GameScreen implements Screen {
                         Wall.TILE_SIZE,
                         Wall.TILE_SIZE
                 );
-
-                this.exitArea = new Rectangle(
-                        exitPosition.x * Wall.TILE_SIZE,
-                        exitPosition.y * Wall.TILE_SIZE,
-                        Wall.TILE_SIZE,
-                        Wall.TILE_SIZE);
-
-            } else {
-                System.out.println("Warning: No exit position found in map file!");
+                this.exitArea = new Rectangle(door.getX(), door.getY(), door.getWidth(), door.getHeight());
             }
 
-            this.enemies.clear();
-            int targetEnemyCount;
-            if (levelNumber <= 1) {
-                targetEnemyCount = 2;
-            } else if (levelNumber == 2) {
-                targetEnemyCount = 3;
-            } else {
-                targetEnemyCount = 5 + (levelNumber - 3) * 3;
-            }
-
-            java.util.List<Enemy> potentialEnemies = new java.util.ArrayList<>(data.enemies);
-            java.util.Collections.shuffle(potentialEnemies);
-
-            int addedCount = 0;
-
-            for (Enemy e : potentialEnemies) {
-                if (addedCount < targetEnemyCount) {
-                    this.enemies.add(e);
-                    addedCount++;
-                } else {
-                    break;
-                }
-            }
-            while (addedCount < targetEnemyCount) {
-                Vector2 pos = getSimpleSpawnPosition(); // 智能找空地 (不靠墙、不靠人)
-                if (pos != null) {
-                    // 默认生成一种怪，后面 initEnemies 会自动根据等级把它变成高级怪
-                    this.enemies.add(new NineTailedFox(pos.x, pos.y));
-                    addedCount++;
-                } else {
-                    System.out.println("Could not find space for more enemies.");
-                    break;
-                }
-            }
-
-            System.out.println("Level " + levelNumber + " Loaded. Enemy Count: " + this.enemies.size);
-
+            // --- 4. 构建寻路网格 ---
             int maxX = 0, maxY = 0;
             for (Wall w : walls) {
                 if (w.gridX > maxX) maxX = w.gridX;
@@ -1298,349 +1296,184 @@ public class GameScreen implements Screen {
             mapWidthInTiles = maxX + 1;
             mapHeightInTiles = maxY + 1;
 
-            // ===== 地板变体加载 =====
+            buildCollisionMap(maxX + 1, maxY + 1);
+            buildWalkableGrid();
+            initPathFinder();
+
+            // --- 5. 地板贴图 ---
             floorVariants = new Texture[]{
-                    new Texture(Gdx.files.internal("floor.png")),          // 基础地板
-                    new Texture(Gdx.files.internal("floor_flower.png")),   // 花地砖
-                    new Texture(Gdx.files.internal("floor_grass.png"))     // 草地砖
+                    new Texture(Gdx.files.internal("floor.png")),
+                    new Texture(Gdx.files.internal("floor_flower.png")),
+                    new Texture(Gdx.files.internal("floor_grass.png"))
             };
-
-            // 每个 tile 用哪一种地板
             floorPick = new byte[mapWidthInTiles][mapHeightInTiles];
-
-            // 固定随机：同一关卡每次进入分布一
-            // 在地板上铺上一些花和草
             Random rngg = new Random(levelNumber * 99991L);
-
             for (int x = 0; x < mapWidthInTiles; x++) {
                 for (int y = 0; y < mapHeightInTiles; y++) {
-
-                    int idx = 0; // 默认 floor.png
-
+                    int idx = 0;
                     float r = rngg.nextFloat();
-                    if (r < 0.06f) {
-                        idx = 1; // 6% 花
-                    } else if (r < 0.12f) {
-                        idx = 2; // 6% 草
-                    }
-
+                    if (r < 0.06f) idx = 1; else if (r < 0.12f) idx = 2;
                     floorPick[x][y] = (byte) idx;
                 }
             }
 
-
-            this.keys = new ArrayList<>(); // 初始化列表
-
-            keys.add(spawnSafeKey(false));
-
-            for (int i = 0; i < 2; i++) {
-                keys.add(spawnSafeKey(true));
+            // --- 6. 随机道具生成 (保留旧逻辑) ---
+            this.items = new ArrayList<>();
+            if (data.items != null && !data.items.isEmpty()) {
+                // 🔥 改为从地图数据中添加
+                this.items.addAll(data.items);
+                System.out.println("Items loaded from map: " + items.size());
+            } else {
+                // 可选：如果地图没写道具，你可以保留一个保底的随机逻辑，或者干脆空着
+                System.out.println("No items defined in map properties.");
             }
 
-            this.items = new ArrayList<>(); // 1. 创建列表
-
-            int itemCount = 1 + levelNumber;
-
-            for (int i = 0; i < itemCount; i++) {
-                Vector2 pos = getRandomEmptyTile();
-                float worldX = pos.x * Wall.TILE_SIZE;
-                float worldY = pos.y * Wall.TILE_SIZE;
-                double rng = Math.random();
-
-                if (levelNumber <= 2) {
-                    if (rng < 0.7) items.add(new Xiandan(worldX, worldY)); // 70% 血
-                    else items.add(new Yufengfu(worldX, worldY));          // 30% 跑
-                }
-                // Lv 3+: 开始出现无敌符，血瓶比例依然要高，因为玩家掉血快
-                else {
-                    if (rng < 0.5) items.add(new Xiandan(worldX, worldY));       // 50% 血
-                    else if (rng < 0.8) items.add(new Yufengfu(worldX, worldY)); // 30% 跑
-                    else items.add(new Jingangfu(worldX, worldY));               // 20% 无敌
-                }
-            }
-            System.out.println("Items initialized: " + items.size() + " (Scaled with Level)");
-
-
-            System.out.println("Loaded level " + levelNumber + " walls: " + walls.size());
-
-            System.out.println("Loaded walls: " + walls.size());
-
+            // --- 7. 实体初始化 ---
             try {
                 arrowTexture = new Texture(Gdx.files.internal("arrow.png"));
                 arrowRegion = new TextureRegion(arrowTexture);
-            } catch (Exception e) {
-                System.out.println("No arrow.png found, arrow will not show.");
-                com.badlogic.gdx.graphics.Pixmap pixmap = new com.badlogic.gdx.graphics.Pixmap(32, 32, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-                pixmap.setColor(Color.RED);
-                pixmap.fillTriangle(0, 0, 0, 32, 32, 16);
-                arrowTexture = new Texture(pixmap);
-                arrowRegion = new TextureRegion(arrowTexture);
-                pixmap.dispose();
+            } catch (Exception e) {}
 
-            }
-
-            buildCollisionMap(maxX + 1, maxY + 1);
-            // ========== 新增：初始化PathFinder ==========
-            initPathFinder();
-            // ========== 新增：初始化陷阱 ==========
-            initTraps();
-
-            // ========== 新增：初始化敌人和玩家 ==========
-            initEnemies();
             initPlayer();
-            buildWalkableGrid();
+            initEnemies(); // 现在只负责配置 AI
 
-
+            // --- 8. UI 和 音效 ---
             achievementManager = new AchievementManager();
             console = new DeveloperConsole(game.getSkin(), uiStage, player, this);
 
+            // 双重保险：给所有敌人设置 Pathfinder
             for (Enemy enemy : enemies) {
                 enemy.setPathFinder(pathFinder);
             }
 
             game.stopMenuMusic();
             try {
-
-                if (mapMusic != null) {
-                    mapMusic.stop();     // 停止播放
-                    mapMusic.dispose();  // 释放内存
-                    mapMusic = null;     // 清空变量
-                }
-
+                if (mapMusic != null) { mapMusic.stop(); mapMusic.dispose(); mapMusic = null; }
                 mapMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/mapbackground.mp3"));
-                mapMusic.setLooping(true);
-                mapMusic.setVolume(0.4f);
-                mapMusic.play();
-
+                mapMusic.setLooping(true); mapMusic.setVolume(0.4f); mapMusic.play();
 
                 pauseMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/pausegameSound.mp3"));
-                pauseMusic.setLooping(true);
-                pauseMusic.setVolume(0.3f);
-
+                pauseMusic.setLooping(true); pauseMusic.setVolume(0.3f);
 
                 attackSound = Gdx.audio.newSound(Gdx.files.internal("Sound/attack.mp3"));
                 fogSound = Gdx.audio.newSound(Gdx.files.internal("Sound/fog.mp3"));
-
                 bonusSound = Gdx.audio.newSound(Gdx.files.internal("Sound/video-game-bonus-323603.mp3"));
                 buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
                 mechanismSound = Gdx.audio.newSound(Gdx.files.internal("Sound/trap1.mp3"));
                 keySound = Gdx.audio.newSound(Gdx.files.internal("Sound/key-get-39925.mp3"));
-
-
-                System.out.println("Sounds loaded successfully!");
-
-            } catch (Exception e) {
-                System.out.println("Error loading sounds: " + e.getMessage());
-            }
-
+                fireballSound = Gdx.audio.newSound(Gdx.files.internal("Sound/fire.wav"));
+                lightningSound = Gdx.audio.newSound(Gdx.files.internal("Sound/lightning.mp3"));
+                healSkillSound = Gdx.audio.newSound(Gdx.files.internal("Sound/heal.wav"));
+                swingSound = Gdx.audio.newSound(Gdx.files.internal("Sound/swing.wav"));
+            } catch (Exception e) { System.out.println("Sound load error: " + e.getMessage()); }
 
             try {
-                texHpFrame = new Texture(Gdx.files.internal("HUD/hp_frame.png")); // 图1
-                texHpBar = new Texture(Gdx.files.internal("HUD/hp_bar.png"));   // 图2
-                texTaiji = new Texture(Gdx.files.internal("HUD/taiji_gold.png")); // 生成的太极图
-            } catch (Exception e) {
-                System.out.println("loading wrong ,please  check again");
-            }
+                texHpFrame = new Texture(Gdx.files.internal("HUD/hp_frame.png"));
+                texHpBar = new Texture(Gdx.files.internal("HUD/hp_bar.png"));
+                texTaiji = new Texture(Gdx.files.internal("HUD/taiji_gold.png"));
+            } catch (Exception e) {}
 
             currentState = GameState.RUNNING;
-            isInitialized = true; // 标记初始化完成！
+            isInitialized = true;
         }
 
-        // =================================================================
-        // 以下代码每次显示屏幕（包括从技能树返回）都会执行
-        // =================================================================
-
-        // 1. 恢复输入处理
-        // 如果之前是暂停状态，应该保持 UI 输入；如果是运行状态，恢复为 null (角色控制)
+        // --- 暂停恢复逻辑 ---
         if (isInitialized && currentState == GameState.PAUSED) {
-            currentState = GameState.RUNNING; // 1. 恢复运行状态
-            Gdx.input.setInputProcessor(null); // 2. 恢复角色移动控制
-
-            // 3. 隐藏暂停菜单（防止UI挡住屏幕）
-            if (pauseMenuTable != null) {
-                pauseMenuTable.setVisible(false);
-            }
-        }
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-        // 保持原有的输入处理器逻辑作为兜底（或者你可以直接删除下面这个if-else，因为上面已经处理了）
-        else if (currentState == GameState.PAUSED) {
+            currentState = GameState.RUNNING;
+            Gdx.input.setInputProcessor(null);
+            if (pauseMenuTable != null) pauseMenuTable.setVisible(false);
+        } else if (currentState == GameState.PAUSED) {
             Gdx.input.setInputProcessor(uiStage);
         } else {
             Gdx.input.setInputProcessor(null);
         }
 
-        // 2. 确保背景音乐继续播放
         if (mapMusic != null && !mapMusic.isPlaying() && currentState == GameState.RUNNING) {
             mapMusic.play();
         }
     }
 
 
+    private void resolveEnemyOverlaps(float delta) {
+        for (int i = 0; i < enemies.size; i++) {
+            Enemy e1 = enemies.get(i);
+            if (!e1.isAlive()) continue;
+
+            for (int j = i + 1; j < enemies.size; j++) {
+                Enemy e2 = enemies.get(j);
+                if (!e2.isAlive()) continue;
+
+                // 计算中心点
+                float r1 = e1.getWidth() / 2f;
+                float r2 = e2.getWidth() / 2f;
+                float cx1 = e1.getX() + r1;
+                float cy1 = e1.getY() + e1.getHeight() / 2f;
+                float cx2 = e2.getX() + r2;
+                float cy2 = e2.getY() + e2.getHeight() / 2f;
+
+                float dst = Vector2.dst(cx1, cy1, cx2, cy2);
+                float minDist = r1 + r2 - 4f; // 允许 4 像素的微小重叠，避免抖动
+
+                if (dst < minDist) {
+                    if (dst == 0) dst = 0.01f; // 防止除以0
+
+                    float overlap = minDist - dst;
+                    // 推力稍微小一点，让它们慢慢分开，不要瞬间弹飞
+                    float pushForce = overlap * 0.5f;
+
+                    float pushX = (cx1 - cx2) / dst * pushForce;
+                    float pushY = (cy1 - cy2) / dst * pushForce;
+
+                    // 尝试推 e1
+                    float nextX1 = e1.getX() + pushX;
+                    float nextY1 = e1.getY() + pushY;
+                    if (!collidesWithAnyWall(new Rectangle(nextX1, nextY1, e1.getWidth(), e1.getHeight()))) {
+                        e1.setPosition(nextX1, nextY1);
+                    }
+
+                    // 尝试推 e2 (反方向)
+                    float nextX2 = e2.getX() - pushX;
+                    float nextY2 = e2.getY() - pushY;
+                    if (!collidesWithAnyWall(new Rectangle(nextX2, nextY2, e2.getWidth(), e2.getHeight()))) {
+                        e2.setPosition(nextX2, nextY2);
+                    }
+                }
+            }
+        }
+    }
+
+
+
     // =========================================================
     // 🔥 修改后：适配简单写法的敌人生成逻辑
     // =========================================================
+    // 修改后的 initEnemies：不再生成，只负责配置
     private void initEnemies() {
-        enemies.clear(); // 清空之前的敌人
+        System.out.println("Configuring " + enemies.size + " enemies loaded from map...");
 
-        System.out.println("Loading Level " + levelNumber + " enemies...");
-
-        // Level 1: 3只狐狸
-        if (levelNumber == 1) {
-            spawnFox();
-            spawnFox();
-            spawnFox();
-        }
-        // Level 2: 1只狐狸 + 2只穷奇
-        else if (levelNumber == 2) {
-            spawnFox();
-            spawnQiongQi();
-            spawnQiongQi();
-        }
-        // Level 3: 1只狐狸 + 1只烛龙 + 1只穷奇
-        else if (levelNumber == 3) {
-            spawnFox();
-            spawnZhuLong();
-            spawnQiongQi();
-        }
-        // Level 4: 1只烛龙 + 2只穷奇
-        else if (levelNumber == 4) {
-            spawnZhuLong();
-            spawnQiongQi();
-            spawnQiongQi();
-        }
-        // Level 5: 3个穷奇，1个狐狸，1个烛笼
-        else if (levelNumber == 5) {
-            spawnQiongQi();
-            spawnQiongQi();
-            spawnQiongQi();
-            spawnFox();
-            spawnZhuLong();
-        }
-        // Level 6及以上：随机生成
-        else {
-            int enemyCount = 5 + (levelNumber - 5);
-            for (int i = 0; i < enemyCount; i++) {
-                spawnRandomEnemy(); // 使用简单版的随机生成
-            }
-        }
-
-        // 统一设置一下怪物的属性（这一步还是要的，不然怪会傻站着）
         for (Enemy enemy : enemies) {
+            // 1. 设置难度
             enemy.adjustDifficulty(this.levelNumber);
+
+            enemy.setMapLimits(mapPixelWidth, mapPixelHeight);
+
+            // 2. 赋予 AI 寻路能力
             enemy.setWalkableGrid(walkableGrid);
             enemy.setPathFinder(pathFinder);
             enemy.setTargetPlayer(player);
 
-            // 如果是烛龙，告诉它玩家在哪
+            // 3. 特殊怪物的特殊设置
             if (enemy instanceof ZhuLong) {
                 if (player != null) {
                     ((ZhuLong) enemy).setTargetPosition(player.getPosition());
                 }
             }
-            // 如果是狐狸，重置一下状态
             if (enemy instanceof NineTailedFox) {
                 ((NineTailedFox) enemy).resetEncounterState();
             }
         }
     }
-    private void spawnFox() {
-        Vector2 pos = getSimpleSpawnPosition(); // 获取一个随机位置
-        if (pos != null) {
-            enemies.add(new NineTailedFox(pos.x, pos.y));
-        }
-    }
 
-    // 专门生成穷奇
-    private void spawnQiongQi() {
-        Vector2 pos = getSimpleSpawnPosition();
-        if (pos != null) {
-            enemies.add(new QiongQi(pos.x, pos.y));
-        }
-    }
-
-    // 专门生成烛龙
-    private void spawnZhuLong() {
-        Vector2 pos = getSimpleSpawnPosition();
-        if (pos != null) {
-            enemies.add(new ZhuLong(pos.x, pos.y));
-        }
-    }
-
-    // 随机生成一种怪
-    private void spawnRandomEnemy() {
-        double r = Math.random();
-        if (r < 0.4) spawnFox();
-        else if (r < 0.8) spawnQiongQi();
-        else spawnZhuLong();
-    }
-
-    private Vector2 getSimpleSpawnPosition() {
-        // 第一轮尝试：努力找一个离大家都“很远”的位置
-        // 尝试 30 次
-        for (int i = 0; i < 30; i++) {
-            Vector2 candidate = getRandomEmptyTile();
-            float x = candidate.x * Wall.TILE_SIZE;
-            float y = candidate.y * Wall.TILE_SIZE;
-            boolean isGood = true;
-
-            // 1. 检查离玩家的距离 (必须大于 300，离得远远的)
-            if (player != null) {
-                if (player.getPosition().dst(x, y) < 300) {
-                    isGood = false;
-                }
-            }
-
-            // 2. 检查离其他敌人的距离 (必须大于 350，防止挤在一起)
-            if (isGood) {
-                for (Enemy e : enemies) {
-                    if (e.getPosition().dst(x, y) < 350) {
-                        isGood = false;
-                        break;
-                    }
-                }
-            }
-
-            // 如果这个点很好，就直接用
-            if (isGood) {
-                return new Vector2(x, y);
-            }
-        }
-
-        // 第二轮尝试：如果上面试了30次都没找到（可能地图太小或者怪太多了）
-        // 那就降低标准，只要不贴脸就行
-        for (int i = 0; i < 20; i++) {
-            Vector2 candidate = getRandomEmptyTile();
-            float x = candidate.x * Wall.TILE_SIZE;
-            float y = candidate.y * Wall.TILE_SIZE;
-            boolean isOk = true;
-
-            // 离玩家稍微近点也行 (150)
-            if (player != null) {
-                if (player.getPosition().dst(x, y) < 150) {
-                    isOk = false;
-                }
-            }
-
-            // 离队友稍微近点也行 (120)
-            if (isOk) {
-                for (Enemy e : enemies) {
-                    if (e.getPosition().dst(x, y) < 120) {
-                        isOk = false;
-                        break;
-                    }
-                }
-            }
-
-            if (isOk) {
-                return new Vector2(x, y);
-            }
-        }
-
-        // 第三轮：实在没办法了，随便给个空地吧，总比没有强
-        Vector2 fallback = getRandomEmptyTile();
-        return new Vector2(fallback.x * Wall.TILE_SIZE, fallback.y * Wall.TILE_SIZE);
-    }
 
 
     private void initPlayer() {
@@ -1708,7 +1541,7 @@ public class GameScreen implements Screen {
             skillManager.useSkill("Q");
 
             // 播放音效
-            if (attackSound != null) attackSound.play();
+            if (fireballSound != null) fireballSound.play(0.7f);
 
             // --- 核心发射逻辑 ---
             if (projectiles != null) {
@@ -1766,6 +1599,7 @@ public class GameScreen implements Screen {
 
             if (skillManager != null && skillManager.hasESkill()) {
                 if (skillManager.useSkill("E")) {
+                    if (healSkillSound != null) healSkillSound.play(0.8f);
                     System.out.println(" E Skill - Healing cast successfully!");
                     // Add visual feedback here if needed
                 } else {
@@ -1788,6 +1622,7 @@ public class GameScreen implements Screen {
 
             if (skillManager != null && skillManager.hasRSkill()) {
                 if (skillManager.useSkill("R")) {
+                    if (lightningSound != null) lightningSound.play(1.0f);
                     System.out.println(" R Skill - Lightning cast successfully!");
                     // Add visual feedback here if needed
                 } else {
@@ -1864,6 +1699,16 @@ public class GameScreen implements Screen {
 
         if (fireballTexture != null) fireballTexture.dispose();
         if (healTexture != null) healTexture.dispose();
+
+        if (arrowTexture != null) arrowTexture.dispose();
+        if (hudFrameTexture != null) hudFrameTexture.dispose();
+        if (buttonBg != null) buttonBg.dispose();
+
+        if (fireballSound != null) fireballSound.dispose();
+        if (lightningSound != null) lightningSound.dispose();
+        if (healSkillSound != null) healSkillSound.dispose();
+        if (swingSound != null) swingSound.dispose();
+
 
     }
 
@@ -1964,94 +1809,35 @@ public class GameScreen implements Screen {
         }
     }
 
-    // ========== 新增：初始化陷阱 ==========
-    private void initTraps() {
-        traps = new Array<>();
-
-        int trapCount = 1 + levelNumber;
-
-        for (int i = 0; i < trapCount; i++) {
-            Vector2 smartPos = getSimpleSpawnPosition();
-            if (smartPos != null) {
-
-                // 类型控制：
-                if (levelNumber == 1) {
-
-                    traps.add(new MechanismTrap(smartPos.x, smartPos.y));
-                }
-                else if (levelNumber <= 3) {
-
-                    if (Math.random() < 0.5) {
-                        traps.add(new MechanismTrap(smartPos.x, smartPos.y));
-                    } else {
-                        traps.add(new Fog(smartPos.x, smartPos.y));
-                    }
-                }
-                else {
-
-                    if (Math.random() < 0.7) {
-                        traps.add(new Fog(smartPos.x, smartPos.y));
-                    } else {
-                        traps.add(new MechanismTrap(smartPos.x, smartPos.y));
-                    }
-                }
-            }
-        }
-        System.out.println("Initialized " + traps.size + " traps for Level " + levelNumber);
-    }
 
 
     private Vector2 getRandomEmptyTile() {
-        List<Vector2> emptyTiles = new ArrayList<>();
-        HashSet<String> occupied = new HashSet<>();
+        // 1. 如果碰撞地图还没生成，暂时没法找，返回 null
+        if (collisionMap == null) return null;
 
-        if (walls != null) {
-            for (Wall w : walls) {
-                occupied.add(w.gridX + "," + w.gridY);
-            }
-        }
-        if (entryPosition != null) occupied.add((int) entryPosition.x + "," + (int) entryPosition.y);
-        if (exitPosition != null) occupied.add((int) exitPosition.x + "," + (int) exitPosition.y);
+        List<Vector2> validTiles = new ArrayList<>();
 
+        int h = collisionMap.length;
+        int w = collisionMap[0].length;
 
-        for (int x = 0; x < mapWidthInTiles; x++) {
-            for (int y = 0; y < mapHeightInTiles; y++) {
-                String key = x + "," + y;
-                if (!occupied.contains(key)) {
-                    emptyTiles.add(new Vector2(x, y));
+        // 2. 遍历整个地图，只收集 value 为 0 (空地) 的格子
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                // collisionMap[y][x] == 0 代表是路，1 代表是墙
+                if (collisionMap[y][x] == 0) {
+                    validTiles.add(new Vector2(x, y));
                 }
             }
         }
 
-        if (!emptyTiles.isEmpty()) {
+        // 3. 如果有空地，随机挑一个
+        if (!validTiles.isEmpty()) {
             Random random = new Random();
-            return emptyTiles.get(random.nextInt(emptyTiles.size()));
+            return validTiles.get(random.nextInt(validTiles.size()));
         }
-        return new Vector2(1, 1);
-    }
 
-    private Key spawnSafeKey(boolean isBonus) {
-        Vector2 pos = getRandomEmptyTile();
-
-        return new Key(pos.x * Wall.TILE_SIZE, pos.y * Wall.TILE_SIZE, isBonus);
-    }
-
-
-
-    private void updateItems() {
-        if (items == null || player == null) return;
-
-        for (int i = items.size() - 1; i >= 0; i--) {
-            Item item = items.get(i);
-            if (player.getHitbox().overlaps(item.getBounds())) {
-                item.onPickup(player);
-
-                // 播放捡东西音效
-                if (bonusSound != null) bonusSound.play();
-
-                items.remove(i);
-            }
-        }
+        // 4. 如果整个地图全是墙（不可能发生），返回 null，绝对不要返回 (1,1)！
+        return null;
     }
 
 
@@ -2104,6 +1890,27 @@ public class GameScreen implements Screen {
 
                 // 播放命中音效 (复用 attackSound 或者你可以加一个新的 hitSound)
                 // if (attackSound != null) attackSound.play(0.3f);
+            }
+        }
+    }
+
+    
+    private void updateItems() {
+        if (items == null || player == null) return;
+
+        // 倒序遍历，因为要执行删除操作
+        for (int i = items.size() - 1; i >= 0; i--) {
+            Item item = items.get(i);
+            // 检测玩家是否碰到道具
+            if (player.getHitbox().overlaps(item.getBounds())) {
+                item.onPickup(player);
+
+                // 播放捡东西音效
+                if (bonusSound != null) bonusSound.play();
+
+                // 从列表中移除已被捡起的道具
+                items.remove(i);
+                System.out.println("Item collected!");
             }
         }
     }
