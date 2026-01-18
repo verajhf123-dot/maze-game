@@ -133,6 +133,7 @@ public class GameScreen implements Screen {
     // 新增：按钮样式相关
     private Texture buttonBg;
     private TextButton.TextButtonStyle commonButtonStyle;
+    private Texture keyIconTexture;
 
     // 新增：HUD 背景框 Texture
     private Texture hudFrameTexture;
@@ -879,6 +880,40 @@ public class GameScreen implements Screen {
         // 1. 血条 (位置不变)
         drawXianxiaHealthBar(batch, 60, uiH - 70, 300);
 
+        if (keyIconTexture != null && player != null && player.getStats() != null) {
+            float keyIconSize = 48;
+            float startX = 75;        // X坐标：与血条左对齐稍微偏移
+            float startY = uiH - 130; // Y坐标：在血条下方 (血条约在 uiH-70)
+            float gap = 60;           // 图标间距
+
+            int bonusKeys = player.getStats().getBonusKey();
+            boolean hasExitKey = player.getStats().hasKey();
+
+            // 循环绘制 3 把钥匙
+            for (int i = 0; i < 3; i++) {
+                if (i < 2) {
+                    // 前两把是 Bonus Key
+                    if (i < bonusKeys) {
+                        batch.setColor(Color.GREEN); // 已收集：绿色
+                    } else {
+                        batch.setColor(Color.DARK_GRAY); // 未收集：深灰色
+                    }
+                } else {
+                    // 第三把是 Exit Key
+                    if (hasExitKey) {
+                        batch.setColor(Color.RED); // 已收集：红色
+                    } else {
+                        batch.setColor(Color.DARK_GRAY); // 未收集：深灰色
+                    }
+                }
+                // 绘制图标
+                batch.draw(keyIconTexture, startX + (i * gap), startY, keyIconSize, keyIconSize);
+            }
+            // 重置颜色，防止影响后续绘制
+            batch.setColor(Color.WHITE);
+        }
+
+
         // ============================================================
         // 2. 右上角信息框 (干净文字版)
         // ============================================================
@@ -912,10 +947,6 @@ public class GameScreen implements Screen {
                 // 技能点可以用稍微醒目点的深色，这里保持统一深灰
                 font.draw(batch, "SKILL PTS: " + skillPoints, textX, textY); textY -= lineGap;
             }
-            String keyLabel = player.getStats().hasKey() ? "KEY: FOUND" : "KEY: MISSING";
-            // 钥匙丢失可以用深红色提示
-            font.setColor(player.getStats().hasKey() ? Color.DARK_GRAY : Color.FIREBRICK);
-            font.draw(batch, keyLabel, textX, textY);
 
             // 画完恢复深灰色，供后续使用
             font.setColor(0.25f, 0.25f, 0.25f, 1f);
@@ -1094,6 +1125,7 @@ public class GameScreen implements Screen {
             // 新增：加载 HUD 背景框纹理
             try {
                 hudFrameTexture = new Texture(Gdx.files.internal("scroll_1.png"));
+                keyIconTexture = new Texture(Gdx.files.internal("key.png"));
             } catch (Exception e) {
                 Gdx.app.log("GameScreen", "Failed to load hud_frame.png: " + e.getMessage());
             }
@@ -1692,6 +1724,9 @@ public class GameScreen implements Screen {
         // 新增：清理按钮和 HUD 背景资源
         if (buttonBg != null) buttonBg.dispose();
         if (hudFrameTexture != null) hudFrameTexture.dispose();
+
+
+        if (keyIconTexture != null) keyIconTexture.dispose();
 
     }
 
