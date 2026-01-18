@@ -632,6 +632,14 @@ public class GameScreen implements Screen {
     private void handleSkillInput() {
         if (player == null || player.getStats() == null) return;
 
+        if (currentState == GameState.RUNNING && Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            // 保存当前游戏状态
+            if (player != null && player.getStats() != null) {
+                game.setScreen(new SkillTreeScreen(game, player.getStats(), this));
+                currentState = GameState.PAUSED; // 暂停游戏逻辑
+            }
+        }
+
         // 按T打开技能树
         if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             if (player != null && player.getStats() != null) {
@@ -669,10 +677,10 @@ public class GameScreen implements Screen {
 
     private void updateEnemies(float delta) {
         for (Enemy enemy : enemies) {
-            if (!enemy.isAlive()) {
-                continue;
-            }
-            enemy.update(delta);
+            if (!enemy.isAlive()) continue;
+
+            // 确保这里传入的是两个参数：delta 和 walls
+            enemy.update(delta, walls);
 
             // 如果敌人有PathFinder，让它寻找路径到玩家位置
             if (player != null && pathFinder != null) {
