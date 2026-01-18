@@ -153,16 +153,14 @@ public class SkillTreeScreen implements Screen {
     }
 
     private void returnToGame() {
-        // Return to current game level
+        // 确保正确返回到之前的屏幕
         if (previousScreen != null) {
             game.setScreen(previousScreen);
             this.dispose();
         } else {
-            Gdx.app.error("SkillTreeScreen", "No previous screen found to return to!");
-            // Fallback to level 1 if no previous screen
-
+            // 如果没有之前的屏幕，创建一个新的GameScreen
+            game.goToGame(1, playerStats);
         }
-
     }
 
 
