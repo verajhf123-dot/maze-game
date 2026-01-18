@@ -126,6 +126,7 @@ public class GameScreen implements Screen {
     private Texture texHpBar;
     private Texture texTaiji;
     private List<Item> items;
+    private Texture healTexture;
 
 
     private DeveloperConsole console; // 声明控制台
@@ -464,17 +465,6 @@ public class GameScreen implements Screen {
             shapeRenderer.rect(door.getX(), door.getY(), door.getWidth(), door.getHeight());
         }
 
-//        // 绘制无贴图的敌人方块
-//        for (Enemy enemy : enemies) {
-//            if (!enemy.isAlive()) continue;
-//            Texture texture = enemy.getTexture();
-//            if (texture != null) {
-//                batch.draw(texture, enemy.getX(), enemy.getY(),
-//                        enemy.getWidth(), enemy.getHeight());
-//            }
-//            // 如果纹理为null，直接跳过（不绘制）
-//        }
-
 
         shapeRenderer.end();
 
@@ -491,7 +481,6 @@ public class GameScreen implements Screen {
             }
         }
 
-        // Layer B: 陷阱 (画在地上，人可以踩上去) -> ✅ 你的Trap逻辑是对的
         if (traps != null) {
             for (Trap trap : traps) {
                 if (trap.hasTexture()) trap.render(batch);
@@ -524,6 +513,37 @@ public class GameScreen implements Screen {
 
         if (player != null) {
             player.render(batch);
+
+            if (player.getStats() != null) {
+                SkillManager sm = player.getStats().getSkillManager();
+                // 同样的判断逻辑，但是做的事情不一样
+                if (sm != null && "heal".equals(sm.getCurrentSkillEffect()) && sm.getSkillEffectTimer() > 0) {
+
+                    if (healTexture != null) {
+                        // 计算透明度
+                        float alpha = MathUtils.clamp(sm.getSkillEffectTimer() / 0.5f, 0f, 1f);
+                        batch.setColor(1f, 1f, 1f, alpha);
+
+                        // 开启发光混合模式 (可选)
+                        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
+
+                        // 计算位置 (飘在头顶)
+                        float floatOffset = (0.5f - sm.getSkillEffectTimer()) * 40f;
+                        float drawX = player.getPosition().x + player.getHitbox().width / 2 - 32; // 假设图片宽64，偏移32居中
+                        float drawY = player.getPosition().y + player.getHitbox().height / 2 - 32 + floatOffset;
+
+                        // 画图片！
+                        batch.draw(healTexture, drawX, drawY, 64, 64);
+
+                        // 还原设置
+                        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
+                        batch.setColor(Color.WHITE);
+                    }
+                }
+            }
+
+
+
         }
 
         // ✅ 正确：调用 p.render(batch)，让投射物使用它自己的图片
@@ -1181,6 +1201,15 @@ public class GameScreen implements Screen {
             projectiles = new Array<>();
 
             wallTexture = new Texture(Gdx.files.internal("wall.png"));
+
+
+            try {
+                healTexture = new Texture(Gdx.files.internal("heal.png"));
+
+            } catch (Exception e) {
+                Gdx.app.log("GameScreen", "Failed to load textures: " + e.getMessage());
+            }
+
 
             // 新增：加载 HUD 背景框纹理
             try {
