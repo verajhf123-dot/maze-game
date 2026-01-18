@@ -19,9 +19,15 @@ public class Fog extends Trap {
     private float currentEffectTime = 0f;
     private static Texture fallbackTexture;
 
+
+
+    private static final float FOG_ICON_SIZE = 32f;
     public Fog(float x, float y) {
-        super(x, y, 16, 16);
-        this.effectArea = new Circle(x + 32, y + 32, 200);
+        super(x, y, FOG_ICON_SIZE, FOG_ICON_SIZE);
+        float centerX = x + FOG_ICON_SIZE / 2;
+        float centerY = y + FOG_ICON_SIZE / 2;
+        this.effectArea = new Circle(centerX, centerY, 200); // 200是迷雾扩散半径
+
         this.effectActive = false;
         this.cooldown = 10f;
 

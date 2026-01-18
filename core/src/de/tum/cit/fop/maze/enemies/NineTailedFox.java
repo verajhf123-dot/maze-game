@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
 import de.tum.cit.fop.maze.Player;
+import de.tum.cit.fop.maze.Wall;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,13 +32,13 @@ public class NineTailedFox extends Enemy {
     private float currentAttackCooldown = 0f;
 
     public NineTailedFox(float x, float y) {
-        super(x, y, 48, 48);
+        super(x, y, 30, 30);
 
         // 敌人数值
         this.speed = 80f;
-        this.maxHealth = 50f;
+        this.maxHealth = 40f;
         this.health = maxHealth;
-        this.attackDamage = 8f;
+        this.attackDamage = 6f;
         this.attackRange = 40f;
         this.detectionRange = 200f;
         this.attackCooldown = 0.8f;
@@ -144,8 +146,8 @@ public class NineTailedFox extends Enemy {
     }
 
     @Override
-    public void update(float delta) {
-        super.update(delta);
+    public void update(float delta, List<Wall> walls) { // 增加 List<Wall> 参数
+        super.update(delta, walls);
 
         // 更新动画计时器
         stateTime += delta;
@@ -213,8 +215,8 @@ public class NineTailedFox extends Enemy {
 
         if (currentFrame != null) {
             // 统一绘制大小为 64x64
-            float drawWidth = 64f;
-            float drawHeight = 64f;
+            float drawWidth = 50f;
+            float drawHeight = 50f;
 
             // 计算偏移使图像中心与碰撞框中心对齐
             float offsetX = (bounds.width - drawWidth) / 2;

@@ -365,6 +365,7 @@ public class GameScreen implements Screen {
             checkTrapActivation();
 
             checkPlayerAttackHit();
+            checkSkillCollisions(delta);
             updateKeys();
             updateItems();
 
@@ -447,16 +448,7 @@ public class GameScreen implements Screen {
             // 如果纹理为null，直接跳过（不绘制）
         }
 
-        // 绘制无贴图的陷阱
-//        if (traps != null) {
-//            for (Trap trap : traps) {
-//                if (!trap.hasTexture()) {
-//                    shapeRenderer.setColor(trap.isActivated() ? Color.ORANGE : Color.GRAY);
-//                    Rectangle b = trap.getBounds();
-//                    shapeRenderer.rect(b.x, b.y, b.width, b.height);
-//                }
-//            }
-//        }
+
         shapeRenderer.end();
 
 
@@ -537,18 +529,6 @@ public class GameScreen implements Screen {
 
 
 
-
-        // 1. 画剑气 (如果玩家正在挥剑)
-        if (player != null && player.isAttacking()) {
-            shapeRenderer.setColor(1f, 1f, 0f, 0.5f); // 半透明黄色
-            Rectangle atk = player.getAttackHitbox();
-            shapeRenderer.rect(atk.x, atk.y, atk.width, atk.height);
-        }
-
-
-
-
-
         // 2. 画火球/闪电 (如果技能正在生效)
         if (player != null && player.getStats() != null) {
             SkillManager sm = player.getStats().getSkillManager();
@@ -625,6 +605,14 @@ public class GameScreen implements Screen {
     private void handleSkillInput() {
         if (player == null || player.getStats() == null) return;
 
+        if (currentState == GameState.RUNNING && Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            // 保存当前游戏状态
+            if (player != null && player.getStats() != null) {
+                game.setScreen(new SkillTreeScreen(game, player.getStats(), this));
+                currentState = GameState.PAUSED; // 暂停游戏逻辑
+            }
+        }
+
         // 按T打开技能树
         if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             if (player != null && player.getStats() != null) {
@@ -662,10 +650,10 @@ public class GameScreen implements Screen {
 
     private void updateEnemies(float delta) {
         for (Enemy enemy : enemies) {
-            if (!enemy.isAlive()) {
-                continue;
-            }
-            enemy.update(delta);
+            if (!enemy.isAlive()) continue;
+
+            // 确保这里传入的是两个参数：delta 和 walls
+            enemy.update(delta, walls);
 
             // 如果敌人有PathFinder，让它寻找路径到玩家位置
             if (player != null && pathFinder != null) {
@@ -1462,30 +1450,22 @@ public class GameScreen implements Screen {
         double rand = Math.random(); // 0.0 到 1.0 之间的随机数
 
         if (level == 1) {
+            // Level 1: 纯新手村，只有狐狸
             return new NineTailedFox(x, y);
-        } else if (level <= 3) {
-
-            if (rand < 0.7) {
-                return new NineTailedFox(x, y);
-            } else {
-                return new QiongQi(x, y);
-            }
+        } else if (level == 2) {
+            // Level 2: 玩家刚学会火球，放入少量穷奇练手
+            if (rand < 0.8) return new NineTailedFox(x, y);
+            return new QiongQi(x, y);
         } else if (level <= 4) {
-            if (rand < 0.4) {
-                return new NineTailedFox(x, y);
-            } else if (rand < 0.8) {
-                return new QiongQi(x, y);
-            } else {
-                return new ZhuLong(x, y);
-            }
+            // Level 3-4: 混合兵种，极低概率出现烛龙吓唬玩家
+            if (rand < 0.6) return new NineTailedFox(x, y);
+            else if (rand < 0.9) return new QiongQi(x, y);
+            else return new ZhuLong(x, y);
         } else {
-            if (rand < 0.3) {
-                return new NineTailedFox(x, y);
-            } else if (rand < 0.7) {
-                return new QiongQi(x, y);
-            } else {
-                return new ZhuLong(x, y);
-            }
+            // Level 5+: 地狱难度
+            if (rand < 0.4) return new NineTailedFox(x, y);
+            else if (rand < 0.7) return new QiongQi(x, y);
+            else return new ZhuLong(x, y);
         }
     }
 
@@ -1994,6 +1974,91 @@ public class GameScreen implements Screen {
         }
     }
 
+
+
+    // ==========================================
+    // 🔥 优化后的技能伤害判定逻辑
+    // ==========================================
+    private void checkSkillCollisions(float delta) {
+        if (player == null || player.getStats() == null) return;
+        SkillManager sm = player.getStats().getSkillManager();
+
+        // 1. 基础检查：没有特效、或者特效已结束，直接返回
+        if (sm == null || sm.getSkillEffectTimer() <= 0) return;
+
+        // 2. 核心检查：如果这个技能已经造成过伤害了，不再重复判定
+        // (这一步防止了每帧扣血的 BUG)
+        if (sm.hasDealtDamage()) return;
+
+        // 获取技能信息
+        String currentSkill = sm.getCurrentSkillEffect();
+        Vector2 skillPos = sm.getSkillEffectPosition(); // 技能释放时的位置
+
+        float damage = 0f;
+        float range = 0f;
+        boolean isAreaEffect = false; // 是否是群体伤害
+
+        // 3. 根据技能类型设定伤害和范围 (数值已根据之前的平衡调整)
+        if ("fireball".equals(currentSkill)) {
+            // 火球：基础40 + 50%攻击力加成
+            damage = 40f + player.getStats().getActualAttackDamage() * 0.5f;
+            range = 40f; // 判定半径 (稍微加大一点，更容易打中)
+            isAreaEffect = false; // 单体
+        }
+        else if ("lightning".equals(currentSkill)) {
+            // 闪电：基础25 + 30%攻击力加成
+            damage = 25f + player.getStats().getActualAttackDamage() * 0.3f;
+            range = 120f; // 大范围 AOE
+            isAreaEffect = true; // 群体
+        }
+        else {
+            return; // 治疗术(heal)不需要检测敌人，护盾(shield)也不需要
+        }
+
+        boolean hitAnyone = false;
+
+        // 4. 遍历所有敌人
+        for (Enemy enemy : enemies) {
+            if (!enemy.isAlive()) continue;
+
+            // --- 距离计算优化 ---
+            // 获取敌人中心点，而不是左下角 (x, y)
+            float enemyCenterX = enemy.getX() + enemy.getWidth() / 2f;
+            float enemyCenterY = enemy.getY() + enemy.getHeight() / 2f;
+
+            // 计算技能中心到敌人中心的距离
+            float dist = Vector2.dst(skillPos.x, skillPos.y, enemyCenterX, enemyCenterY);
+
+            // 如果在范围内
+            if (dist <= range) {
+                // 造成伤害！
+                enemy.takeDamage(damage);
+
+                // 如果打死了，记录击杀
+                if (!enemy.isAlive()) {
+                    achievementManager.trackKill();
+                }
+
+                hitAnyone = true;
+
+                System.out.println("Skill [" + currentSkill + "] hit enemy for " + (int)damage + " dmg!");
+
+                // 如果不是群体伤害（火球），打中第一个人就停止循环
+                if (!isAreaEffect) {
+                    break;
+                }
+            }
+        }
+
+        // 5. 命中后处理
+        if (hitAnyone) {
+            // 标记该次技能已造成伤害，后续帧不再判定
+            sm.setHasDealtDamage(true);
+
+            // 播放命中音效 (如果有的话)
+            // if (attackSound != null) attackSound.play(0.5f);
+        }
+    }
 
 
 

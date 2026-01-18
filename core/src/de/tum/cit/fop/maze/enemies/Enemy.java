@@ -1,12 +1,14 @@
 package de.tum.cit.fop.maze.enemies;
 
+import de.tum.cit.fop.maze.Wall;
+import java.util.List;
+
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import de.tum.cit.fop.maze.ai.AIBehavior;
 import de.tum.cit.fop.maze.ai.AStarPathFinder;
-import de.tum.cit.fop.maze.Player; // 添加这行导入
-import java.util.List;
+import de.tum.cit.fop.maze.Player;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
@@ -114,7 +116,7 @@ public abstract class Enemy {
         findPathTo(target);
     }
 
-    public void update(float delta) {
+    public void update(float delta, List<Wall> walls) {
         if (!isAlive()) return;
 
         damageCooldown = Math.max(0f, damageCooldown - delta);
@@ -131,6 +133,32 @@ public abstract class Enemy {
 
         if (currentBehavior != null) {
             currentBehavior.update(delta);
+        }
+
+        // 1. 处理 X 轴移动
+        float oldX = position.x;
+        position.x += velocity.x * delta;
+        bounds.setPosition(position.x, position.y);
+
+        for (Wall wall : walls) {
+            if (bounds.overlaps(wall.getBounds())) {
+                position.x = oldX; // 撞墙了，回退
+                bounds.setPosition(position.x, position.y);
+                break;
+            }
+        }
+
+        // 2. 处理 Y 轴移动
+        float oldY = position.y;
+        position.y += velocity.y * delta;
+        bounds.setPosition(position.x, position.y);
+
+        for (Wall wall : walls) {
+            if (bounds.overlaps(wall.getBounds())) {
+                position.y = oldY; // 撞墙了，回退
+                bounds.setPosition(position.x, position.y);
+                break;
+            }
         }
 
         if (currentPath != null && !currentPath.isEmpty()) {

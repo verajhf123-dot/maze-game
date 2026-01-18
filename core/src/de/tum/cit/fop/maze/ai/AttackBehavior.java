@@ -33,10 +33,7 @@ public class AttackBehavior extends AIBehavior {
                 currentCooldown = attackCooldown;
             }
         } else {
-            // 不在攻击范围，继续追击
-            Vector2 direction = new Vector2(playerPos.x - enemyPos.x,
-                    playerPos.y - enemyPos.y).nor();
-            enemy.setVelocity(direction.x * enemy.getSpeed(), direction.y * enemy.getSpeed());
+            enemy.findPathTo(playerPos);
         }
     }
 

@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
 import de.tum.cit.fop.maze.Player;
+import de.tum.cit.fop.maze.Wall;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,14 +42,14 @@ public class QiongQi extends Enemy {
     private float chargeTimer = 0f;
 
     public QiongQi(float x, float y) {
-        super(x, y, 48, 48);
+        super(x, y, 30, 30);
 
         // 敌人数值
         this.normalSpeed = 70f;
         this.speed = normalSpeed;
         this.maxHealth = 120f;
         this.health = maxHealth;
-        this.attackDamage = 15f;
+        this.attackDamage = 12f;
         this.attackRange = 45f;
         this.detectionRange = 180f;
 
@@ -154,8 +156,8 @@ public class QiongQi extends Enemy {
     }
 
     @Override
-    public void update(float delta) {
-        super.update(delta);
+    public void update(float delta, List<Wall> walls) { // 增加 List<Wall> 参数
+        super.update(delta, walls);
 
         // 更新动画计时器
         stateTime += delta;
@@ -244,8 +246,8 @@ public class QiongQi extends Enemy {
 
         if (currentFrame != null) {
             // 固定大小，不随状态变化
-            float drawWidth = 64f;  // 固定宽度
-            float drawHeight = 64f; // 固定高度
+            float drawWidth = 60f;  // 固定宽度
+            float drawHeight = 60f; // 固定高度
 
             // 计算中心偏移
             float offsetX = (bounds.width - drawWidth) / 2;
@@ -253,11 +255,21 @@ public class QiongQi extends Enemy {
 
             // 充电时的视觉特效（颜色变化而不是大小变化）
             if (isCharging) {
-                batch.setColor(1f, 0.8f, 0.8f, 1f); // 轻微红色调
-                batch.draw(currentFrame, position.x + offsetX, position.y + offsetY, drawWidth, drawHeight);
-                batch.setColor(1f, 1f, 1f, 1f); // 恢复白色
+                batch.setColor(1f, 0.8f, 0.8f, 1f);
+                batch.draw(currentFrame,
+                        position.x + offsetX,
+                        position.y + offsetY,
+                        drawWidth,  // 强制宽度
+                        drawHeight  // 强制高度
+                );
+                batch.setColor(1f, 1f, 1f, 1f);
             } else {
-                batch.draw(currentFrame, position.x + offsetX, position.y + offsetY, drawWidth, drawHeight);
+                batch.draw(currentFrame,
+                        position.x + offsetX,
+                        position.y + offsetY,
+                        drawWidth,  // 强制宽度
+                        drawHeight  // 强制高度
+                );
             }
         }
     }
