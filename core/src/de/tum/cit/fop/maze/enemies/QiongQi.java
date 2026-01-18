@@ -49,7 +49,7 @@ public class QiongQi extends Enemy {
         this.speed = normalSpeed;
         this.maxHealth = 120f;
         this.health = maxHealth;
-        this.attackDamage = 15f;
+        this.attackDamage = 12f;
         this.attackRange = 45f;
         this.detectionRange = 180f;
 

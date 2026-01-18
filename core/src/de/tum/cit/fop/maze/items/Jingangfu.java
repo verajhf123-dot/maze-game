@@ -9,7 +9,7 @@ public class Jingangfu extends Item {
         super(
                 x,
                 y,
-                16f,
+                32f,
                 "items_jingangfu.png",
                 Color.GOLD
         );

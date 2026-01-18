@@ -74,11 +74,11 @@ public class ExperienceSystem {
     public static int getExpForEnemy(String enemyType) {
         switch (enemyType) {
             case "NineTailedFox":
-                return 25;
+                return 50;
             case "QiongQi":
-                return 60;
+                return 100;
             case "ZhuLong":
-                return 150;
+                return 500;
             default:
                 return 20;
         }

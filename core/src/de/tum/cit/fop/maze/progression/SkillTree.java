@@ -91,7 +91,7 @@ public class SkillTree {
                 "speed_boost",
                 "Swift Step",
                 "Move Speed +20%",
-                100,
+                150,
                 0f,
                 0.2f,
                 0f,
@@ -115,13 +115,13 @@ public class SkillTree {
                 "fireball",
                 "Fireball",
                 "Launch fireball at enemies (Q Key)",
-                150,
+                100,
                 0f,
                 0f,
                 0f,
                 "fireball",
                 30f,
-                3.0f,
+                4.0f,
                 "Q"
         ));
 
@@ -130,13 +130,13 @@ public class SkillTree {
                 "heal",
                 "Healing Aura",
                 "Restore health (E Key)",
-                120,
+                300,
                 20f,
                 0f,
                 0f,
                 "heal",
-                50f,
-                5.0f,
+                30f,
+                20.0f,
                 "E"
         ));
 
@@ -145,13 +145,13 @@ public class SkillTree {
                 "lightning",
                 "Chain Lightning",
                 "Lightning attacks multiple enemies (R Key)",
-                200,
+                500,
                 0f,
                 0f,
                 2f,
                 "lightning",
-                15f,
-                8.0f,
+                25f,
+                12.0f,
                 "R"
         ));
 
