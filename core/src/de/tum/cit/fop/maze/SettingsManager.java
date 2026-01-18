@@ -7,7 +7,6 @@ import com.badlogic.gdx.Preferences;
 
 public class SettingsManager {
 
-    // 存档文件的名字，通常保存在用户的主目录下 (例如 ~/.prefs/)
     private static final String PREF_NAME = "MazeRunnerGame_Settings";
 
 
