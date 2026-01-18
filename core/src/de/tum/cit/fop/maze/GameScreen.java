@@ -108,6 +108,7 @@ public class GameScreen implements Screen {
     private Texture floorTexture;
     private Texture wallTexture;
     private Texture fireballTexture; // 火球图片
+    private Texture lightningTexture;
     private Array<Projectile> projectiles; // 管理所有飞行的火球
 
 
@@ -525,14 +526,11 @@ public class GameScreen implements Screen {
             player.render(batch);
         }
 
+        // ✅ 正确：调用 p.render(batch)，让投射物使用它自己的图片
         if (projectiles != null) {
             for (Projectile p : projectiles) {
-                // 只有当火球处于激活状态，且图片存在时才画
-                if (p.isActive() && fireballTexture != null) {
-                    batch.draw(fireballTexture,
-                            p.getPosition().x - 16, // 修正坐标，让图片居中
-                            p.getPosition().y - 16,
-                            32, 32);                // 强制设置大小为 32x32
+                if (p.isActive()) {
+                    p.render(batch); // <--- 关键修改
                 }
             }
         }
@@ -1173,6 +1171,11 @@ public class GameScreen implements Screen {
             } else {
                 System.out.println("Warning: fireball.png not found!");
             }
+            if (Gdx.files.internal("lightning.png").exists()) {
+                lightningTexture = new Texture(Gdx.files.internal("lightning.png"));
+            } else {
+                System.out.println("Warning: lightning.png not found!");
+            }
 
             // 2. 初始化列表
             projectiles = new Array<>();
@@ -1714,13 +1717,17 @@ public class GameScreen implements Screen {
                 // 注意：这里我们让火球从玩家中心稍微偏移一点，避免看起来像从脚底发出来的
                 float offsetX = player.getHitbox().width / 2f;
                 float offsetY = player.getHitbox().height / 2f;
+                float startX = player.getPosition().x + offsetX - 16f;
+                float startY = player.getPosition().y + offsetY - 16f;
+
+                // 3. 创建火球对象
                 Projectile fireball = new Projectile(
-                        player.getPosition().x,
-                        player.getPosition().y,
+                        startX, startY,           // 现在这两个变量有值了
                         direction.x, direction.y,
-                        300f, // 速度
+                        300f,
                         dmg,
-                        Color.ORANGE
+                        fireballTexture,
+                        32f, 32f                  // 传入火球的宽和高
                 );
 
                 projectiles.add(fireball);
@@ -1754,24 +1761,72 @@ public class GameScreen implements Screen {
     }
 
     private void useSkill3() {
-        if (player != null && player.getStats() != null) {
-            SkillManager skillManager = player.getStats().getSkillManager();
+        // 1. 基础检查
+        if (player == null || !player.getStats().getSkillManager().canUseRSkill()) {
+            return;
+        }
 
-            if (skillManager != null && skillManager.hasRSkill()) {
-                if (skillManager.useSkill("R")) {
-                    System.out.println(" R Skill - Lightning cast successfully!");
-                    // Add visual feedback here if needed
-                } else {
-                    float cooldown = skillManager.getRCooldown();
-                    if (cooldown > 0) {
-                        System.out.println(" R Skill cooling down: " + String.format("%.1f", cooldown) + "s");
-                    } else {
-                        System.out.println(" R Skill not available");
-                    }
+        // 2. 寻找最近的敌人 (索敌逻辑)
+        Enemy nearestEnemy = null;
+        float minDistance = Float.MAX_VALUE;
+        float range = 600f; // 索敌范围
+
+        if (enemies != null) {
+            for (Enemy enemy : enemies) {
+                float distance = player.getPosition().dst(enemy.getPosition());
+                if (distance < minDistance && distance <= range) {
+                    minDistance = distance;
+                    nearestEnemy = enemy;
                 }
-            } else {
-                System.out.println(" R Skill not unlocked. Press T to open Skill Tree");
             }
+        }
+
+        // 3. 如果找到了敌人，就释放技能
+        if (nearestEnemy != null) {
+            if (player.getStats().getSkillManager().useSkill("R")) {
+
+                // === 补全代码：定义伤害值 ===
+                float lightningDamage = 25f; // 基础伤害
+                if (player.getStats().getSkillTree() != null && player.getStats().getSkillTree().getRSkill() != null) {
+                    lightningDamage = player.getStats().getSkillTree().getRSkill().skillValue;
+                }
+                // ==========================
+
+                // --- 定义闪电的大小 ---
+                float lightWidth = 64f;
+                float lightHeight = 150f;
+
+                // --- 重新计算生成位置 ---
+                float targetX = nearestEnemy.getPosition().x + nearestEnemy.getBounds().width / 2f;
+                float targetY = nearestEnemy.getPosition().y;
+
+                float startX = targetX - (lightWidth / 2f);
+                float startY = targetY + 100f;
+
+                // --- 创建投射物 ---
+                Projectile lightning = new Projectile(
+                        startX, startY,
+                        0, -1,            // 向下
+                        900f,             // 速度
+                        lightningDamage,  // 现在这里有值了
+                        lightningTexture,
+                        lightWidth,
+                        lightHeight
+                );
+
+                if (projectiles != null) {
+                    projectiles.add(lightning);
+                }
+
+                // === 补全代码：播放音效 ===
+                if (attackSound != null) {
+                    long id = attackSound.play();
+                    attackSound.setPitch(id, 1.8f);
+                }
+                // ========================
+            }
+        } else {
+            System.out.println("There are no enemies within the range!");
         }
     }
 
@@ -1832,8 +1887,8 @@ public class GameScreen implements Screen {
         // 新增：清理按钮和 HUD 背景资源
         if (buttonBg != null) buttonBg.dispose();
         if (hudFrameTexture != null) hudFrameTexture.dispose();
-
         if (fireballTexture != null) fireballTexture.dispose();
+        if (lightningTexture != null) lightningTexture.dispose();
 
     }
 
