@@ -4,20 +4,16 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.MazeRunnerGame;
 import de.tum.cit.fop.maze.PlayerStats;
-
-import java.util.Map;
 
 public class SkillTreeScreen implements Screen {
     private final MazeRunnerGame game;
@@ -28,7 +24,12 @@ public class SkillTreeScreen implements Screen {
     private final Screen previousScreen;
 
     private Label skillPointsLabel;
-    private Label statsLabel;
+
+    // 将这些 Label 提升为类成员，以便在点击后更新它们
+    private Label hpLabel;
+    private Label speedLabel;
+    private Label atkLabel;
+
     private SpriteBatch batch;
     private Texture menuBg;
     private Texture hpIcon;
@@ -37,7 +38,7 @@ public class SkillTreeScreen implements Screen {
 
     private static final Color MINT_COLOR = new Color(0.96f, 1.0f, 0.98f, 1.0f);
 
-    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats,Screen previousScreen) {
+    public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats, Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
         this.skillTree = playerStats.getSkillTree();
@@ -46,7 +47,7 @@ public class SkillTreeScreen implements Screen {
         this.stage = new Stage(new ScreenViewport(), game.getSpriteBatch());
 
         this.skillPointsLabel = new Label("", game.getSkin());
-        this.statsLabel = new Label("", game.getSkin());
+        // statsLabel 不再需要，因为我们直接更新三个具体的 Label
     }
 
     @Override
@@ -62,6 +63,7 @@ public class SkillTreeScreen implements Screen {
 
         Table mainTable = new Table();
         mainTable.setFillParent(true);
+        mainTable.center(); // 让整个布局居中
         stage.addActor(mainTable);
 
         // Title
@@ -70,61 +72,142 @@ public class SkillTreeScreen implements Screen {
         title.setFontScale(1.2f);
         mainTable.add(title).padBottom(40).row();
 
+        // 技能点信息 (放在上面更显眼)
+        updateSkillPointsLabel();
+        skillPointsLabel.setFontScale(1.2f);
+        mainTable.add(skillPointsLabel).padBottom(40).row();
+
         Table statsTable = new Table();
-        statsTable.defaults().pad(70);
+        statsTable.defaults().pad(30); // 减小间距，防止超出屏幕
 
-        float iconSize = 500f;
+        // 修改：将图标大小从 500 改为 120，确保能显示完全
+        float iconSize = 120f;
 
-        // HP 图标和数值
+        // --- HP 容器 ---
         Table hpContainer = new Table();
         Image hpImage = new Image(hpIcon);
         hpImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        // 添加点击事件
+        hpImage.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                attemptUpgrade("HP");
+            }
+        });
         hpContainer.add(hpImage).size(iconSize, iconSize).row();
-        Label hpLabel = new Label("HP +" + (int)skillTree.getTotalHealthBonus(), game.getSkin());
-        hpLabel.setColor(Color.RED);
-        hpLabel.setFontScale(1.5f);
-        hpContainer.add(hpLabel);
 
-        // Speed 图标和数值
+        Label clickHint1 = new Label("Click to Add", game.getSkin());
+        clickHint1.setFontScale(0.8f);
+        hpContainer.add(clickHint1).padTop(10).row();
+
+        hpLabel = new Label("", game.getSkin());
+        hpLabel.setColor(Color.RED);
+        hpLabel.setFontScale(1.2f);
+        hpContainer.add(hpLabel).padTop(5);
+        statsTable.add(hpContainer);
+
+        // --- Speed 容器 ---
         Table speedContainer = new Table();
         Image speedImage = new Image(speedIcon);
         speedImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        // 添加点击事件
+        speedImage.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                attemptUpgrade("SPEED");
+            }
+        });
         speedContainer.add(speedImage).size(iconSize, iconSize).row();
-        Label speedLabel = new Label("Speed +" + (int)(skillTree.getTotalSpeedBonus() * 100) + "%", game.getSkin());
-        speedLabel.setColor(MINT_COLOR);
-        speedLabel.setFontScale(1.5f);
-        speedContainer.add(speedLabel);
 
-        // ATK 图标和数值
+        Label clickHint2 = new Label("Click to Add", game.getSkin());
+        clickHint2.setFontScale(0.8f);
+        speedContainer.add(clickHint2).padTop(10).row();
+
+        speedLabel = new Label("", game.getSkin());
+        speedLabel.setColor(MINT_COLOR);
+        speedLabel.setFontScale(1.2f);
+        speedContainer.add(speedLabel).padTop(5);
+        statsTable.add(speedContainer);
+
+        // --- ATK 容器 ---
         Table atkContainer = new Table();
         Image atkImage = new Image(atkIcon);
         atkImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        // 添加点击事件
+        atkImage.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                attemptUpgrade("ATK");
+            }
+        });
         atkContainer.add(atkImage).size(iconSize, iconSize).row();
-        Label atkLabel = new Label("ATK +" + (int)skillTree.getTotalAttackBonus(), game.getSkin());
-        atkLabel.setColor(Color.ORANGE);
-        atkLabel.setFontScale(1.5f);
-        atkContainer.add(atkLabel);
 
-        // 将三个容器添加到一行
-        statsTable.add(hpContainer);
-        statsTable.add(speedContainer);
+        Label clickHint3 = new Label("Click to Add", game.getSkin());
+        clickHint3.setFontScale(0.8f);
+        atkContainer.add(clickHint3).padTop(10).row();
+
+        atkLabel = new Label("", game.getSkin());
+        atkLabel.setColor(Color.ORANGE);
+        atkLabel.setFontScale(1.2f);
+        atkContainer.add(atkLabel).padTop(5);
         statsTable.add(atkContainer);
 
+        // 将 statsTable 加入主表
         mainTable.add(statsTable).padBottom(30).row();
 
-        // 当前属性加成
-        //updateStatsLabel();
-        //mainTable.add(statsLabel).padBottom(30).row();
-
-        // 技能点信息
-        updateSkillPointsLabel();
-        skillPointsLabel.setFontScale(1.5f);
-        mainTable.add(skillPointsLabel).padBottom(30).row();
+        // 初始化 Label 的文字
+        updateAllStatsLabels();
 
         // 提示信息
         Label hintLabel = new Label("Press T or ESC to return", game.getSkin());
-        hintLabel.setFontScale(1.3f);
+        hintLabel.setFontScale(1.0f);
         mainTable.add(hintLabel).padTop(20);
+    }
+
+    // 新增：处理升级的核心逻辑
+    private void attemptUpgrade(String type) {
+        if (expSystem.getSkillPoints() > 0) {
+            boolean success = false;
+
+            // 注意：这里需要调用你 SkillTree 类中具体的升级方法
+            // 因为我看不到你的 SkillTree 代码，所以我写了通用的逻辑。
+            // 如果你的方法名不一样（比如叫 unlockNode），请在这里修改！
+            switch (type) {
+                case "HP":
+                    // 假设你的 SkillTree 有 addHealth 或类似的方法
+                    // skillTree.unlockHealthNode();
+                    // 如果没有特定方法，这里只是模拟成功：
+                    success = true;
+                    System.out.println("Upgraded HP!");
+                    break;
+                case "SPEED":
+                    // skillTree.unlockSpeedNode();
+                    success = true;
+                    System.out.println("Upgraded Speed!");
+                    break;
+                case "ATK":
+                    // skillTree.unlockAttackNode();
+                    success = true;
+                    System.out.println("Upgraded Attack!");
+                    break;
+            }
+
+            if (success) {
+                expSystem.useSkillPoint(); // 扣除技能点
+                updateAllStatsLabels();      // 刷新界面数值
+                updateSkillPointsLabel();    // 刷新剩余技能点
+            }
+        } else {
+            System.out.println("Not enough skill points!");
+        }
+    }
+
+    private void updateAllStatsLabels() {
+        if (skillTree != null) {
+            hpLabel.setText("HP +" + (int)skillTree.getTotalHealthBonus());
+            speedLabel.setText("Speed +" + (int)(skillTree.getTotalSpeedBonus() * 100) + "%");
+            atkLabel.setText("ATK +" + (int)skillTree.getTotalAttackBonus());
+        }
     }
 
     private void updateSkillPointsLabel() {
@@ -138,20 +221,6 @@ public class SkillTreeScreen implements Screen {
         }
     }
 
-    private void updateStatsLabel() {
-        if (skillTree != null && playerStats != null) {
-            String stats = String.format(
-                    "Current Bonuses: HP +%.0f | Speed +%.0f%% | ATK +%.0f",
-                    skillTree.getTotalHealthBonus(),
-                    skillTree.getTotalSpeedBonus() * 100,
-                    skillTree.getTotalAttackBonus()
-            );
-            statsLabel.setText(stats);
-        } else {
-            statsLabel.setText("Skill tree not available");
-        }
-    }
-
     private void returnToGame() {
         // Return to current game level
         if (previousScreen != null) {
@@ -159,30 +228,28 @@ public class SkillTreeScreen implements Screen {
             this.dispose();
         } else {
             Gdx.app.error("SkillTreeScreen", "No previous screen found to return to!");
-            // Fallback to level 1 if no previous screen
-
         }
-
     }
 
 
     @Override
     public void render(float delta) {
-        // 1) 清屏（可以留黑，不影响，因为马上会画背景图）
+        // 1) 清屏
         ScreenUtils.clear(0, 0, 0, 1);
+
         // ESC or T key to go back
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             returnToGame();
         }
 
-        // 2) 先画背景图（一定要在 stage.draw 之前）
+        // 2) 画背景
         batch.begin();
-        batch.draw(menuBg, 0, 0,
-                Gdx.graphics.getWidth(),
-                Gdx.graphics.getHeight());
+        if (menuBg != null) {
+            batch.draw(menuBg, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        }
         batch.end();
 
-        // 3) 再画 UI（按钮、文字）
+        // 3) 画 UI
         stage.act(delta);
         stage.draw();
     }

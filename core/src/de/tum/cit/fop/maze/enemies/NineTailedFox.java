@@ -34,9 +34,9 @@ public class NineTailedFox extends Enemy {
 
         // 敌人数值
         this.speed = 80f;
-        this.maxHealth = 50f;
+        this.maxHealth = 40f;
         this.health = maxHealth;
-        this.attackDamage = 8f;
+        this.attackDamage = 6f;
         this.attackRange = 40f;
         this.detectionRange = 200f;
         this.attackCooldown = 0.8f;

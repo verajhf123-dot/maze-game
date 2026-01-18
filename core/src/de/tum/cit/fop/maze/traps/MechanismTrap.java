@@ -12,8 +12,12 @@ public class MechanismTrap extends Trap {
     private float animTimer;
     private float animDuration = 0.3f;
 
+
+
+
+    private static final float TRAP_SIZE = 32f;
     public MechanismTrap(float x, float y) {
-        super(x, y, 16, 16);
+        super(x, y, TRAP_SIZE, TRAP_SIZE);
         this.cooldown = 4f;
         this.activationDelay = 0.3f;
 

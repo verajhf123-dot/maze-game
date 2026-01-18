@@ -28,9 +28,9 @@ public class ZhuLong extends Enemy {
 
         // 初始化 Enemy 基类的属性
         this.health = 150f;
-        this.maxHealth = 150f;
+        this.maxHealth = 300f;
         this.speed = 40f;
-        this.attackDamage = 3f;
+        this.attackDamage = 15f;
         this.attackRange = 60f;
         this.detectionRange = 180f;
 

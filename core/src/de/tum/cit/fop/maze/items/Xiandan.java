@@ -10,7 +10,7 @@ public class Xiandan extends Item {
         super(
                 x,
                 y,
-                16f,
+                32f,
                 "items_Xiandan.png", // 有就用，没有就自动忽略
                 Color.GREEN
         );
