@@ -29,10 +29,9 @@ public class SaveManager {
                 data.setSkillPoints(stats.getExpSystem().getSkillPoints());
             }
 
-            // 技能树 (保存已解锁的技能 ID)
+
             SkillTree tree = stats.getSkillTree();
             if (tree != null) {
-                // 调用我们在 SkillTree 中新加的方法获取 ID 列表
                 data.setUnlockedSkillIds(tree.getUnlockedSkillIds());
             }
         }

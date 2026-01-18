@@ -136,6 +136,7 @@ public class GameScreen implements Screen {
     // 新增：按钮样式相关
     private Texture buttonBg;
     private TextButton.TextButtonStyle commonButtonStyle;
+    private Texture keyIconTexture;
 
     // 新增：HUD 背景框 Texture
     private Texture hudFrameTexture;
@@ -157,6 +158,11 @@ public class GameScreen implements Screen {
         this.levelNumber = levelNumber;
         this.currentMapPath = "maps/level-" + levelNumber + ".properties";
         this.previousStats = prevStats;
+
+        if (this.previousStats != null) {
+            this.previousStats.setBonusKey(0); // 重置加分钥匙数量
+            this.previousStats.setHasKey(false); // 重置通关钥匙状态
+        }
         initCommon();
     }
 
@@ -897,6 +903,40 @@ public class GameScreen implements Screen {
         // 1. 血条 (位置不变)
         drawXianxiaHealthBar(batch, 60, uiH - 70, 300);
 
+        if (keyIconTexture != null && player != null && player.getStats() != null) {
+            float keyIconSize = 48;
+            float startX = 75;        // X坐标：与血条左对齐稍微偏移
+            float startY = uiH - 130; // Y坐标：在血条下方 (血条约在 uiH-70)
+            float gap = 60;           // 图标间距
+
+            int bonusKeys = player.getStats().getBonusKey();
+            boolean hasExitKey = player.getStats().hasKey();
+
+            // 循环绘制 3 把钥匙
+            for (int i = 0; i < 3; i++) {
+                if (i < 2) {
+                    // 前两把是 Bonus Key
+                    if (i < bonusKeys) {
+                        batch.setColor(Color.GREEN); // 已收集：绿色
+                    } else {
+                        batch.setColor(Color.DARK_GRAY); // 未收集：深灰色
+                    }
+                } else {
+                    // 第三把是 Exit Key
+                    if (hasExitKey) {
+                        batch.setColor(Color.RED); // 已收集：红色
+                    } else {
+                        batch.setColor(Color.DARK_GRAY); // 未收集：深灰色
+                    }
+                }
+                // 绘制图标
+                batch.draw(keyIconTexture, startX + (i * gap), startY, keyIconSize, keyIconSize);
+            }
+            // 重置颜色，防止影响后续绘制
+            batch.setColor(Color.WHITE);
+        }
+
+
         // ============================================================
         // 2. 右上角信息框 (XP 显示)
         // ============================================================
@@ -1142,6 +1182,7 @@ public class GameScreen implements Screen {
             // 新增：加载 HUD 背景框纹理
             try {
                 hudFrameTexture = new Texture(Gdx.files.internal("scroll_1.png"));
+                keyIconTexture = new Texture(Gdx.files.internal("key.png"));
             } catch (Exception e) {
                 Gdx.app.log("GameScreen", "Failed to load hud_frame.png: " + e.getMessage());
             }
@@ -1205,7 +1246,7 @@ public class GameScreen implements Screen {
                 }
             }
             while (addedCount < targetEnemyCount) {
-                Vector2 pos = getSmartSpawnPosition(); // 智能找空地 (不靠墙、不靠人)
+                Vector2 pos = getSimpleSpawnPosition(); // 智能找空地 (不靠墙、不靠人)
                 if (pos != null) {
                     // 默认生成一种怪，后面 initEnemies 会自动根据等级把它变成高级怪
                     this.enemies.add(new NineTailedFox(pos.x, pos.y));
@@ -1406,97 +1447,170 @@ public class GameScreen implements Screen {
         }
     }
 
-    // ========== 新增：初始化方法 ==========
-    // 在 GameScreen.java 中
 
+    // =========================================================
+    // 🔥 修改后：适配简单写法的敌人生成逻辑
+    // =========================================================
     private void initEnemies() {
-        Array<Enemy> upgradedEnemies = new Array<>();
+        enemies.clear(); // 清空之前的敌人
 
-        for (Enemy mapEnemy : enemies) {
-            float x = mapEnemy.getX();
-            float y = mapEnemy.getY();
-            Enemy newEnemy = spawnEnemyByLevel(levelNumber, x, y);
-            if (newEnemy != null) {
-                newEnemy.adjustDifficulty(this.levelNumber);
+        System.out.println("Loading Level " + levelNumber + " enemies...");
 
-                newEnemy.setWalkableGrid(walkableGrid);
-                newEnemy.setPathFinder(pathFinder);
-
-                // 确保为每个敌人设置目标玩家
-                newEnemy.setTargetPlayer(player);
-
-                // 如果是九尾狐，重置其接触状态
-                if (newEnemy instanceof NineTailedFox) {
-                    NineTailedFox fox = (NineTailedFox) newEnemy;
-                    fox.resetEncounterState(); // 重置接触状态
-                    System.out.println("INIT: NineTailedFox created, player set, state reset");
-                }
-
-                upgradedEnemies.add(newEnemy);
+        // Level 1: 3只狐狸
+        if (levelNumber == 1) {
+            spawnFox();
+            spawnFox();
+            spawnFox();
+        }
+        // Level 2: 1只狐狸 + 2只穷奇
+        else if (levelNumber == 2) {
+            spawnFox();
+            spawnQiongQi();
+            spawnQiongQi();
+        }
+        // Level 3: 1只狐狸 + 1只烛龙 + 1只穷奇
+        else if (levelNumber == 3) {
+            spawnFox();
+            spawnZhuLong();
+            spawnQiongQi();
+        }
+        // Level 4: 1只烛龙 + 2只穷奇
+        else if (levelNumber == 4) {
+            spawnZhuLong();
+            spawnQiongQi();
+            spawnQiongQi();
+        }
+        // Level 5: 3个穷奇，1个狐狸，1个烛笼
+        else if (levelNumber == 5) {
+            spawnQiongQi();
+            spawnQiongQi();
+            spawnQiongQi();
+            spawnFox();
+            spawnZhuLong();
+        }
+        // Level 6及以上：随机生成
+        else {
+            int enemyCount = 5 + (levelNumber - 5);
+            for (int i = 0; i < enemyCount; i++) {
+                spawnRandomEnemy(); // 使用简单版的随机生成
             }
         }
 
-        enemies.clear();
-        enemies.addAll(upgradedEnemies);
+        // 统一设置一下怪物的属性（这一步还是要的，不然怪会傻站着）
+        for (Enemy enemy : enemies) {
+            enemy.adjustDifficulty(this.levelNumber);
+            enemy.setWalkableGrid(walkableGrid);
+            enemy.setPathFinder(pathFinder);
+            enemy.setTargetPlayer(player);
 
-        if (levelNumber > 5) {
-            int extraCount = levelNumber - 5;
-            for (int i = 0; i < extraCount; i++) {
-                Vector2 pos = getSmartSpawnPosition();
-                if (pos != null) {
-                    Enemy e = spawnEnemyByLevel(levelNumber, pos.x, pos.y);
-                    if (e != null) {
-                        e.adjustDifficulty(levelNumber);
-                        e.setPathFinder(pathFinder);
-                        e.setTargetPlayer(player); // 为新增的敌人也设置目标玩家
+            // 如果是烛龙，告诉它玩家在哪
+            if (enemy instanceof ZhuLong) {
+                if (player != null) {
+                    ((ZhuLong) enemy).setTargetPosition(player.getPosition());
+                }
+            }
+            // 如果是狐狸，重置一下状态
+            if (enemy instanceof NineTailedFox) {
+                ((NineTailedFox) enemy).resetEncounterState();
+            }
+        }
+    }
+    private void spawnFox() {
+        Vector2 pos = getSimpleSpawnPosition(); // 获取一个随机位置
+        if (pos != null) {
+            enemies.add(new NineTailedFox(pos.x, pos.y));
+        }
+    }
 
-                        // 如果是九尾狐，重置其接触状态
-                        if (e instanceof NineTailedFox) {
-                            NineTailedFox fox = (NineTailedFox) e;
-                            fox.resetEncounterState();
-                        }
+    // 专门生成穷奇
+    private void spawnQiongQi() {
+        Vector2 pos = getSimpleSpawnPosition();
+        if (pos != null) {
+            enemies.add(new QiongQi(pos.x, pos.y));
+        }
+    }
 
-                        enemies.add(e);
+    // 专门生成烛龙
+    private void spawnZhuLong() {
+        Vector2 pos = getSimpleSpawnPosition();
+        if (pos != null) {
+            enemies.add(new ZhuLong(pos.x, pos.y));
+        }
+    }
+
+    // 随机生成一种怪
+    private void spawnRandomEnemy() {
+        double r = Math.random();
+        if (r < 0.4) spawnFox();
+        else if (r < 0.8) spawnQiongQi();
+        else spawnZhuLong();
+    }
+
+    private Vector2 getSimpleSpawnPosition() {
+        // 第一轮尝试：努力找一个离大家都“很远”的位置
+        // 尝试 30 次
+        for (int i = 0; i < 30; i++) {
+            Vector2 candidate = getRandomEmptyTile();
+            float x = candidate.x * Wall.TILE_SIZE;
+            float y = candidate.y * Wall.TILE_SIZE;
+            boolean isGood = true;
+
+            // 1. 检查离玩家的距离 (必须大于 300，离得远远的)
+            if (player != null) {
+                if (player.getPosition().dst(x, y) < 300) {
+                    isGood = false;
+                }
+            }
+
+            // 2. 检查离其他敌人的距离 (必须大于 350，防止挤在一起)
+            if (isGood) {
+                for (Enemy e : enemies) {
+                    if (e.getPosition().dst(x, y) < 350) {
+                        isGood = false;
+                        break;
                     }
                 }
             }
-        }
 
-        System.out.println("Enemies initialized: " + enemies.size);
-
-        // 再次确保所有敌人都设置了目标玩家（双重保险）
-        for (Enemy enemy : enemies) {
-            enemy.setTargetPlayer(player);
-            if (enemy instanceof NineTailedFox) {
-                System.out.println("INIT: NineTailedFox found and player set");
+            // 如果这个点很好，就直接用
+            if (isGood) {
+                return new Vector2(x, y);
             }
         }
 
-        System.out.println("INIT: Total enemies = " + enemies.size);
-    }
+        // 第二轮尝试：如果上面试了30次都没找到（可能地图太小或者怪太多了）
+        // 那就降低标准，只要不贴脸就行
+        for (int i = 0; i < 20; i++) {
+            Vector2 candidate = getRandomEmptyTile();
+            float x = candidate.x * Wall.TILE_SIZE;
+            float y = candidate.y * Wall.TILE_SIZE;
+            boolean isOk = true;
 
+            // 离玩家稍微近点也行 (150)
+            if (player != null) {
+                if (player.getPosition().dst(x, y) < 150) {
+                    isOk = false;
+                }
+            }
 
-    private Enemy spawnEnemyByLevel(int level, float x, float y) {
-        double rand = Math.random(); // 0.0 到 1.0 之间的随机数
+            // 离队友稍微近点也行 (120)
+            if (isOk) {
+                for (Enemy e : enemies) {
+                    if (e.getPosition().dst(x, y) < 120) {
+                        isOk = false;
+                        break;
+                    }
+                }
+            }
 
-        if (level == 1) {
-            // Level 1: 纯新手村，只有狐狸
-            return new NineTailedFox(x, y);
-        } else if (level == 2) {
-            // Level 2: 玩家刚学会火球，放入少量穷奇练手
-            if (rand < 0.8) return new NineTailedFox(x, y);
-            return new QiongQi(x, y);
-        } else if (level <= 4) {
-            // Level 3-4: 混合兵种，极低概率出现烛龙吓唬玩家
-            if (rand < 0.6) return new NineTailedFox(x, y);
-            else if (rand < 0.9) return new QiongQi(x, y);
-            else return new ZhuLong(x, y);
-        } else {
-            // Level 5+: 地狱难度
-            if (rand < 0.4) return new NineTailedFox(x, y);
-            else if (rand < 0.7) return new QiongQi(x, y);
-            else return new ZhuLong(x, y);
+            if (isOk) {
+                return new Vector2(x, y);
+            }
         }
+
+        // 第三轮：实在没办法了，随便给个空地吧，总比没有强
+        Vector2 fallback = getRandomEmptyTile();
+        return new Vector2(fallback.x * Wall.TILE_SIZE, fallback.y * Wall.TILE_SIZE);
     }
 
 
@@ -1545,21 +1659,6 @@ public class GameScreen implements Screen {
     @Override
     public void hide() {
     }
-
-//    private void useSpecialSkill() {
-//        if (player != null && player.getStats() != null) {
-//            PlayerStats stats = player.getStats();
-//
-//            if (stats.canDash()) {
-//                performDash();
-//            } else if (stats.canDoubleJump()) {
-//                performDoubleJump();
-//            } else {
-//                System.out.println("No special skills unlocked yet!");
-//                System.out.println("Press T to open Skill Tree and unlock skills!");
-//            }
-//        }
-//    }
 
     private void useSkill1() {
         // 1. 基础检查
@@ -1676,44 +1775,6 @@ public class GameScreen implements Screen {
         }
     }
 
-//    private void performDash() {
-//        System.out.println("Player dashes forward!");
-//        // 冲刺逻辑
-//        if (controller != null && player != null) {
-//            // 获取当前移动方向
-//            float dashDistance = 150f; // 冲刺距离
-//
-//            // 根据控制器输入决定冲刺方向
-//            Vector2 dashDirection = new Vector2();
-//            if (controller.up) dashDirection.y += 1;
-//            if (controller.down) dashDirection.y -= 1;
-//            if (controller.left) dashDirection.x -= 1;
-//            if (controller.right) dashDirection.x += 1;
-//
-//            // 如果没有方向输入，使用玩家当前朝向
-//            if (dashDirection.len() == 0) {
-//                dashDirection.set(0, 1); // 默认向上
-//            }
-//
-//            dashDirection.nor().scl(dashDistance);
-//
-//            // 应用冲刺
-//            Vector2 playerPos = player.getPosition();
-//            playerPos.add(dashDirection);
-//
-//            // 同步碰撞箱
-//            player.syncPositionToHitbox();
-//
-//            System.out.println("Dashed " + dashDistance + " units!");
-//        }
-//    }
-//
-//    private void performDoubleJump() {
-//        System.out.println("Player double jumps!");
-//        // 二段跳逻辑
-//        // 需要在 Player 类中添加跳跃状态
-//        // 这里只是一个占位符
-//    }
 
     @Override
     public void dispose() {
@@ -1880,7 +1941,7 @@ public class GameScreen implements Screen {
         int trapCount = 1 + levelNumber;
 
         for (int i = 0; i < trapCount; i++) {
-            Vector2 smartPos = getSmartSpawnPosition();
+            Vector2 smartPos = getSimpleSpawnPosition();
             if (smartPos != null) {
 
                 // 类型控制：
@@ -1945,44 +2006,6 @@ public class GameScreen implements Screen {
         return new Key(pos.x * Wall.TILE_SIZE, pos.y * Wall.TILE_SIZE, isBonus);
     }
 
-
-    private Vector2 getSmartSpawnPosition() {
-        int attempts = 0;
-        while (attempts < 150) {
-            Vector2 tilePos = getRandomEmptyTile(); // 获取一个没墙的格子坐标
-            float worldX = tilePos.x * Wall.TILE_SIZE;
-            float worldY = tilePos.y * Wall.TILE_SIZE;
-
-            if (player != null && player.getPosition().dst(worldX, worldY) < 250) {
-                attempts++;
-                continue;
-            }
-
-            if (exitPosition != null) {
-                float exitWorldX = exitPosition.x * Wall.TILE_SIZE;
-                float exitWorldY = exitPosition.y * Wall.TILE_SIZE;
-                if (Vector2.dst(worldX, worldY, exitWorldX, exitWorldY) < 100) {
-                    attempts++;
-                    continue;
-                }
-            }
-
-            boolean tooCloseToOthers = false;
-            for (Enemy e : enemies) {
-                if (e.getPosition().dst(worldX, worldY) < 120) {
-                    tooCloseToOthers = true;
-                    break;
-                }
-            }
-            if (tooCloseToOthers) {
-                attempts++;
-                continue;
-            }
-
-            return new Vector2(worldX, worldY); // 找到了完美位置！
-        }
-        return null;
-    }
 
 
     private void updateItems() {
