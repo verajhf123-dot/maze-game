@@ -52,6 +52,10 @@ public abstract class Enemy {
     protected float currentPathfindingCooldown = 0f;
     protected float damageCooldown = 0f;
 
+
+    protected float mapWidthLimit = 2000f;  // 默认给个大值
+    protected float mapHeightLimit = 2000f;
+
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2();
@@ -116,55 +120,73 @@ public abstract class Enemy {
         findPathTo(target);
     }
 
+    // 🔥【重点修改】改进后的 update 方法
     public void update(float delta, List<Wall> walls) {
         if (!isAlive()) return;
 
+        // 1. 更新所有计时器（保持不变）
         damageCooldown = Math.max(0f, damageCooldown - delta);
-
         attackTimer = Math.max(0f, attackTimer - delta);
         currentPathfindingCooldown = Math.max(0f, currentPathfindingCooldown - delta);
         currentEvadeCooldown = Math.max(0f, currentEvadeCooldown - delta);
         stateTimer += delta;
 
+        // 2. 更新状态机（保持不变）
         updateState(delta);
 
-        position.add(velocity.x * delta, velocity.y * delta);
-        bounds.setPosition(position.x, position.y);
-
+        // 3. 更新AI行为（AI会计算出 velocity）
         if (currentBehavior != null) {
             currentBehavior.update(delta);
         }
 
-        // 1. 处理 X 轴移动
+        // 4. 物理移动核心逻辑（分离轴检测，防止卡墙）
+
+        // --- X轴移动 ---
         float oldX = position.x;
         position.x += velocity.x * delta;
-        bounds.setPosition(position.x, position.y);
+        bounds.x = position.x; // 同步 Hitbox
 
-        for (Wall wall : walls) {
-            if (bounds.overlaps(wall.getBounds())) {
-                position.x = oldX; // 撞墙了，回退
-                bounds.setPosition(position.x, position.y);
-                break;
+        boolean collisionX = false;
+        if (walls != null) {
+            for (Wall wall : walls) {
+                if (bounds.overlaps(wall.getBounds())) {
+                    collisionX = true;
+                    break;
+                }
             }
         }
+        // 如果X轴撞墙，退回原来的位置
+        if (collisionX) {
+            position.x = oldX;
+            bounds.x = oldX;
+        }
 
-        // 2. 处理 Y 轴移动
+        // --- Y轴移动 ---
         float oldY = position.y;
         position.y += velocity.y * delta;
-        bounds.setPosition(position.x, position.y);
+        bounds.y = position.y; // 同步 Hitbox
 
-        for (Wall wall : walls) {
-            if (bounds.overlaps(wall.getBounds())) {
-                position.y = oldY; // 撞墙了，回退
-                bounds.setPosition(position.x, position.y);
-                break;
+        boolean collisionY = false;
+        if (walls != null) {
+            for (Wall wall : walls) {
+                if (bounds.overlaps(wall.getBounds())) {
+                    collisionY = true;
+                    break;
+                }
             }
         }
+        // 如果Y轴撞墙，退回原来的位置
+        if (collisionY) {
+            position.y = oldY;
+            bounds.y = oldY;
+        }
 
+        // 5. 路径跟随逻辑（保持不变）
         if (currentPath != null && !currentPath.isEmpty()) {
             followPath(delta);
         }
 
+        // 6. 边界检查
         keepInBounds();
     }
 
@@ -277,8 +299,9 @@ public abstract class Enemy {
     private void keepInBounds() {
         if (position.x < 0) position.x = 0;
         if (position.y < 0) position.y = 0;
-        if (position.x > 800 - bounds.width) position.x = 800 - bounds.width;
-        if (position.y > 600 - bounds.height) position.y = 600 - bounds.height;
+        if (position.x > mapWidthLimit - bounds.width) position.x = mapWidthLimit - bounds.width;
+        if (position.y > mapHeightLimit - bounds.height) position.y = mapHeightLimit - bounds.height;
+
     }
 
     public void setPathFinder(AStarPathFinder pathFinder) {
@@ -387,4 +410,20 @@ public abstract class Enemy {
                 ", DMG=" + attackDamage +
                 ", Retreat at " + (retreatHealthThreshold * 100) + "%");
     }
+
+
+
+    public void setPosition(float x, float y) {
+        this.position.set(x, y);
+        this.bounds.setPosition(x, y); // 关键：同时更新碰撞箱
+    }
+
+
+    public void setMapLimits(float width, float height) {
+        this.mapWidthLimit = width;
+        this.mapHeightLimit = height;
+    }
+
+
+
 }

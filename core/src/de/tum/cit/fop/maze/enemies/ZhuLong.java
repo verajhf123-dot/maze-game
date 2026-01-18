@@ -32,7 +32,7 @@ public class ZhuLong extends Enemy {
 
     public ZhuLong(float x, float y) {
         // 建议：如果烛龙是 Boss，碰撞箱(32,32)可能比(16,16)更合适，防止穿模，但要确保能过路
-        super(x, y, 32, 32);
+        super(x, y, 31, 31);
 
         // 初始化属性
         this.health = 150f;
