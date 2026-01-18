@@ -32,6 +32,19 @@ public class Projectile {
         this.color = color;
     }
 
+    public Projectile(float x, float y, float directionX, float directionY, float speed, float damage, Texture texture, float width, float height) {
+        this.position = new Vector2(x, y);
+        this.velocity = new Vector2(directionX, directionY).nor().scl(speed);
+
+        // 现在这里的 width 和 height 就能对应上参数里的数值了
+        this.bounds = new Rectangle(x, y, width, height);
+
+        this.speed = speed;
+        this.damage = damage;
+        this.active = true;
+        this.texture = texture;
+    }
+
     public Projectile(float x, float y, Vector2 direction, float speed, float damage, Color color) {
         this(x, y, direction.x, direction.y, speed, damage, color);
     }
