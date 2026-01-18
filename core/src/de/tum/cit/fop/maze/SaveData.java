@@ -5,22 +5,17 @@ import java.util.List;
 
 
 public class SaveData {
-    // ===========================
-    // 1. 基础信息
-    // ===========================
-    private int currentLevel; // 当前地图是第几关 (例如 1, 2, 3...)
-    private boolean hasKey;      // 当前是否持有通关钥匙
+
+    private int currentLevel;
+    private boolean hasKey;
 
     private int currentHealth;
     private int maxHealth;
     private int currentExp;
-    private int charLevel;       // 玩家的角色等级 (例如 Lv.5)
-    private int skillPoints;     // 剩余技能点
+    private int charLevel;
+    private int skillPoints;
 
-    // ===========================
-    // 3. 技能树状态
-    // ===========================
-    // 存储所有已解锁技能的 ID (例如 "doubleJump", "fireball")
+
     private List<String> unlockedSkillIds = new ArrayList<>();
 
 
