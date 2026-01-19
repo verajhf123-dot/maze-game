@@ -107,16 +107,7 @@ public class GameScreen implements Screen {
 
     private Texture floorTexture;
     private Texture wallTexture;
-    private Texture treeTexture;
-    private Texture tree2Texture;
-    private Texture rockTexture;
-
-    // 0=无, 1=tree, 2=tree2, 3=rock
-    private byte[][] decoPick;
-
-
     private Texture fireballTexture; // 火球图片
-    private Texture lightningTexture;
     private Array<Projectile> projectiles; // 管理所有飞行的火球
 
 
@@ -151,7 +142,6 @@ public class GameScreen implements Screen {
     private Texture buttonBg;
     private TextButton.TextButtonStyle commonButtonStyle;
     private Texture keyIconTexture;
-
 
     // 新增：HUD 背景框 Texture
     private Texture hudFrameTexture;
@@ -480,6 +470,7 @@ public class GameScreen implements Screen {
         }
 
 
+        shapeRenderer.end();
 
 
         // --- 3. SpriteBatch (实体贴图) ---
@@ -488,59 +479,12 @@ public class GameScreen implements Screen {
         batch.begin();
 
         // Layer A: 墙壁
-
-        // ===== Layer A: 墙（先全部画墙）=====
         if (walls != null) {
             for (Wall wall : walls) {
-                batch.draw(wallTexture,
-                        wall.worldX, wall.worldY,
-                        Wall.TILE_SIZE, Wall.TILE_SIZE);
+                batch.draw(wallTexture, wall.worldX, wall.worldY, Wall.TILE_SIZE, Wall.TILE_SIZE);
             }
         }
 
-// ===== Layer A-Overlay: 装饰（再画树/石头）=====
-        if (walls != null && decoPick != null) {
-            for (Wall wall : walls) {
-                int gx = wall.gridX;
-                int gy = wall.gridY;
-                if (gx < 0 || gx >= mapWidthInTiles || gy < 0 || gy >= mapHeightInTiles) continue;
-
-                byte type = decoPick[gx][gy];
-
-                // 1) rock：覆盖整个墙（完全1:1贴合tile）
-                if (type == 3 && rockTexture != null) {
-                    batch.draw(rockTexture,
-                            wall.worldX, wall.worldY,
-                            Wall.TILE_SIZE, Wall.TILE_SIZE);
-                }
-
-                // 2) tree：放大（跨tile），你说 tree 要改 size
-                else if (type == 1 && treeTexture != null) {
-                    float w = Wall.TILE_SIZE * 2.0f;  // 你想更大就调这里
-                    float h = Wall.TILE_SIZE * 3.0f;
-
-                    batch.draw(treeTexture,
-                            wall.worldX - Wall.TILE_SIZE * 0.5f, // 居中一点
-                            wall.worldY,                          // 底部贴墙
-                            w, h);
-                }
-
-                // 3) tree2：也放大，但可以和 tree 不一样大小（更自然）
-                else if (type == 2 && tree2Texture != null) {
-                    float w = Wall.TILE_SIZE * 2.5f;
-                    float h = Wall.TILE_SIZE * 3.2f;
-
-                    batch.draw(tree2Texture,
-                            wall.worldX - Wall.TILE_SIZE * 0.75f,
-                            wall.worldY,
-                            w, h);
-                }
-            }
-        }
-
-
-
-        // Layer B: 陷阱 (画在地上，人可以踩上去) -> ✅ 你的Trap逻辑是对的
         if (traps != null) {
             for (Trap trap : traps) {
                 if (trap.hasTexture()) trap.render(batch);
@@ -606,11 +550,14 @@ public class GameScreen implements Screen {
 
         }
 
-        // ✅ 正确：调用 p.render(batch)，让投射物使用它自己的图片
         if (projectiles != null) {
             for (Projectile p : projectiles) {
-                if (p.isActive()) {
-                    p.render(batch); // <--- 关键修改
+                // 只有当火球处于激活状态，且图片存在时才画
+                if (p.isActive() && fireballTexture != null) {
+                    batch.draw(fireballTexture,
+                            p.getPosition().x - 16, // 修正坐标，让图片居中
+                            p.getPosition().y - 16,
+                            32, 32);                // 强制设置大小为 32x32
                 }
             }
         }
@@ -1354,25 +1301,6 @@ public class GameScreen implements Screen {
             initPathFinder();
 
             // --- 5. 地板贴图 ---
-            //美化墙
-            decoPick = new byte[mapWidthInTiles][mapHeightInTiles];
-            Random rng = new Random(levelNumber * 1357911L);
-
-            for (Wall w : walls) {
-                int x = w.gridX, y = w.gridY;
-                if (x < 0 || x >= mapWidthInTiles || y < 0 || y >= mapHeightInTiles) continue;
-
-                float r = rng.nextFloat();
-
-                // 你可以随便调比例
-                if (r < 0.06f) decoPick[x][y] = 1;       // 6% tree
-                else if (r < 0.10f) decoPick[x][y] = 2;  // 4% tree2
-                else if (r < 0.16f) decoPick[x][y] = 3;  // 6% rock
-            }
-
-
-
-            // ===== 地板变体加载 =====
             floorVariants = new Texture[]{
                     new Texture(Gdx.files.internal("floor.png")),
                     new Texture(Gdx.files.internal("floor_flower.png")),
@@ -1648,17 +1576,13 @@ public class GameScreen implements Screen {
                 // 注意：这里我们让火球从玩家中心稍微偏移一点，避免看起来像从脚底发出来的
                 float offsetX = player.getHitbox().width / 2f;
                 float offsetY = player.getHitbox().height / 2f;
-                float startX = player.getPosition().x + offsetX - 16f;
-                float startY = player.getPosition().y + offsetY - 16f;
-
-                // 3. 创建火球对象
                 Projectile fireball = new Projectile(
-                        startX, startY,           // 现在这两个变量有值了
+                        player.getPosition().x,
+                        player.getPosition().y,
                         direction.x, direction.y,
-                        300f,
+                        300f, // 速度
                         dmg,
-                        fireballTexture,
-                        32f, 32f                  // 传入火球的宽和高
+                        Color.ORANGE
                 );
 
                 projectiles.add(fireball);
@@ -1693,10 +1617,8 @@ public class GameScreen implements Screen {
     }
 
     private void useSkill3() {
-        // 1. 基础检查
-        if (player == null || !player.getStats().getSkillManager().canUseRSkill()) {
-            return;
-        }
+        if (player != null && player.getStats() != null) {
+            SkillManager skillManager = player.getStats().getSkillManager();
 
             if (skillManager != null && skillManager.hasRSkill()) {
                 if (skillManager.useSkill("R")) {
@@ -1711,55 +1633,9 @@ public class GameScreen implements Screen {
                         System.out.println(" R Skill not available");
                     }
                 }
+            } else {
+                System.out.println(" R Skill not unlocked. Press T to open Skill Tree");
             }
-        }
-
-        // 3. 如果找到了敌人，就释放技能
-        if (nearestEnemy != null) {
-            if (player.getStats().getSkillManager().useSkill("R")) {
-
-                // === 补全代码：定义伤害值 ===
-                float lightningDamage = 25f; // 基础伤害
-                if (player.getStats().getSkillTree() != null && player.getStats().getSkillTree().getRSkill() != null) {
-                    lightningDamage = player.getStats().getSkillTree().getRSkill().skillValue;
-                }
-                // ==========================
-
-                // --- 定义闪电的大小 ---
-                float lightWidth = 64f;
-                float lightHeight = 150f;
-
-                // --- 重新计算生成位置 ---
-                float targetX = nearestEnemy.getPosition().x + nearestEnemy.getBounds().width / 2f;
-                float targetY = nearestEnemy.getPosition().y;
-
-                float startX = targetX - (lightWidth / 2f);
-                float startY = targetY + 100f;
-
-                // --- 创建投射物 ---
-                Projectile lightning = new Projectile(
-                        startX, startY,
-                        0, -1,            // 向下
-                        900f,             // 速度
-                        lightningDamage,  // 现在这里有值了
-                        lightningTexture,
-                        lightWidth,
-                        lightHeight
-                );
-
-                if (projectiles != null) {
-                    projectiles.add(lightning);
-                }
-
-                // === 补全代码：播放音效 ===
-                if (attackSound != null) {
-                    long id = attackSound.play();
-                    attackSound.setPitch(id, 1.8f);
-                }
-                // ========================
-            }
-        } else {
-            System.out.println("There are no enemies within the range!");
         }
     }
 
@@ -1768,6 +1644,7 @@ public class GameScreen implements Screen {
     public void dispose() {
         // ========== 清理资源 ==========
         if (shapeRenderer != null) {
+
             shapeRenderer.dispose();
         }
 
@@ -1820,8 +1697,9 @@ public class GameScreen implements Screen {
         // 新增：清理按钮和 HUD 背景资源
         if (buttonBg != null) buttonBg.dispose();
         if (hudFrameTexture != null) hudFrameTexture.dispose();
+
         if (fireballTexture != null) fireballTexture.dispose();
-        if (lightningTexture != null) lightningTexture.dispose();
+        if (healTexture != null) healTexture.dispose();
 
         if (arrowTexture != null) arrowTexture.dispose();
         if (hudFrameTexture != null) hudFrameTexture.dispose();
