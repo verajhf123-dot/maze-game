@@ -43,6 +43,7 @@ public class Projectile {
         this.damage = damage;
         this.active = true;
         this.texture = texture;
+        this.color = Color.WHITE;
     }
 
     public Projectile(float x, float y, Vector2 direction, float speed, float damage, Color color) {
@@ -65,14 +66,16 @@ public class Projectile {
         }
     }
 
+    // 修改 Projectile.java 中的 render 方法
     public void render(SpriteBatch batch) {
         if (!active) return;
 
         if (texture != null) {
             batch.draw(texture, position.x, position.y, bounds.width, bounds.height);
         } else {
-            batch.setColor(color);
-            batch.setColor(Color.WHITE);
+            // 如果没有贴图，我们可以尝试画一个调试用的矩形（如果您的项目中有单像素贴图的话）
+            // 或者，至少打印一条错误日志，告诉自己这里出问题了
+            System.err.println("Projectile texture is NULL! Position: " + position);
         }
     }
 
@@ -99,12 +102,14 @@ public class Projectile {
 
     public boolean checkEnemyHit(Array<Enemy> enemies) {
         if (!active) return false;
+        boolean hasHit = false;
 
         for (Enemy enemy : enemies) {
             if (enemy.isAlive() && bounds.overlaps(enemy.getBounds())) {
-                enemy.takeDamage(damage); // 造成伤害
-                active = false;           // 火球消失
-                return true;              // 击中了一个就返回
+                enemy.takeDamage(damage);
+                hasHit = true;
+
+                return true;
             }
         }
         return false;
