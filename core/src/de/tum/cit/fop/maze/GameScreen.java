@@ -108,6 +108,7 @@ public class GameScreen implements Screen {
     private Texture floorTexture;
     private Texture wallTexture;
     private Texture fireballTexture; // 火球图片
+    private Texture lightningTexture;
     private Array<Projectile> projectiles; // 管理所有飞行的火球
 
 
@@ -155,6 +156,12 @@ public class GameScreen implements Screen {
      */
     public GameScreen(MazeRunnerGame game) {
         this(game, 1,null);// 默认进 Level 1
+        if (fireballTexture == null) {
+            fireballTexture = new Texture(Gdx.files.internal("fireball.png"));
+        }
+        if (lightningTexture == null) {
+            lightningTexture = new Texture(Gdx.files.internal("lightning.png"));
+        }
     }
 
 
@@ -374,19 +381,38 @@ public class GameScreen implements Screen {
             updateEnemies(delta);
             updatePlayer(delta);
 
+            // --- 更新投射物逻辑 (修复版) ---
             if (projectiles != null) {
                 for (int i = projectiles.size - 1; i >= 0; i--) {
                     Projectile p = projectiles.get(i);
                     p.update(delta);
 
-                    // 检查是否击中敌人
+                    // --- 1. 碰撞检测 ---
                     if (p.checkEnemyHit(enemies)) {
-                        System.out.println("Fireball hit enemy!");
-                        // 这里可以加一个击中音效，比如 attackSound.play();
+                        // 播放音效
+                        // if (attackSound != null) attackSound.play();
+
+                        // === 修改点1：使用 getBounds().width 获取宽度 ===
+                        // 如果是火球 (宽度小于40)，撞到敌人立刻销毁
+                        if (p.getBounds().width < 40) {
+                            projectiles.removeIndex(i);
+                            continue; // 这一帧处理完了，直接跳过后面
+                        }
+                        // 如果是闪电 (宽度大于40)，什么都不做！让它继续穿透
+                        else {
+                            System.out.println("Lightning hit, but persists!");
+                        }
                     }
 
-                    // 如果火球销毁了（击中或超时），从列表中移除
-                    if (!p.isActive()) {
+                    // --- 2. 移除规则 ---
+                    // === 修改点2：使用 getPosition().y 获取 Y 坐标 ===
+
+                    // 规则A: 如果是火球，且它变得不活跃（撞墙或飞远），则移除
+                    if (p.getBounds().width < 40 && !p.isActive()) {
+                        projectiles.removeIndex(i);
+                    }
+                    // 规则B: 如果是闪电，只有当它飞到屏幕很下面时才移除
+                    else if (p.getBounds().width >= 40 && p.getPosition().y < player.getPosition().y - 400) {
                         projectiles.removeIndex(i);
                     }
                 }
@@ -401,11 +427,89 @@ public class GameScreen implements Screen {
             updateKeys();
             updateItems();
 
-            // --- F. 技能与视效 ---
+            // --- F. 技能与视效 (修复版) ---
+            SkillManager skillManager = null;
             if (player != null && player.getStats() != null) {
-                SkillManager skillManager = player.getStats().getSkillManager();
+                skillManager = player.getStats().getSkillManager();
                 if (skillManager != null) {
                     skillManager.update(delta);
+                }
+            }
+
+            String skillEffect = "";
+            if (skillManager != null) {
+                skillEffect = skillManager.getCurrentSkillEffect();
+            }
+
+            // 检查是否需要生成新的投射物 (hasDealtDamage 在这里被借用作为 "hasSpawnedProjectile" 标记)
+            if (skillManager != null && !skillEffect.isEmpty() && !skillManager.hasDealtDamage()) {
+
+                // === 1. 火球术 (Q) ===
+                if (skillEffect.equals("fireball")) {
+                    // 计算射击方向
+                    Vector2 shootDirection = new Vector2(0, -1); // 默认向下
+
+                    // 优先使用玩家当前的移动速度方向
+                    if (player.getVelocity().len() > 0.1f) {
+                        shootDirection.set(player.getVelocity()).nor();
+                    }
+                    // 如果玩家没动，尝试获取面朝方向 (请确保 Player 类里有这个方法，或者用 savedDirection 变量)
+                    else {
+                        // shootDirection.set(player.getLastDirection()); // <--- 如果 Player 有这个方法请取消注释
+                    }
+
+                    Projectile fireball = new Projectile(
+                            player.getPosition().x,  // 从玩家中心发射
+                            player.getPosition().y,
+                            shootDirection.x,
+                            shootDirection.y,
+                            300f,                    // 速度
+                            20f,                     // 伤害
+                            fireballTexture,
+                            32f, 32f
+                    );
+                    projectiles.add(fireball);
+
+                    // 标记已生成，避免每一帧都生成火球
+                    skillManager.setHasDealtDamage(true);
+                }
+
+                // === 2. 闪电链 (R) - 天降正义 ===
+                else if (skillEffect.equals("lightning")) {
+                    // 1. 寻找目标
+                    Enemy target = findNearestEnemy();
+
+                    if (target != null) {
+                        // 2. 如果有敌人，在敌人头顶上方 300 像素处生成
+                        float startX = target.getPosition().x;
+                        float startY = target.getPosition().y + 300f; // 从天而降的高度
+
+                        Projectile lightning = new Projectile(
+                                startX,
+                                startY,
+                                0, -1,               // 方向：垂直向下
+                                800f,                // 速度：非常快
+                                30f,                 // 伤害
+                                lightningTexture,
+                                64f, 64f
+                        );
+                        projectiles.add(lightning);
+                        System.out.println("Lightning striking " + target.getClass().getSimpleName());
+                    } else {
+                        // 3. 如果没有敌人，在玩家附近随机劈下（视觉效果）
+                        Projectile lightning = new Projectile(
+                                player.getPosition().x + 50,
+                                player.getPosition().y + 300,
+                                0, -1,
+                                800f,
+                                0f, // 没打中人不造成伤害
+                                lightningTexture,
+                                64f, 64f
+                        );
+                        projectiles.add(lightning);
+                    }
+
+                    skillManager.setHasDealtDamage(true);
                 }
             }
 
@@ -552,12 +656,8 @@ public class GameScreen implements Screen {
 
         if (projectiles != null) {
             for (Projectile p : projectiles) {
-                // 只有当火球处于激活状态，且图片存在时才画
-                if (p.isActive() && fireballTexture != null) {
-                    batch.draw(fireballTexture,
-                            p.getPosition().x - 16, // 修正坐标，让图片居中
-                            p.getPosition().y - 16,
-                            32, 32);                // 强制设置大小为 32x32
+                if (p.isActive()) {
+                    p.render(batch); // <--- 关键修改：调用 Projectile 自己的 render 方法
                 }
             }
         }
@@ -642,6 +742,26 @@ public class GameScreen implements Screen {
 
 
         game.setScreen(new ResultScreen(game, true, levelNumber, game.globalScore, currentStats,achievementManager));
+    }
+
+    // --- 新增辅助方法：寻找最近的敌人 ---
+    private Enemy findNearestEnemy() {
+        Enemy nearest = null;
+        float minDistance = Float.MAX_VALUE;
+
+        if (enemies == null) return null;
+
+        for (Enemy enemy : enemies) {
+            if (enemy.isAlive()) {
+                // 计算玩家和敌人之间的距离
+                float distance = player.getPosition().dst(enemy.getPosition());
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearest = enemy;
+                }
+            }
+        }
+        return nearest; // 返回最近的敌人，如果没有则返回 null
     }
 
     private void handleSkillInput() {
@@ -1222,6 +1342,13 @@ public class GameScreen implements Screen {
             // --- 1. 资源加载 (保持原样) ---
             if (Gdx.files.internal("fireball.png").exists()) {
                 fireballTexture = new Texture(Gdx.files.internal("fireball.png"));
+            } else {
+                System.out.println("Warning: fireball.png not found!");
+            }
+            if (Gdx.files.internal("lightning.png").exists()) {
+                lightningTexture = new Texture(Gdx.files.internal("lightning.png"));
+            } else {
+                System.out.println("Warning: lightning.png not found!"); // <--- 检查控制台是否有这句话
             }
             projectiles = new Array<>();
             wallTexture = new Texture(Gdx.files.internal("wall.png"));
@@ -1617,28 +1744,57 @@ public class GameScreen implements Screen {
     }
 
     private void useSkill3() {
-        if (player != null && player.getStats() != null) {
-            SkillManager skillManager = player.getStats().getSkillManager();
+        // 基础检查
+        if (player == null || !player.getStats().getSkillManager().canUseRSkill()) return;
 
-            if (skillManager != null && skillManager.hasRSkill()) {
-                if (skillManager.useSkill("R")) {
-                    if (lightningSound != null) lightningSound.play(1.0f);
-                    System.out.println(" R Skill - Lightning cast successfully!");
-                    // Add visual feedback here if needed
-                } else {
-                    float cooldown = skillManager.getRCooldown();
-                    if (cooldown > 0) {
-                        System.out.println(" R Skill cooling down: " + String.format("%.1f", cooldown) + "s");
-                    } else {
-                        System.out.println(" R Skill not available");
-                    }
+        // 索敌逻辑
+        Enemy nearestEnemy = null;
+        float minDistance = Float.MAX_VALUE;
+        if (enemies != null) {
+            for (Enemy enemy : enemies) {
+                float dst = player.getPosition().dst(enemy.getPosition());
+                if (dst < minDistance && dst < 600f) {
+                    minDistance = dst;
+                    nearestEnemy = enemy;
                 }
-            } else {
-                System.out.println(" R Skill not unlocked. Press T to open Skill Tree");
+            }
+        }
+
+        // 释放技能
+        if (nearestEnemy != null) {
+            if (player.getStats().getSkillManager().useSkill("R")) {
+                // 获取伤害
+                float dmg = 25f;
+                if (player.getStats().getSkillTree().getRSkill() != null) {
+                    dmg = player.getStats().getSkillTree().getRSkill().skillValue;
+                }
+
+                // 计算位置：从怪物头顶降落
+                float lightWidth = 64f;
+                float lightHeight = 150f;
+                float targetX = nearestEnemy.getPosition().x + nearestEnemy.getBounds().width / 2f;
+                float targetY = nearestEnemy.getPosition().y;
+
+                float startX = targetX - (lightWidth / 2f);
+                float startY = targetY + 100f;
+
+                // 创建投射物：注意这里传入的是 lightningTexture
+                Projectile lightning = new Projectile(
+                        startX, startY,
+                        0, -1,           // 向下
+                        900f,            // 速度
+                        dmg,
+                        lightningTexture, // <--- 必须传入闪电图片变量
+                        lightWidth, lightHeight
+                );
+
+                if (projectiles != null) projectiles.add(lightning);
+
+                // 播放音效
+                if (lightningSound != null) lightningSound.play(); // 确保你定义并加载了这个音效
             }
         }
     }
-
 
     @Override
     public void dispose() {
