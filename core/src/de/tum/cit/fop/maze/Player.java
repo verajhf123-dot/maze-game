@@ -52,8 +52,8 @@ public class Player implements CollidableEntity {
 
     public Player(float x, float y, PlayerStats inheritedStats) {
         this.texture = new Texture("character.png");
-        TextureRegion[][] tmpWalk = TextureRegion.split(texture, 16, 32);
-        TextureRegion[][] tmpAttack = TextureRegion.split(texture, 34, 32);
+        TextureRegion[][] tmpWalk = TextureRegion.split(texture, 64, 128);
+        TextureRegion[][] tmpAttack = TextureRegion.split(texture, 136, 128);
 
         if (tmpWalk.length >= 4) {
             walkDownAnim  = new Animation<>(0.15f, tmpWalk[0][0], tmpWalk[0][1], tmpWalk[0][2]);
@@ -213,8 +213,8 @@ public class Player implements CollidableEntity {
         if (damageColorTimer > 0) batch.setColor(Color.RED);
         else batch.setColor(Color.WHITE);
 
-        float drawWidth = currentFrame.getRegionWidth() * 2f;
-        float drawHeight = currentFrame.getRegionHeight() * 2f;
+        float drawWidth = currentFrame.getRegionWidth() * 0.5f;
+        float drawHeight = currentFrame.getRegionHeight() * 0.5f;
         float drawX = position.x - (drawWidth - hitbox.width) / 2f;
         float drawY = position.y;
 
