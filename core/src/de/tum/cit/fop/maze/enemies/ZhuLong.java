@@ -2,6 +2,7 @@ package de.tum.cit.fop.maze.enemies;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -210,12 +211,7 @@ public class ZhuLong extends Enemy {
             float offsetX = (bounds.width - drawWidth) / 2;
             float offsetY = (bounds.height - drawHeight) / 2;
 
-            // 闭眼时变暗一点，作为视觉反馈（替代之前的变色方块）
-            if (!eyesOpen) {
-                batch.setColor(0.6f, 0.6f, 0.6f, 1f);
-            } else {
-                batch.setColor(1f, 1f, 1f, 1f);
-            }
+            batch.setColor(Color.WHITE);
 
             batch.draw(currentFrame, position.x + offsetX, position.y + offsetY, drawWidth, drawHeight);
 
