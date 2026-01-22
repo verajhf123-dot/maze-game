@@ -45,6 +45,7 @@ public class MapLoader {
 
     }
 
+
     public LevelData loadLevel(String internalPath,int levelNumber) {
         LevelData data = new LevelData();
         Properties props = new Properties();
