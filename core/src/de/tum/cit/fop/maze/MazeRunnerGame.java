@@ -56,16 +56,13 @@ public class MazeRunnerGame extends Game {
     @Override
     public void create() {
 
-        spriteBatch = new SpriteBatch(); // Create SpriteBatch
+        spriteBatch = new SpriteBatch();
         skin = new Skin(Gdx.files.internal("craft/craftacular-ui.json"));
         settingsManager = new SettingsManager();
 
+        this.loadCharacterAnimation();
 
-
-        this.loadCharacterAnimation(); // Load character animation
-
-        // Play some background music
-        // Background sound
+        // 背景音乐（菜单音乐）
         try {
             backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/menu_music.mp3"));
             backgroundMusic.setLooping(true);
@@ -75,7 +72,8 @@ public class MazeRunnerGame extends Game {
             System.out.println("Error loading menu music: " + e.getMessage());
         }
 
-        goToMenu(); // Navigate to the menu screen
+        // ✅ 启动时先进入故事背景
+        setScreen(new StoryScreen(this));
     }
 
     public void playMenuMusic() {

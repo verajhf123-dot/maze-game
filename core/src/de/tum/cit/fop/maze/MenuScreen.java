@@ -140,7 +140,7 @@ public class MenuScreen implements Screen {
 
                 Preferences prefs = Gdx.app.getPreferences("MazeRunnerGame");
                 game.resetGlobalScore();
-                game.goToGame(1, null);
+                game.goToGame(1, null); // 这里才进入 GameScreen
             }
         });
 
