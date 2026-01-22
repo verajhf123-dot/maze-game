@@ -16,15 +16,12 @@ import games.spooky.gdx.nativefilechooser.NativeFileChooser;
  * It manages the screens and global resources like SpriteBatch and Skin.
  */
 public class MazeRunnerGame extends Game {
-    // Screens
     private MenuScreen menuScreen;
     private GameScreen gameScreen;
 
 
     private SettingsManager settingsManager;
-    // Sprite Batch for rendering
     private SpriteBatch spriteBatch;
-    // UI Skin
     private Skin skin;
 
 
@@ -32,12 +29,8 @@ public class MazeRunnerGame extends Game {
 
 
 
-    // Character animation downwards
     private Animation<TextureRegion> characterDownAnimation;
-    // update background Music
     private Music backgroundMusic;
-
-    // 保存文件选择器；
     private NativeFileChooser fileChooser;
 
     /**
@@ -56,16 +49,15 @@ public class MazeRunnerGame extends Game {
     @Override
     public void create() {
 
-        spriteBatch = new SpriteBatch(); // Create SpriteBatch
+        spriteBatch = new SpriteBatch();
         skin = new Skin(Gdx.files.internal("craft/craftacular-ui.json"));
         settingsManager = new SettingsManager();
 
 
 
-        this.loadCharacterAnimation(); // Load character animation
+        this.loadCharacterAnimation();
 
-        // Play some background music
-        // Background sound
+
         try {
             backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/menu_music.mp3"));
             backgroundMusic.setLooping(true);
@@ -75,7 +67,7 @@ public class MazeRunnerGame extends Game {
             System.out.println("Error loading menu music: " + e.getMessage());
         }
 
-        goToMenu(); // Navigate to the menu screen
+        goToMenu();
     }
 
     public void playMenuMusic() {
@@ -84,7 +76,6 @@ public class MazeRunnerGame extends Game {
         }
     }
 
-    /** 停止菜单音乐 */
     public void stopMenuMusic() {
         if (backgroundMusic != null && backgroundMusic.isPlaying()) {
             backgroundMusic.stop();
@@ -92,18 +83,11 @@ public class MazeRunnerGame extends Game {
     }
 
 
-
-    // to update Music;
     public Music getBackgroundMusic() {
         return backgroundMusic;
     }
-
-    /**
-     * Switches to the menu screen.
-     */
     public void goToMenu() {
         this.setScreen(new MenuScreen(this, settingsManager));
-
         if (gameScreen != null) {
             gameScreen.dispose();
             gameScreen = null;
@@ -111,25 +95,16 @@ public class MazeRunnerGame extends Game {
     }
 
 
-
-    /**
-     * Switches to the game screen.
-     */
-
-
     /**
      * Loads the character animation from the character.png file.
-     */private void loadCharacterAnimation() {
+     */
+    private void loadCharacterAnimation() {
         Texture walkSheet = new Texture(Gdx.files.internal("character.png"));
 
         int frameWidth = 16;
         int frameHeight = 32;
         int animationFrames = 4;
-
-        // libGDX internal Array instead of ArrayList because of performance
         Array<TextureRegion> walkFrames = new Array<>(TextureRegion.class);
-
-        // Add all frames to the animation
         for (int col = 0; col < animationFrames; col++) {
             walkFrames.add(new TextureRegion(walkSheet, col * frameWidth, 0, frameWidth, frameHeight));
         }
@@ -184,7 +159,6 @@ public class MazeRunnerGame extends Game {
         return settingsManager;
     }
 
-    // Getter methods
     public Skin getSkin() {
         return skin;
     }

@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class NineTailedFox extends Enemy {
-    // 动画相关
     private enum Direction {
         UP, DOWN, LEFT, RIGHT
     }
@@ -26,7 +25,6 @@ public class NineTailedFox extends Enemy {
     private float stateTime = 0f;
     private float animationSpeed = 0.15f;
 
-    // 攻击相关（仅状态，无动画）
     private boolean isAttacking = false;
     private float attackCooldown = 1.0f;
     private float currentAttackCooldown = 0f;
@@ -34,7 +32,6 @@ public class NineTailedFox extends Enemy {
     public NineTailedFox(float x, float y) {
         super(x, y, 30, 30);
 
-        // 敌人数值
         this.speed = 50f;
         this.maxHealth = 40f;
         this.health = maxHealth;
@@ -43,7 +40,6 @@ public class NineTailedFox extends Enemy {
         this.detectionRange = 200f;
         this.attackCooldown = 0.8f;
 
-        // 初始化动画系统
         initializeAnimations();
 
         System.out.println("NineTailedFox initialized with melee attack");
@@ -54,11 +50,10 @@ public class NineTailedFox extends Enemy {
         idleFrames = new HashMap<>();
 
         try {
-            // 加载每个方向的行走动画（3帧）
             TextureRegion[] downFrames = loadDirectionFrames("enemies/nine_tailed_fox/down_", 3);
             if (downFrames[0] != null) {
                 walkAnimations.put(Direction.DOWN, new Animation<>(animationSpeed, downFrames));
-                idleFrames.put(Direction.DOWN, downFrames[1]); // 使用第二帧作为待机
+                idleFrames.put(Direction.DOWN, downFrames[1]);
             }
 
             TextureRegion[] upFrames = loadDirectionFrames("enemies/nine_tailed_fox/up_", 3);
@@ -78,7 +73,6 @@ public class NineTailedFox extends Enemy {
                 walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, rightFrames));
                 idleFrames.put(Direction.RIGHT, rightFrames[1]);
             } else if (leftFrames[0] != null) {
-                // 如果没有向右图片，镜像向左图片
                 TextureRegion[] mirroredFrames = mirrorFrames(leftFrames);
                 walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, mirroredFrames));
                 idleFrames.put(Direction.RIGHT, mirroredFrames[1]);
@@ -146,29 +140,23 @@ public class NineTailedFox extends Enemy {
     }
 
     @Override
-    public void update(float delta, List<Wall> walls) { // 增加 List<Wall> 参数
+    public void update(float delta, List<Wall> walls) {
         super.update(delta, walls);
 
-        // 更新动画计时器
         stateTime += delta;
 
-        // 更新攻击冷却
         if (currentAttackCooldown > 0) {
             currentAttackCooldown -= delta;
         }
 
-        // 更新移动方向
         updateDirection();
 
-        // 更新目标玩家
         if (targetPlayer != null) {
             Vector2 playerPos = targetPlayer.getPosition();
             Vector2 foxPos = getPosition();
             float distance = foxPos.dst(playerPos);
 
-            // 检查是否在攻击范围内且可以攻击
             if (distance <= attackRange && currentAttackCooldown <= 0) {
-                // 执行近战攻击
                 performMeleeAttack(targetPlayer);
                 isAttacking = true;
                 currentAttackCooldown = attackCooldown;
@@ -178,7 +166,6 @@ public class NineTailedFox extends Enemy {
 
     private void updateDirection() {
         if (velocity.len() > 0.1f) {
-            // 根据速度确定方向
             float angle = (float) Math.atan2(velocity.y, velocity.x) * 180f / (float) Math.PI;
 
             if (Math.abs(angle) <= 45f) {
@@ -201,7 +188,6 @@ public class NineTailedFox extends Enemy {
 
         TextureRegion currentFrame = null;
 
-        // 获取当前方向的行走动画和待机帧
         Animation<TextureRegion> walkAnim = walkAnimations.get(currentDirection);
         TextureRegion idleFrame = idleFrames.get(currentDirection);
 
@@ -214,15 +200,12 @@ public class NineTailedFox extends Enemy {
         }
 
         if (currentFrame != null) {
-            // 统一绘制大小为 64x64
             float drawWidth = 50f;
             float drawHeight = 50f;
 
-            // 计算偏移使图像中心与碰撞框中心对齐
             float offsetX = (bounds.width - drawWidth) / 2;
             float offsetY = (bounds.height - drawHeight) / 2;
 
-            // 绘制图像
             batch.draw(currentFrame,
                     position.x + offsetX,
                     position.y + offsetY,
@@ -233,7 +216,6 @@ public class NineTailedFox extends Enemy {
 
     @Override
     public void attack() {
-        // 实现抽象方法
         if (targetPlayer != null) {
             performMeleeAttack(targetPlayer);
         }
@@ -243,11 +225,9 @@ public class NineTailedFox extends Enemy {
         if (player != null) {
             float distance = position.dst(player.getPosition());
             if (distance <= attackRange) {
-                // 应用九尾狐的攻击伤害
                 float finalDamage = attackDamage;
 
-                // 可能的暴击系统
-                if (Math.random() < 0.1f) { // 10%暴击率
+                if (Math.random() < 0.1f) {
                     finalDamage *= 1.5f;
                     System.out.println("NINE-TAILED FOX CRITICAL HIT!");
                 }
@@ -256,7 +236,6 @@ public class NineTailedFox extends Enemy {
 
                 System.out.println("[MELEE] NineTailedFox attacks player for " + finalDamage + " damage");
 
-                // 触发攻击行为回调
                 if (currentBehavior != null) {
                     currentBehavior.onAttack();
                 }
@@ -266,7 +245,6 @@ public class NineTailedFox extends Enemy {
 
     @Override
     public void adjustDifficulty(int level) {
-        // 难度调整系统
         this.maxHealth = 30 + (level * 8);
         this.health = this.maxHealth;
         this.attackDamage = 8 + (level * 2);
@@ -284,9 +262,8 @@ public class NineTailedFox extends Enemy {
         System.out.println("NineTailedFox has been defeated!");
     }
 
-    // 添加缺少的方法
     public int getCurrentForm() {
-        return 1; // 九尾狐只有一个形态
+        return 1;
     }
 
     public boolean hasEncounteredPlayer() {
@@ -295,16 +272,14 @@ public class NineTailedFox extends Enemy {
 
     public void resetEncounterState() {
         System.out.println("NineTailedFox encounter state reset");
-        // 可以在这里重置任何遭遇相关的状态
     }
 
     public boolean isAttacking() {
         return isAttacking;
     }
 
-    // 移除 @Override 注解
+
     public void dispose() {
-        // 释放所有纹理资源
         for (Animation<TextureRegion> anim : walkAnimations.values()) {
             for (TextureRegion frame : anim.getKeyFrames()) {
                 if (frame != null && frame.getTexture() != null) {

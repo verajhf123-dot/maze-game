@@ -20,7 +20,6 @@ public abstract class AIBehavior {
     }
 
     protected abstract void updateAI();
-
     public abstract void onPlayerSpotted();
     public abstract void onPlayerLost();
     public abstract void onAttack();

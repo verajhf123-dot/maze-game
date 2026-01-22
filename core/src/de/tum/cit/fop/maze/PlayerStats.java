@@ -46,26 +46,20 @@ public class PlayerStats {
     public SkillManager getSkillManager() { return skillManager; }
     public SkillTree getSkillTree() { return skillTree; }
 
-    // === 核心修复方法：从技能树读取最新属性 ===
     private void updateStatsFromLevel() {
-        // 1. 计算血量加成
         float skillHealthBonus = 0;
         if (skillTree != null) {
             skillHealthBonus = skillTree.getTotalHealthBonus();
         }
 
-        // 2. 更新最大生命值 (基础 100 + 技能加成)
         int newMaxHealth = baseMaxHealth + (int)skillHealthBonus;
 
-        // 只有当上限发生变化时才打印日志（避免刷屏）
         if (newMaxHealth != maxHealth) {
-            // System.out.println("HP Limit Updated: " + maxHealth + " -> " + newMaxHealth);
             maxHealth = newMaxHealth;
         } else {
             maxHealth = newMaxHealth;
         }
 
-        // 3. 更新其他能力
         if (skillTree != null) {
             canDoubleJump = skillTree.hasDoubleJump();
             canDash = skillTree.hasDash();
@@ -75,7 +69,6 @@ public class PlayerStats {
             dodgeChance = skillTree.getTotalDodgeChance();
         }
 
-        // 4. 确保当前血量不超过新上限
         if (health > maxHealth) {
             health = maxHealth;
         }
@@ -158,16 +151,12 @@ public class PlayerStats {
         health = maxHealth;
     }
 
-    // === 这里是这次修改的关键点 ===
     public void update(float delta) {
         if (skillTree != null) skillTree.update(delta);
         if (skillManager != null) skillManager.update(delta);
-
-        // 🔥 强制每一帧同步属性！这样你在菜单里点了技能，这里立刻就能知道。
         updateStatsFromLevel();
     }
 
-    // Getters
     public int getScore() { return score; }
     public void addScore(int amount) { this.score += amount; }
     public void setScore(int score) { this.score = score; }

@@ -22,19 +22,15 @@ import com.badlogic.gdx.graphics.Texture;
 
 
 public class MapLoader {
-    // 用于记录地图边界
     public int minX = Integer.MAX_VALUE;
     public int maxX = Integer.MIN_VALUE;
     public int minY = Integer.MAX_VALUE;
     public int maxY = Integer.MIN_VALUE;
 
-    // 数据容器：存放从文件读出来的所有东西
     public static class LevelData {
         public List<Wall> walls = new ArrayList<>();
         public List<Enemy> enemies = new ArrayList<>();
-        // 新增：存放陷阱
         public List<Trap> traps = new ArrayList<>();
-        // 新增：存放钥匙
         public List<Key> keys = new ArrayList<>();
 
         public Vector2 exitPosition = null;
@@ -79,89 +75,80 @@ public class MapLoader {
                     float pixelX = x * Wall.TILE_SIZE;
                     float pixelY = y * Wall.TILE_SIZE;
 
-                    // 🔥 根据老师要求的 ID 表加载 🔥
                     switch (type) {
-                        case 0: // 墙
+                        case 0:
                             data.walls.add(new Wall(x, y));
                             break;
-                        case 1: // 起点
+                        case 1:
                             data.entryPosition = new Vector2(pixelX, pixelY);
                             break;
-                        case 2: // 终点
+                        case 2:
                             data.exitPosition = new Vector2(x, y);
                             break;
-                        case 3: // 陷阱 (根据坐标奇偶数生成不同陷阱)
+                        case 3:
                             if ((x + y) % 2 == 0) {
                                 data.traps.add(new MechanismTrap(pixelX, pixelY));
                             } else {
                                 data.traps.add(new Fog(pixelX, pixelY));
                             }
                             break;
-                        case 4: // 敌人 (精确控制各关卡配置)
-                            int currentEnemyIdx = data.enemies.size(); // 获取这是当前地图加载的第几个敌人
+                        case 4:
+                            int currentEnemyIdx = data.enemies.size();
 
                             if (levelNumber == 1) {
-                                // Level 1: 3只狐狸 (前提：地图文件里至少有3个 ID=4 的坐标)
                                 data.enemies.add(new NineTailedFox(pixelX, pixelY));
                             }
                             else if (levelNumber == 2) {
-                                // Level 2: 2狐狸 + 1穷奇
                                 if (currentEnemyIdx < 2) data.enemies.add(new NineTailedFox(pixelX, pixelY));
                                 else data.enemies.add(new QiongQi(pixelX, pixelY));
                             }
                             else if (levelNumber == 3) {
-                                // Level 3: 3狐狸 + 1烛龙
                                 if (currentEnemyIdx < 3) data.enemies.add(new NineTailedFox(pixelX, pixelY));
                                 else data.enemies.add(new ZhuLong(pixelX, pixelY));
                             }
                             else if (levelNumber == 4) {
-                                // Level 4: 1狐狸 + 2穷奇 + 1烛龙
                                 if (currentEnemyIdx == 0) data.enemies.add(new NineTailedFox(pixelX, pixelY));
                                 else if (currentEnemyIdx <= 2) data.enemies.add(new QiongQi(pixelX, pixelY));
                                 else data.enemies.add(new ZhuLong(pixelX, pixelY));
                             }
                             else if (levelNumber == 5) {
-                                // Level 5: 3狐狸 + 2穷奇 + 2烛龙
                                 if (currentEnemyIdx < 3) data.enemies.add(new NineTailedFox(pixelX, pixelY));
                                 else if (currentEnemyIdx < 5) data.enemies.add(new QiongQi(pixelX, pixelY));
                                 else data.enemies.add(new ZhuLong(pixelX, pixelY));
                             }
                             else {
-                                // Level 6+ (无尽模式): 随机混搭
                                 int rand = (x + y + currentEnemyIdx) % 3;
                                 if (rand == 0) data.enemies.add(new NineTailedFox(pixelX, pixelY));
                                 else if (rand == 1) data.enemies.add(new QiongQi(pixelX, pixelY));
                                 else data.enemies.add(new ZhuLong(pixelX, pixelY));
                             }
                             break;
-                        case 5: // 钥匙 (默认非 Bonus)
+                        case 5:
                             data.keys.add(new Key(pixelX, pixelY, false));
                             break;
 
-                        case 6: // 道具 (根据你要求的概率逻辑)
+                        case 6:
                             double rng = Math.random();
                             if (levelNumber <= 2) {
-                                // 前两关只出仙丹或御风符
                                 if (rng < 0.7) data.items.add(new Xiandan(pixelX, pixelY));
                                 else data.items.add(new de.tum.cit.fop.maze.items.Yufengfu(pixelX, pixelY));
                             } else {
-                                // 后续关卡加入金刚符
                                 if (rng < 0.5) data.items.add(new Xiandan(pixelX, pixelY));
                                 else if (rng < 0.8) data.items.add(new de.tum.cit.fop.maze.items.Yufengfu(pixelX, pixelY));
                                 else data.items.add(new Jingangfu(pixelX, pixelY));
                             }
                             break;
 
-                        case 7: // 装饰：lishu
+                        case 7:
                             data.decorations.add(new Decoration(
                                     pixelX, pixelY,
                                     lishu(),
-                                    Wall.TILE_SIZE * 2f,   // 宽：2格
-                                    Wall.TILE_SIZE * 3f    // 高：3格（明显超过墙）
+                                    Wall.TILE_SIZE * 2f,
+                                    Wall.TILE_SIZE * 3f
                             ));
                             break;
 
-                        case 8: // 装饰：lishu2
+                        case 8:
                             data.decorations.add(new Decoration(
                                     pixelX, pixelY,
                                     lishu2(),
@@ -193,5 +180,4 @@ public class MapLoader {
         if (LISHU2 == null) LISHU2 = new Texture("lishu2.png");
         return LISHU2;
     }
-
 }
