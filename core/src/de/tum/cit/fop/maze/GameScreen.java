@@ -932,6 +932,8 @@ public class GameScreen implements Screen {
             } else {
                 actualPathToLoad = "maps/level-" + levelNumber + ".properties";
             }
+            System.out.println("Loading Map: " + actualPathToLoad);
+
 
             System.out.println("[BEFORE loadLevel] levelNumber=" + levelNumber + " path=" + currentMapPath);
             MapLoader.LevelData data = loader.loadLevel(actualPathToLoad,this.levelNumber);
