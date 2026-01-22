@@ -37,8 +37,6 @@ public class HighScoreManager {
         prefs.putString("list", sb.toString());
         prefs.flush();
     }
-
-    // 取分：给界面用的
     public static String[] getTopScores() {
         String s = prefs.getString("list", "");
         if (s.isEmpty()) return new String[0];

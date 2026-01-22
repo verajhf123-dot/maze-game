@@ -13,7 +13,6 @@ public class SettingsManager {
     private final Preferences preferences;
 
     public SettingsManager() {
-        // 获取 LibGDX 的 Preferences 实例
         this.preferences = Gdx.app.getPreferences(PREF_NAME);
     }
 
@@ -25,14 +24,13 @@ public class SettingsManager {
 
     public void setVolume(float volume) {
         preferences.putFloat("volume", volume);
-        preferences.flush(); // 强制写入硬盘
+        preferences.flush();
     }
 
 
     public int getKey(String action) {
         int defaultKey;
 
-        // 定义默认按键
         switch (action) {
             case "move_up":
                 defaultKey = Input.Keys.W;

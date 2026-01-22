@@ -46,7 +46,6 @@ public abstract class Trap {
     public boolean hasTexture() {
         return true;
     }
-
     public Rectangle getBounds() { return bounds; }
     public boolean isActivated() { return activated; }
     public boolean isVisible() { return visible; }

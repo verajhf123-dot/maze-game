@@ -26,11 +26,9 @@ public class HelpScreen implements Screen {
     private SpriteBatch batch;
     private Texture menuBg;
 
-    // 按钮样式资源
     private Texture buttonBg;
     private TextButton.TextButtonStyle buttonStyle;
 
-    // 卷轴图片
     private Texture scrollTexture;
 
     public HelpScreen(MazeRunnerGame game) {
@@ -77,15 +75,12 @@ public class HelpScreen implements Screen {
         createButtonStyle();
         Gdx.input.setInputProcessor(stage);
 
-        // 1. 根容器
         Table rootTable = new Table();
         rootTable.setFillParent(true);
         stage.addActor(rootTable);
 
-        // 2. 卷轴容器
         Table scrollTable = new Table();
         try {
-            // 请确保这里使用的是透明背景的 png
             if (Gdx.files.internal("scroll_1.png").exists()) {
                 scrollTexture = new Texture(Gdx.files.internal("scroll_1.png"));
             } else {
@@ -96,11 +91,7 @@ public class HelpScreen implements Screen {
             Gdx.app.log("HelpScreen", "Scroll texture not found.");
         }
 
-        // --- 内容添加 ---
-
-        // 标题
         Label titleLabel = new Label("HOW TO PLAY", game.getSkin(), "title");
-        // 增加 padTop 确保标题不会顶出卷轴
         scrollTable.add(titleLabel).padTop(80).padBottom(20).row();
 
         String instructions =
@@ -122,13 +113,10 @@ public class HelpScreen implements Screen {
         Label infoLabel = new Label(instructions, game.getSkin());
         infoLabel.setAlignment(com.badlogic.gdx.utils.Align.center);
 
-        // 【修改】：不设置黑色，恢复为白色 (或 Skin 默认色)
         infoLabel.setColor(Color.WHITE);
-        // 【修改】：去掉 setFontScale，字体保持原样
 
         scrollTable.add(infoLabel).padBottom(30).row();
 
-        // 按钮
         TextButton backButton = new TextButton("Back to Menu", buttonStyle);
         backButton.getLabel().setFontScale(1.1f);
         backButton.addListener(new ChangeListener() {
@@ -139,22 +127,17 @@ public class HelpScreen implements Screen {
             }
         });
         scrollTable.add(backButton).width(350).height(100).padBottom(50);
-
-        // 4. 将 scrollTable 添加到 rootTable
-        // 【修改】：大幅增加宽度至 1150，高度至 850，确保包住文字
         rootTable.add(scrollTable).width(1150).height(1300);
     }
 
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
-
         batch.begin();
         batch.draw(menuBg, 0, 0,
                 Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
         batch.end();
-
         stage.act(delta);
         stage.draw();
     }

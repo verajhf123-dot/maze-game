@@ -62,11 +62,9 @@ public class AStarPathFinder {
         int maxSteps =1000;
 
         while (!openSet.isEmpty()) {
-            // 安全检查：如果算太久了，强制停止
             loopCount++;
             if (loopCount > maxSteps) {
-                // System.out.println("⚠️ 寻路超时，放弃计算");
-                return new ArrayList<>(); // 强制返回空，防止游戏卡死
+                return new ArrayList<>();
             }
 
             Node currentNode = openSet.poll();

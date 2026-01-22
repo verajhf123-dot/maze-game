@@ -53,16 +53,13 @@ public class PatrolBehavior extends AIBehavior {
 
     @Override
     public void onPlayerSpotted() {
-        // 切换到追击行为
     }
 
     @Override
     public void onPlayerLost() {
-        // 返回巡逻
     }
 
     @Override
     public void onAttack() {
-        // 攻击行为
     }
 }

@@ -11,16 +11,15 @@ import de.tum.cit.fop.maze.ai.AStarPathFinder;
 import de.tum.cit.fop.maze.Player;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.Color;
 
 public abstract class Enemy {
     public enum EnemyState {
-        PATROL,      // 巡逻
-        CHASE,       // 追击
-        ATTACK,      // 攻击
-        RETREAT,     // 撤退
-        EVADE,       // 规避
-        STUNNED      // 眩晕
+        PATROL,
+        CHASE,
+        ATTACK,
+        RETREAT,
+        EVADE,
+        STUNNED
     }
     protected Vector2 position;
     protected Vector2 velocity;
@@ -53,7 +52,7 @@ public abstract class Enemy {
     protected float damageCooldown = 0f;
 
 
-    protected float mapWidthLimit = 2000f;  // 默认给个大值
+    protected float mapWidthLimit = 2000f;
     protected float mapHeightLimit = 2000f;
 
     public Enemy(float x, float y, float width, float height) {
@@ -120,31 +119,25 @@ public abstract class Enemy {
         findPathTo(target);
     }
 
-    // 🔥【重点修改】改进后的 update 方法
     public void update(float delta, List<Wall> walls) {
         if (!isAlive()) return;
 
-        // 1. 更新所有计时器（保持不变）
         damageCooldown = Math.max(0f, damageCooldown - delta);
         attackTimer = Math.max(0f, attackTimer - delta);
         currentPathfindingCooldown = Math.max(0f, currentPathfindingCooldown - delta);
         currentEvadeCooldown = Math.max(0f, currentEvadeCooldown - delta);
         stateTimer += delta;
 
-        // 2. 更新状态机（保持不变）
         updateState(delta);
 
-        // 3. 更新AI行为（AI会计算出 velocity）
         if (currentBehavior != null) {
             currentBehavior.update(delta);
         }
 
-        // 4. 物理移动核心逻辑（分离轴检测，防止卡墙）
 
-        // --- X轴移动 ---
         float oldX = position.x;
         position.x += velocity.x * delta;
-        bounds.x = position.x; // 同步 Hitbox
+        bounds.x = position.x;
 
         boolean collisionX = false;
         if (walls != null) {
@@ -155,16 +148,14 @@ public abstract class Enemy {
                 }
             }
         }
-        // 如果X轴撞墙，退回原来的位置
         if (collisionX) {
             position.x = oldX;
             bounds.x = oldX;
         }
 
-        // --- Y轴移动 ---
         float oldY = position.y;
         position.y += velocity.y * delta;
-        bounds.y = position.y; // 同步 Hitbox
+        bounds.y = position.y;
 
         boolean collisionY = false;
         if (walls != null) {
@@ -175,18 +166,15 @@ public abstract class Enemy {
                 }
             }
         }
-        // 如果Y轴撞墙，退回原来的位置
         if (collisionY) {
             position.y = oldY;
             bounds.y = oldY;
         }
 
-        // 5. 路径跟随逻辑（保持不变）
         if (currentPath != null && !currentPath.isEmpty()) {
             followPath(delta);
         }
 
-        // 6. 边界检查
         keepInBounds();
     }
 
@@ -415,15 +403,11 @@ public abstract class Enemy {
 
     public void setPosition(float x, float y) {
         this.position.set(x, y);
-        this.bounds.setPosition(x, y); // 关键：同时更新碰撞箱
+        this.bounds.setPosition(x, y);
     }
-
 
     public void setMapLimits(float width, float height) {
         this.mapWidthLimit = width;
         this.mapHeightLimit = height;
     }
-
-
-
 }

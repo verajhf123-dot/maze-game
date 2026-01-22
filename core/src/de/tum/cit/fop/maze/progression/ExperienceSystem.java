@@ -14,7 +14,6 @@ public class ExperienceSystem {
         System.out.println("Gained " + amount + " XP. Current: " + currentExp);
     }
 
-    // ▼▼▼▼▼ 这就是你缺失的方法，必须加上！ ▼▼▼▼▼
     public boolean spendExp(int amount) {
         if (currentExp >= amount) {
             currentExp -= amount;
@@ -23,7 +22,6 @@ public class ExperienceSystem {
         }
         return false;
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     public static int getExpForEnemy(String enemyType) {
         switch (enemyType) {
@@ -37,9 +35,8 @@ public class ExperienceSystem {
     public int getCurrentExp() { return currentExp; }
     public int getTotalExp() { return totalExp; }
 
-    // 兼容旧代码的方法（如果还有地方调用）
-    public int getCurrentLevel() { return 1; } // 永远返回1级
-    public int getSkillPoints() { return 0; }  // 永远返回0点
+    public int getCurrentLevel() { return 1; }
+    public int getSkillPoints() { return 0; }
     public int getHealthBonus() { return 0; }
     public int getAttackBonus() { return 0; }
     public int getDefenseBonus() { return 0; }

@@ -25,7 +25,6 @@ public class AttackBehavior extends AIBehavior {
         float distance = enemyPos.dst(playerPos);
 
         if (distance <= enemy.getAttackRange()) {
-            // 在攻击范围内，停止移动并攻击
             enemy.setVelocity(0, 0);
 
             if (currentCooldown <= 0) {
@@ -38,22 +37,18 @@ public class AttackBehavior extends AIBehavior {
     }
 
     private void performAttack() {
-        // 敌人具体的攻击逻辑（由子类实现）
         enemy.attack();
     }
 
     @Override
     public void onPlayerSpotted() {
-        // 已经在攻击状态
     }
 
     @Override
     public void onPlayerLost() {
-        // 玩家离开视线，切换行为
     }
 
     @Override
     public void onAttack() {
-        // 攻击触发
     }
 }

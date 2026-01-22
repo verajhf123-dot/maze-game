@@ -26,8 +26,7 @@ public class Fog extends Trap {
         super(x, y, FOG_ICON_SIZE, FOG_ICON_SIZE);
         float centerX = x + FOG_ICON_SIZE / 2;
         float centerY = y + FOG_ICON_SIZE / 2;
-        this.effectArea = new Circle(centerX, centerY, 200); // 200是迷雾扩散半径
-
+        this.effectArea = new Circle(centerX, centerY, 200);
         this.effectActive = false;
         this.cooldown = 10f;
 
@@ -68,7 +67,6 @@ public class Fog extends Trap {
     @Override
     public void update(float delta) {
         super.update(delta);
-
         if (effectActive) {
             currentEffectTime += delta;
 
