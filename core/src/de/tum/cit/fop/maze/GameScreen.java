@@ -47,64 +47,126 @@ import java.util.ArrayList;
 import de.tum.cit.fop.maze.items.Item;
 
 /**
- * The GameScreen class is responsible for rendering the gameplay screen.
+ * The GameScreen class is responsible rendering the gameplay screen.
  * It handles the game logic and rendering of the game elements.
  */
 public class GameScreen implements Screen {
+
+    //=======================================================================
+    //camera and Rendering
+    //========================================================================
+
+    /** The screen camera  */
+    private OrthographicCamera camera;
+    /** drawing text on the screen.*/
+    private BitmapFont font;
+    /**  debug lines and solid shapes  */
+    private ShapeRenderer shapeRenderer;
+    /** access global resources. */
+    private final MazeRunnerGame game;
+
+    // =================================================================
+    // Build Map and Environment.
+    // =================================================================
+    /** draw */
     private float mapPixelWidth;
     private float mapPixelHeight;
+    /** logical */
     private int mapWidthInTiles;
     private int mapHeightInTiles;
-    private boolean gameWon = false;
 
-    private final MazeRunnerGame game;
-    private OrthographicCamera camera;
-    private BitmapFont font;
+    /** List of wall objects for collision detection. */
     private List<Wall> walls;
-    private ShapeRenderer shapeRenderer;
-
-    private AStarPathFinder pathFinder;
-    private Array<Trap> traps;
-    private int[][] collisionMap;
+    /**  exit object. */
+    private Exit exit;
+    /** The door object that requires keys to open. */
+    private Door door;
+    /** The area triggering the level exit. */
     private Rectangle exitArea;
 
-    private Array<Enemy> enemies;
+    private boolean gameWon = false;
+    /** Textures for floor*/
+    private Texture[] floorVariants;
+    private byte[][] floorPick;
+
+    // =================================================================
+    // Game Entities (Player, Enemies, Items)
+    // =================================================================
+    /**  character. */
     private Player player;
-    private boolean[][] walkableGrid;
-
-    private GameState currentState;
-    private Stage uiStage;
-    private Table pauseMenuTable;
-
-    private float gameTime = 0f;
-    private int levelNumber;
-    private String currentMapPath;
-    private InputController controller;
-    private Exit exit;
+    /**  list of all  enemies. */
+    private Array<Enemy> enemies;
+    /** list of  projectiles like  fireballs, lightning, etc.. */
+    private Array<Projectile> projectiles;
+    /** list of collectible items like Jingangfu,Xiandan,Yufengfu . */
+    private List<Item> items;
+    /** list of keys. */
     private List<Key> keys;
-    private Door door;
-    private Vector2 exitPosition;
-    private Vector2 entryPosition;
+    /**  list of traps . */
+    private Array<Trap> traps;
+    // =================================================================
+    // Logic,including AIPathFinding,item,collision,level,time,etc.
+    // =================================================================
+    /** A* pathfinder used by enemies. */
+    private AStarPathFinder pathFinder;
+
+    /** Binary map for collision*/
+    private int[][] collisionMap;
+    /** Boolean grid for AI movement checks. */
+    private boolean[][] walkableGrid;
+    /** current level*/
+    private int levelNumber;
+    /** current map properties file. */
+    private String currentMapPath;
+    /** back to the previousStats*/
+    private PlayerStats previousStats;
+    /** total using time in the game level also used to calculate the grades*/
+    private float gameTime = 0f;
+
+    // =================================================================
+    // UI, State and Input
+    // =================================================================
+    private Stage uiStage;
+    /** create an pauseMenu Table in the game*/
+    private Table pauseMenuTable;
+    /**the current stage of the game,like RUNNING,PAUSED */
+    private GameState currentState;
+    /** keyboard Input*/
+    private InputController controller;
+    /** console that can control the game*/
+    private DeveloperConsole console;
+    /** for manager the setting*/
+    private SettingsManager settingsManager;
+    /** achievement system*/
+    private AchievementManager achievementManager;
+    private boolean isInitialized = false;
+    private Texture buttonBg;
+    /** Unify the ButtonStyle */
+    private TextButton.TextButtonStyle commonButtonStyle;
+
+    // =================================================================
+    // Assets: Textures & Audio
+    // =================================================================
+    // Textures
+    private Texture wallTexture;
     private Texture arrowTexture;
     private TextureRegion arrowRegion;
-
-    private float spawnInvulnTimer = 0f;
-    private static final float SPAWN_INVULN_DURATION = 1.0f;
-    private SettingsManager settingsManager;
-    private PlayerStats previousStats;
-
-    private Texture floorTexture;
-    private Texture wallTexture;
-
     private Texture fireballTexture;
-    private Animation<TextureRegion> fireballAnimation;
 
     private Texture lightningTexture;
-    private Array<Projectile> projectiles;
-
+    private Texture texHpFrame;
+    private Texture texHpBar;
+    private Texture texTaiji;
+    private Texture healTexture;
+    private Texture keyIconTexture;
+    private Texture hudFrameTexture;
+    private Animation<TextureRegion> fireballAnimation;
+    //Position to check and find the Positions of the exit and entry;
+    private Vector2 exitPosition;
+    private Vector2 entryPosition;
+    // Audio
     private Music mapMusic;
     private Music pauseMusic;
-
     private com.badlogic.gdx.audio.Sound attackSound;
     private com.badlogic.gdx.audio.Sound fogSound;
     private com.badlogic.gdx.audio.Sound bonusSound;
@@ -115,24 +177,19 @@ public class GameScreen implements Screen {
     private com.badlogic.gdx.audio.Sound lightningSound;
     private com.badlogic.gdx.audio.Sound healSkillSound;
     private com.badlogic.gdx.audio.Sound swingSound;
+    //Timers
     private float fogSoundTimer = 0f;
+    private float spawnInvulnTimer = 0f;
+    private static final float SPAWN_INVULN_DURATION = 1.0f;
 
-    private Texture texHpFrame;
-    private Texture texHpBar;
-    private Texture texTaiji;
-    private List<Item> items;
-    private Texture healTexture;
-
-    private DeveloperConsole console;
-    private AchievementManager achievementManager;
-    private Texture[] floorVariants;
-    private byte[][] floorPick;
-
-    private Texture buttonBg;
-    private TextButton.TextButtonStyle commonButtonStyle;
-    private Texture keyIconTexture;
-    private Texture hudFrameTexture;
-    private boolean isInitialized = false;
+    // =================================================================
+    // Constructors
+    // =================================================================
+    /**
+     * Constructs a new GameScreen with default settings (Level 1).
+     *
+     * @param game The main game class containing shared resources.
+     */
 
     public GameScreen(MazeRunnerGame game) {
         this(game, 1,null);
