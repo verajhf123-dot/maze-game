@@ -317,13 +317,8 @@ public class GameScreen implements Screen {
                     p.update(delta);
 
                     if (p.checkEnemyHit(enemies)) {
-                        if (p.getBounds().width < 40) {
-                            projectiles.removeIndex(i);
-                            continue;
-                        }
-                        else {
-                            System.out.println("Lightning hit, but persists!");
-                        }
+                        projectiles.removeIndex(i);
+                        continue;
                     }
 
                     if (p.getBounds().width < 40 && !p.isActive()) {
