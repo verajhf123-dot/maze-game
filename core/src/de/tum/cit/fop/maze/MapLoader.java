@@ -18,6 +18,8 @@ import de.tum.cit.fop.maze.traps.Trap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import com.badlogic.gdx.graphics.Texture;
+
 
 public class MapLoader {
     // 用于记录地图边界
@@ -38,6 +40,9 @@ public class MapLoader {
         public Vector2 exitPosition = null;
         public Vector2 entryPosition = null;
         public List<Item> items = new ArrayList<>();
+
+        public List<Decoration> decorations = new ArrayList<>();
+
     }
 
     public LevelData loadLevel(String internalPath,int levelNumber) {
@@ -146,6 +151,25 @@ public class MapLoader {
                                 else data.items.add(new Jingangfu(pixelX, pixelY));
                             }
                             break;
+
+                        case 7: // 装饰：lishu
+                            data.decorations.add(new Decoration(
+                                    pixelX, pixelY,
+                                    lishu(),
+                                    Wall.TILE_SIZE * 2f,   // 宽：2格
+                                    Wall.TILE_SIZE * 3f    // 高：3格（明显超过墙）
+                            ));
+                            break;
+
+                        case 8: // 装饰：lishu2
+                            data.decorations.add(new Decoration(
+                                    pixelX, pixelY,
+                                    lishu2(),
+                                    Wall.TILE_SIZE * 2.2f,
+                                    Wall.TILE_SIZE * 3.2f
+                            ));
+                            break;
+
                     }
                 } catch (NumberFormatException e) {
                     System.err.println("Skipping invalid line: " + key);
@@ -156,4 +180,18 @@ public class MapLoader {
         }
         return data;
     }
+
+    private static Texture LISHU;
+    private static Texture LISHU2;
+
+    private static Texture lishu() {
+        if (LISHU == null) LISHU = new Texture("lishu.png");
+        return LISHU;
+    }
+
+    private static Texture lishu2() {
+        if (LISHU2 == null) LISHU2 = new Texture("lishu2.png");
+        return LISHU2;
+    }
+
 }
