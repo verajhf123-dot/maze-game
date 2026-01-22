@@ -64,18 +64,20 @@ public class QiongQi extends Enemy {
         idleFrames = new HashMap<>();
 
         try {
-            // 加载每个方向的行走动画（3帧）
+            // 下 (保持不变，假设是3)
             TextureRegion[] downFrames = loadDirectionFrames("enemies/qiongqi/down_", 3);
             if (downFrames[0] != null) {
                 walkAnimations.put(Direction.DOWN, new Animation<>(animationSpeed, downFrames));
-                idleFrames.put(Direction.DOWN, downFrames[1]); // 使用第二帧作为待机
+                idleFrames.put(Direction.DOWN, downFrames[1]);
             }
 
+            // 上 (保持不变，假设是3)
             TextureRegion[] upFrames = loadDirectionFrames("enemies/qiongqi/up_", 3);
             if (upFrames[0] != null) {
                 walkAnimations.put(Direction.UP, new Animation<>(animationSpeed, upFrames));
                 idleFrames.put(Direction.UP, upFrames[1]);
             }
+
 
             TextureRegion[] leftFrames = loadDirectionFrames("enemies/qiongqi/left_", 3);
             if (leftFrames[0] != null) {
@@ -83,22 +85,18 @@ public class QiongQi extends Enemy {
                 idleFrames.put(Direction.LEFT, leftFrames[1]);
             }
 
+            // ▼▼▼ 右边：改为加载 3 张 ▼▼▼
+            // 这里我们显式地加载右边的图，而不是让它镜像左边
             TextureRegion[] rightFrames = loadDirectionFrames("enemies/qiongqi/right_", 3);
             if (rightFrames[0] != null) {
                 walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, rightFrames));
                 idleFrames.put(Direction.RIGHT, rightFrames[1]);
-            } else if (leftFrames[0] != null) {
-                // 如果没有向右图片，镜像向左图片
-                TextureRegion[] mirroredFrames = mirrorFrames(leftFrames);
-                walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, mirroredFrames));
-                idleFrames.put(Direction.RIGHT, mirroredFrames[1]);
             }
-
-            System.out.println("QiongQi animations loaded successfully (3 frames per direction)");
+            // 如果您没有单独的右边图片，想靠左边镜像，那就用 else if 分支
+            // 但既然您说“右边有三张图”，说明您是有单独文件的，所以用上面的 if 块即可。
 
         } catch (Exception e) {
-            System.out.println("Error loading QiongQi animations: " + e.getMessage());
-            loadFallbackTexture();
+            e.printStackTrace();
         }
     }
 

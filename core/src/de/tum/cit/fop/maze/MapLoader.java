@@ -47,6 +47,7 @@ public class MapLoader {
 
 
     public LevelData loadLevel(String internalPath,int levelNumber) {
+        System.out.println("[MapLoader] levelNumber=" + levelNumber + " path=" + internalPath);
         LevelData data = new LevelData();
         Properties props = new Properties();
 

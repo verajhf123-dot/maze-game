@@ -140,9 +140,7 @@ public class SkillManager {
 
         System.out.println("💚 Casting Healing! Base healing: " + healing);
 
-        // 治疗不需要 GameScreen 检测碰撞，所以直接在这里生效
-        float actualHealing = healing * (1 + skillTree.getTotalHealthBonus() * 0.02f);
-        stats.heal((int)actualHealing);
+        stats.heal((int)healing);
 
         return true;
     }
@@ -223,9 +221,7 @@ public class SkillManager {
     }
 
     public float applySkillBonusesToHealing(float baseHealing) {
-        float modifiedHealing = baseHealing;
-        modifiedHealing *= (1 + skillTree.getTotalHealthBonus() * 0.02f);
-        return modifiedHealing;
+        return baseHealing;
     }
 
     public float applyTrapResistance(float trapDamage) {
