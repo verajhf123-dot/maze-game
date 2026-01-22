@@ -32,21 +32,13 @@ public class HighScoreScreen implements Screen {
     public HighScoreScreen(MazeRunnerGame game) {
         this.game = game;
         stage = new Stage(new ScreenViewport());
-
-
-
-        //Root Table;
-
         Table rootTable = new Table();
         rootTable.setFillParent(true);
         stage.addActor(rootTable);
-
-        //Scroll table;
-        Table scrollTable = new Table(); // 这个才是放内容的
+        Table scrollTable = new Table();
 
         try {
             scroll = new Texture(Gdx.files.internal("scroll.png"));
-            // 把卷轴背景设置给这个内部的 Table，而不是全屏的 rootTable
             scrollTable.setBackground(new TextureRegionDrawable(scroll));
         } catch (Exception e) {
             Gdx.app.log("HighScore", "Scroll texture not found.");
@@ -57,18 +49,17 @@ public class HighScoreScreen implements Screen {
         titleLabel.setFontScale(0.75f);
         scrollTable.add(titleLabel).padBottom(25).row();
 
-       // Add Tables
         String[] scores = HighScoreManager.getTopScores();
         if (scores.length == 0) {
             Label noRec = new Label("No records yet, go play!", game.getSkin());
-            noRec.setColor(Color.WHITE); // 用深褐色
+            noRec.setColor(Color.WHITE);
             noRec.setFontScale(0.9f);
             scrollTable.add(noRec).row();
         } else {
             for (int i = 0; i < scores.length; i++) {
                 Label scoreLabel = new Label((i+1) + ". Score: " + scores[i], game.getSkin());
-                scoreLabel.setColor(Color.WHITE); // 用深褐色
-                scoreLabel.setFontScale(1.1f); // 分数稍微小一点点
+                scoreLabel.setColor(Color.WHITE);
+                scoreLabel.setFontScale(1.1f);
                 scrollTable.add(scoreLabel).padBottom(10).row();
             }
         }
@@ -90,9 +81,7 @@ public class HighScoreScreen implements Screen {
 
         try {
             ButtonBg = new Texture(Gdx.files.internal("button2.png"));
-
             TextureRegionDrawable drawable = new TextureRegionDrawable(ButtonBg);
-
             btnStyle.up = drawable;
             btnStyle.down = drawable.tint(Color.LIGHT_GRAY);
 
@@ -128,17 +117,12 @@ public class HighScoreScreen implements Screen {
     }
     @Override
     public void render(float delta) {
-        // 1) 清屏（可以留黑，不影响，因为马上会画背景图）
         ScreenUtils.clear(0, 0, 0, 1);
-
-        // 2) 先画背景图（一定要在 stage.draw 之前）
         batch.begin();
         batch.draw(menuBg, 0, 0,
                 Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
         batch.end();
-
-        // 3) 再画 UI（按钮、文字）
         stage.act(delta);
         stage.draw();
     }

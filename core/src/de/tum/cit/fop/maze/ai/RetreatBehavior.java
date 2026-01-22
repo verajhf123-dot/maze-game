@@ -55,20 +55,17 @@ public class RetreatBehavior extends AIBehavior {
     private void startRetreat() {
         isRetreating = true;
         retreatTimer = retreatDuration;
-        // enemy.setState("RETREATING");
         System.out.println("Enemy starts retreating! Health: " + enemy.getHealth() + "/" + enemy.getMaxHealth());
     }
 
     private void stopRetreat() {
         isRetreating = false;
-        // enemy.setState("PATROLLING");
         enemy.setVelocity(0, 0);
         System.out.println("Enemy stops retreating");
     }
 
     @Override
     public void onPlayerSpotted() {
-        // this.targetPlayer = enemy.getTargetPlayer();
         System.out.println("Player spotted - retreat behavior activated");
     }
 

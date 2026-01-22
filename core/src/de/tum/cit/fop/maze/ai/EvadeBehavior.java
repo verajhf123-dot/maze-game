@@ -87,7 +87,6 @@ public class EvadeBehavior extends AIBehavior {
 
     @Override
     public void onPlayerSpotted() {
-        // this.targetPlayer = enemy.getTargetPlayer();
         System.out.println("Player spotted - evade behavior activated");
     }
 

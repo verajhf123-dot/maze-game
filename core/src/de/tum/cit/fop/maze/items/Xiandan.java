@@ -11,7 +11,7 @@ public class Xiandan extends Item {
                 x,
                 y,
                 32f,
-                "items_Xiandan.png", // 有就用，没有就自动忽略
+                "items_Xiandan.png",
                 Color.GREEN
         );
     }

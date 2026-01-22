@@ -66,7 +66,6 @@ public class Key {
     public float getHeight() {
         return bounds.height;
     }
-    // 新增方法：允许外部修改这把钥匙是否为 Bonus
     public void setBonus(boolean isBonus) {
         this.isBonus = isBonus;
     }

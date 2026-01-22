@@ -6,7 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation; // ✅ 必须导入
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -63,13 +63,11 @@ public class GameScreen implements Screen {
     private List<Wall> walls;
     private ShapeRenderer shapeRenderer;
 
-    // ==== 新增：路径寻找和陷阱系统 ====
     private AStarPathFinder pathFinder;
     private Array<Trap> traps;
     private int[][] collisionMap;
     private Rectangle exitArea;
 
-    // ==== 新添加的敌人相关变量 ====
     private Array<Enemy> enemies;
     private Player player;
     private boolean[][] walkableGrid;
@@ -78,7 +76,6 @@ public class GameScreen implements Screen {
     private Stage uiStage;
     private Table pauseMenuTable;
 
-    // ==== 其他变量 ====
     private float gameTime = 0f;
     private int levelNumber;
     private String currentMapPath;
@@ -99,9 +96,8 @@ public class GameScreen implements Screen {
     private Texture floorTexture;
     private Texture wallTexture;
 
-    // 🔥 修改：把 Texture 改为 Animation
-    private Texture fireballTexture; // 保留原始Texture用于切割
-    private Animation<TextureRegion> fireballAnimation; // 🔥 新增动画对象
+    private Texture fireballTexture;
+    private Animation<TextureRegion> fireballAnimation;
 
     private Texture lightningTexture;
     private Array<Projectile> projectiles;
@@ -140,7 +136,6 @@ public class GameScreen implements Screen {
 
     public GameScreen(MazeRunnerGame game) {
         this(game, 1,null);
-        // 不要在构造函数里加载 Texture，移到 show() 里统一加载更安全
     }
 
     public GameScreen(MazeRunnerGame game, int levelNumber, PlayerStats prevStats) {
@@ -349,7 +344,6 @@ public class GameScreen implements Screen {
             if (skillManager != null) {
                 skillEffect = skillManager.getCurrentSkillEffect();
             }
-
 
 
             float visibilityFactor = 1.0f;
@@ -591,7 +585,6 @@ public class GameScreen implements Screen {
         for (Enemy enemy : enemies) {
             if (enemy instanceof NineTailedFox && enemy.isAlive()) {
                 NineTailedFox fox = (NineTailedFox) enemy;
-                // System.out.println("Fox state: Form=" + fox.getCurrentForm() + ", HasEncountered=" + fox.hasEncounteredPlayer());
             }
         }
         if (player.getHealth() <= 0) {
@@ -820,20 +813,6 @@ public class GameScreen implements Screen {
         batch.draw(hudFrameTexture, x, y, width, height);
     }
 
-    private void drawDebugInfo() {
-        if (shapeRenderer != null) {
-            shapeRenderer.setProjectionMatrix(camera.combined);
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(Color.RED);
-            for (Enemy enemy : enemies) {
-                if (enemy.isAlive()) {
-                    shapeRenderer.rect(enemy.getBounds().x, enemy.getBounds().y, enemy.getBounds().width, enemy.getBounds().height);
-                }
-            }
-            shapeRenderer.end();
-        }
-    }
-
     private void updateTraps(float delta) {
         if (traps != null) {
             for (Trap trap : traps) {
@@ -886,17 +865,14 @@ public class GameScreen implements Screen {
     public void show() {
         if (!isInitialized) {
             if (Gdx.files.internal("fireball.png").exists()) {
-                // 🔥🔥 核心修改：加载火球并切割成动画 🔥🔥
                 fireballTexture = new Texture(Gdx.files.internal("fireball.png"));
 
-                // 假设火球是 1 行 4 列 (如果是 5 列请把 4 改成 5)
                 int FRAME_COLS = 1;
                 int FRAME_ROWS = 1;
                 TextureRegion[][] tmp = TextureRegion.split(fireballTexture,
                         fireballTexture.getWidth() / FRAME_COLS,
                         fireballTexture.getHeight() / FRAME_ROWS);
 
-                // 创建动画 (0.1f 是每帧间隔时间)
                 fireballAnimation = new Animation<>(0.1f, tmp[0]);
 
             } else {
@@ -1192,7 +1168,6 @@ public class GameScreen implements Screen {
                     System.out.println("Fireball shooting in move direction");
                 }
 
-                // 🔥🔥 核心修改：使用 fireballAnimation 构造火球 🔥🔥
                 if (fireballAnimation != null) {
                     Projectile fireball = new Projectile(
                             player.getPosition().x,
@@ -1200,12 +1175,12 @@ public class GameScreen implements Screen {
                             direction.x, direction.y,
                             300f,
                             dmg,
-                            fireballAnimation, // 传入动画
-                            40, 40 // 大小
+                            fireballAnimation,
+                            40, 40
                     );
                     projectiles.add(fireball);
                 } else {
-                    // Fallback if animation failed
+
                     Projectile fireball = new Projectile(
                             player.getPosition().x, player.getPosition().y,
                             direction.x, direction.y, 300f, dmg, Color.ORANGE
@@ -1267,7 +1242,6 @@ public class GameScreen implements Screen {
                 float startX = targetX - (lightWidth / 2f);
                 float startY = targetY + 100f;
 
-                // 闪电不需要动图，所以还是用 Texture 构造
                 Projectile lightning = new Projectile(
                         startX, startY,
                         0, -1,

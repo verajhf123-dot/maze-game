@@ -54,14 +54,14 @@ public class MenuScreen implements Screen {
         this.settingsManager = settingsManager;
 
         var camera = new OrthographicCamera();
-        camera.zoom = 1.5f; // Set camera zoom for a closer view
+        camera.zoom = 1.5f;
 
-        Viewport viewport = new ScreenViewport(camera); // Create a viewport with the camera
-        stage = new Stage(viewport, game.getSpriteBatch()); // Create a stage for UI elements
+        Viewport viewport = new ScreenViewport(camera);
+        stage = new Stage(viewport, game.getSpriteBatch());
 
-        this.table = new Table(); // Create a table for layout
-        table.setFillParent(true); // Make the table fill the stage
-        stage.addActor(table);// Add the table to the stage
+        this.table = new Table();
+        table.setFillParent(true);
+        stage.addActor(table);
 
         try {
             buttonSound = Gdx.audio.newSound(Gdx.files.internal("Sound/button.mp3"));
@@ -104,22 +104,14 @@ public class MenuScreen implements Screen {
      */
     private void addMenuButton(String text, ChangeListener listener) {
         TextButton button = new TextButton(text, menuButtonStyle);
-        button.getLabel().setFontScale(1.1f); // Matches HighScoreScreen font scale
+        button.getLabel().setFontScale(1.1f);
         button.addListener(listener);
 
-        // MODIFIED HERE:
-        // Width: 450 (Wider than before)
-        // Height: 110 (Taller/Bigger)
-        // padBottom: 10 (Tight spacing to keep them concentrated in the middle)
         table.add(button).width(400).height(110).padBottom(10).row();
     }
 
     private void showMainMenu() {
         table.clear();
-
-        // MODIFIED HERE:
-        // padTop(60): Moves the title down from the top edge.
-        // padBottom(20): Reduces gap between title and first button.
         table.add(new Label("Maze Runner", game.getSkin(), "title")).padTop(60).padBottom(20).row();
 
         if (SaveManager.hasSaveFile()) {
@@ -132,7 +124,6 @@ public class MenuScreen implements Screen {
             });
         }
 
-        // Create and add a button to go to the game screen
         addMenuButton("New Game", new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -198,25 +189,19 @@ public class MenuScreen implements Screen {
         if (data != null) {
             Gdx.app.log("MenuScreen", "Loading Save Game...");
 
-            // 1. Rebuild PlayerStats object
             PlayerStats loadedStats = new PlayerStats();
 
-            // 2. Restore basic attributes
             loadedStats.setCurrentHealth(data.getCurrentHealth());
-
-            // 3. Restore experience system
             if (loadedStats.getExpSystem() != null) {
                 loadedStats.getExpSystem().setCurrentExp(data.getCurrentExp());
             }
 
-            // 4. Restore skill tree
             if (data.getUnlockedSkillIds() != null) {
                 for (String skillId : data.getUnlockedSkillIds()) {
                     loadedStats.getSkillTree().forceUnlock(skillId);
                 }
             }
 
-            // 5. Recalculate attribute bonuses
             loadedStats.applySkillEffects();
 
             Gdx.app.log("MenuScreen", "Loaded Level: " + data.getCurrentLevelMap() + ", Char Level: " + data.getCharLevel());
@@ -236,7 +221,6 @@ public class MenuScreen implements Screen {
             TextButton levelButton = new TextButton("Level " + level, menuButtonStyle);
             levelButton.getLabel().setFontScale(1.0f);
 
-            // Match sizing with main menu
             table.add(levelButton).width(450).height(100).padBottom(10).row();
 
             levelButton.addListener(new ChangeListener() {
@@ -264,7 +248,7 @@ public class MenuScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);// Clear the screen
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         batch.begin();
         if (menuBg != null) {
@@ -272,18 +256,17 @@ public class MenuScreen implements Screen {
         }
         batch.end();
 
-        stage.act(Math.min(Gdx.graphics.getDeltaTime(), 1 / 30f)); // Update the stage
-        stage.draw(); // Draw the stage
+        stage.act(Math.min(Gdx.graphics.getDeltaTime(), 1 / 30f));
+        stage.draw();
     }
 
     @Override
     public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true); // Update the stage viewport on resize
+        stage.getViewport().update(width, height, true);
     }
 
     @Override
     public void dispose() {
-        // Dispose of the stage when screen is disposed
         stage.dispose();
         if (menuBg != null) menuBg.dispose();
         if (buttonBg != null) buttonBg.dispose();
@@ -295,16 +278,13 @@ public class MenuScreen implements Screen {
         batch = new SpriteBatch();
         menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
 
-        // Initialize style logic
         createButtonStyle();
 
-        // Set the input processor so the stage can receive input events
         Gdx.input.setInputProcessor(stage);
         game.playMenuMusic();
         showMainMenu();
     }
 
-    // The following methods are part of the Screen interface but are not used in this screen.
     @Override
     public void pause() {
     }

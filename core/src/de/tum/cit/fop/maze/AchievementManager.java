@@ -14,12 +14,8 @@ public class AchievementManager {
     private int totalKills = 0;
     private int totalExpGained = 0;
 
-    // Map to store achievement data objects
     private Map<String, AchievementData> achievementMap;
-    // Set to track unlocked status
     private Map<String, Boolean> unlockedStatus;
-
-    // Inner class to structure the JSON data [cite: 133]
     public static class AchievementData {
         public String id;
         public String name;
@@ -67,16 +63,11 @@ public class AchievementManager {
     }
 
     private void checkMilestones() {
-        // Check First Blood
         if (totalKills >= 1) unlock("FIRST_BLOOD");
-
-        // Check Monster Slayer requirement from JSON
         if (achievementMap.containsKey("MONSTER_SLAYER") &&
                 totalKills >= achievementMap.get("MONSTER_SLAYER").requirement) {
             unlock("MONSTER_SLAYER");
         }
-
-        // Check EXP Master requirement from JSON
         if (achievementMap.containsKey("EXP_MASTER") &&
                 totalExpGained >= achievementMap.get("EXP_MASTER").requirement) {
             unlock("EXP_MASTER");
@@ -87,12 +78,9 @@ public class AchievementManager {
         if (unlockedStatus.containsKey(id) && !unlockedStatus.get(id)) {
             unlockedStatus.put(id, true);
             AchievementData data = achievementMap.get(id);
-            System.out.println("🏆 CULTIVATION BREAKTHROUGH: " + data.name + " (" + data.description + ")");
-            // Visual/Sound feedback would be triggered here [cite: 124, 157]
+            System.out.println("CULTIVATION BREAKTHROUGH: " + data.name + " (" + data.description + ")");
         }
     }
-
-    // Getters for ResultScreen display
     public int getTotalKills() { return totalKills; }
     public int getTotalExpGained() { return totalExpGained; }
     public Map<String, Boolean> getUnlockedStatus() { return unlockedStatus; }
