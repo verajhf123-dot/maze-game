@@ -1376,11 +1376,14 @@ public class GameScreen implements Screen {
             shapeRenderer = new ShapeRenderer();
 
             String actualPathToLoad;
-            if (levelNumber > 5 || !Gdx.files.local("maps/level-" + levelNumber + ".properties").exists()) {
+            if (levelNumber > 5 || !Gdx.files.internal("maps/level-" + levelNumber + ".properties").exists()) {
+                System.out.println("Map not found or Level > 5, falling back to Level 5.");
                 actualPathToLoad = "maps/level-5.properties";
             } else {
                 actualPathToLoad = "maps/level-" + levelNumber + ".properties";
             }
+            System.out.println("Loading Map: " + actualPathToLoad);
+
 
             // 读取地图数据
             MapLoader.LevelData data = loader.loadLevel(actualPathToLoad,this.levelNumber);
