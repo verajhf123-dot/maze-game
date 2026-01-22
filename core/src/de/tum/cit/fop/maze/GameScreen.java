@@ -148,6 +148,8 @@ public class GameScreen implements Screen {
     private Texture hudFrameTexture;
 
     private boolean isInitialized = false;
+    private List<Decoration> decorations;
+
 
     /**
      * Constructor for GameScreen. Sets up the camera and font.
@@ -170,6 +172,7 @@ public class GameScreen implements Screen {
         this.levelNumber = levelNumber;
         this.currentMapPath = "maps/level-" + levelNumber + ".properties";
         this.previousStats = prevStats;
+
 
         if (this.previousStats != null) {
             this.previousStats.setBonusKey(0); // 重置加分钥匙数量
@@ -206,6 +209,8 @@ public class GameScreen implements Screen {
         this.levelNumber = 0;
         this.currentMapPath = mapFilePath;
         initCommon();
+
+
 
     }
 
@@ -586,6 +591,12 @@ public class GameScreen implements Screen {
         if (walls != null) {
             for (Wall wall : walls) {
                 batch.draw(wallTexture, wall.worldX, wall.worldY, Wall.TILE_SIZE, Wall.TILE_SIZE);
+            }
+        }
+
+        if (decorations != null) {
+            for (Decoration d : decorations) {
+                d.render(batch);
             }
         }
 
@@ -1377,6 +1388,8 @@ public class GameScreen implements Screen {
             this.walls = data.walls;
             this.entryPosition = data.entryPosition;
             this.exitPosition = data.exitPosition;
+            this.decorations = data.decorations; // 这里 data 不存在
+
 
             // 🔥 提取敌人 (注意转换 List 到 Array) 🔥
             this.enemies = new Array<>();
