@@ -34,7 +34,6 @@ public class PlayerStats {
         expSystem = new ExperienceSystem();
         skillTree = new SkillTree(expSystem);
         skillManager = null;
-
         updateStatsFromLevel();
     }
 
@@ -47,26 +46,36 @@ public class PlayerStats {
     public SkillManager getSkillManager() { return skillManager; }
     public SkillTree getSkillTree() { return skillTree; }
 
+    // === 核心修复方法：从技能树读取最新属性 ===
     private void updateStatsFromLevel() {
-        // ▼▼▼ 修改：不再获取 expSystem.getHealthBonus()，只看技能树加成 ▼▼▼
+        // 1. 计算血量加成
         float skillHealthBonus = 0;
         if (skillTree != null) {
             skillHealthBonus = skillTree.getTotalHealthBonus();
         }
 
-        maxHealth = baseMaxHealth + (int)skillHealthBonus;
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        // 2. 更新最大生命值 (基础 100 + 技能加成)
+        int newMaxHealth = baseMaxHealth + (int)skillHealthBonus;
 
+        // 只有当上限发生变化时才打印日志（避免刷屏）
+        if (newMaxHealth != maxHealth) {
+            // System.out.println("HP Limit Updated: " + maxHealth + " -> " + newMaxHealth);
+            maxHealth = newMaxHealth;
+        } else {
+            maxHealth = newMaxHealth;
+        }
+
+        // 3. 更新其他能力
         if (skillTree != null) {
             canDoubleJump = skillTree.hasDoubleJump();
             canDash = skillTree.hasDash();
             fireResistance = skillTree.hasFireResistance();
             poisonResistance = skillTree.hasPoisonResistance();
+            criticalChance = skillTree.getTotalCritChance();
+            dodgeChance = skillTree.getTotalDodgeChance();
         }
 
-        criticalChance = skillTree != null ? skillTree.getTotalCritChance() : 0.0f;
-        dodgeChance = skillTree != null ? skillTree.getTotalDodgeChance() : 0.0f;
-
+        // 4. 确保当前血量不超过新上限
         if (health > maxHealth) {
             health = maxHealth;
         }
@@ -78,40 +87,30 @@ public class PlayerStats {
         return levelDefense + skillDefense;
     }
 
-    // === 核心逻辑：受伤处理 (护盾/闪避/抗性) ===
     public void takeDamage(float damage, String damageType) {
-        // 1. 闪避
         if (skillManager != null && skillManager.hasSpecialAbility("dodge") && Math.random() < dodgeChance) {
             System.out.println("Dodged!");
             return;
         }
 
         float finalDamage = damage;
-        // 2. 抗性
         if (damageType.equals(DAMAGE_TYPE_FIRE) && fireResistance) finalDamage *= 0.5f;
         if (damageType.equals(DAMAGE_TYPE_POISON) && poisonResistance) finalDamage *= 0.5f;
 
-        // 3. 防御
         finalDamage -= calculateDefenseBonus() * 0.5f;
         if (finalDamage < 1) finalDamage = 1;
 
-        // 4. 🔥 护盾 (Shield) 🔥
         if (skillTree != null && skillTree.hasShieldActive()) {
             finalDamage = skillTree.applyShield(finalDamage);
         }
 
-        // 5. 其他 Buff
         if (skillManager != null) {
             finalDamage = skillManager.applyTrapResistance(finalDamage);
         }
 
-        // 6. 最终结算
         if (finalDamage > 0) {
             health -= (int) finalDamage;
             if (health < 0) health = 0;
-            System.out.println("Damage taken: " + (int)finalDamage + ". Current HP: " + health);
-        } else {
-            System.out.println("Damage blocked by Shield!");
         }
     }
 
@@ -119,10 +118,8 @@ public class PlayerStats {
 
     public float getActualAttackDamage() {
         float baseDamage = 10f;
-        // float levelBonus = expSystem.getAttackBonus(); // <--- 删掉这行
         float skillBonus = skillTree != null ? skillTree.getTotalAttackBonus() : 0;
-
-        float totalDamage = baseDamage + skillBonus; // <--- 这里不加 levelBonus
+        float totalDamage = baseDamage + skillBonus;
 
         if (skillManager != null) {
             totalDamage = skillManager.applySkillBonusesToDamage(totalDamage);
@@ -161,13 +158,16 @@ public class PlayerStats {
         health = maxHealth;
     }
 
-    // === 核心逻辑：更新时钟 ===
+    // === 这里是这次修改的关键点 ===
     public void update(float delta) {
         if (skillTree != null) skillTree.update(delta);
         if (skillManager != null) skillManager.update(delta);
+
+        // 🔥 强制每一帧同步属性！这样你在菜单里点了技能，这里立刻就能知道。
+        updateStatsFromLevel();
     }
 
-    // Getters/Setters 保持不变
+    // Getters
     public int getScore() { return score; }
     public void addScore(int amount) { this.score += amount; }
     public void setScore(int score) { this.score = score; }
