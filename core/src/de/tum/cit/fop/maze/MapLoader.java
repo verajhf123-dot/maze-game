@@ -50,15 +50,13 @@ public class MapLoader {
         Properties props = new Properties();
 
         try {
-            FileHandle file = Gdx.files.local(internalPath);
+            FileHandle file = Gdx.files.internal(internalPath);
             if (!file.exists()) {
-                file = Gdx.files.internal(internalPath);
-                if (!file.exists()) {
-                    System.err.println("Map file not found: " + internalPath);
-                    return data;
-                }
+                System.err.println("Map file not found: " + internalPath);
+                return data;
             }
             props.load(file.read());
+
 
             for (String key : props.stringPropertyNames()) {
                 if (!key.contains(",")) continue;
