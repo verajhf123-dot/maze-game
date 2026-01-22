@@ -7,7 +7,6 @@ import java.util.Map;
  * Enhanced Skill Tree with Q/E/R skills system.
  */
 public class SkillTree {
-    // Make SkillNode public and fields public
     public static class SkillNode {
         public String id;
         public String name;
@@ -18,11 +17,10 @@ public class SkillTree {
         public float speedBonus;
         public float attackBonus;
 
-        // Skill-related fields
-        public String skillType;  // "fireball", "heal", "lightning", "shield", "slow", "teleport"
-        public float skillValue;  // Skill value (damage/healing amount)
-        public float skillCooldown; // Cooldown time in seconds
-        public String bindKey;    // Bind to key "Q", "E", "R"
+        public String skillType;
+        public float skillValue;
+        public float skillCooldown;
+        public String bindKey;
 
         public SkillNode(String id, String name, String description, int cost,
                          float healthBonus, float speedBonus, float attackBonus,
@@ -45,22 +43,18 @@ public class SkillTree {
     private ExperienceSystem expSystem;
     private Map<String, SkillNode> nodes;
 
-    // Q/E/R skill cooldown timers
     private float qCooldownTimer = 0f;
     private float eCooldownTimer = 0f;
     private float rCooldownTimer = 0f;
 
-    // Skill states
     private boolean shieldActive = false;
     private float shieldTimer = 0f;
     private float shieldValue = 0f;
 
-    // Total bonuses
     private float totalHealthBonus = 0;
     private float totalSpeedBonus = 0;
     private float totalAttackBonus = 0;
 
-    // Special abilities
     private boolean hasDoubleJump = false;
     private boolean hasDash = false;
     private boolean hasFireResistance = false;
@@ -74,7 +68,6 @@ public class SkillTree {
     }
 
     private void initializeSkills() {
-        // 1. Health Boost (基础技能)
         nodes.put("health_boost", new SkillNode(
                 "health_boost",
                 "Health Boost",
@@ -86,7 +79,6 @@ public class SkillTree {
                 "", 0f, 0f, ""
         ));
 
-        // 2. Speed Boost (基础技能)
         nodes.put("speed_boost", new SkillNode(
                 "speed_boost",
                 "Swift Step",
@@ -98,7 +90,6 @@ public class SkillTree {
                 "", 0f, 0f, ""
         ));
 
-        // 3. Attack Boost (基础技能)
         nodes.put("attack_boost", new SkillNode(
                 "attack_boost",
                 "Power Strike",
@@ -110,7 +101,6 @@ public class SkillTree {
                 "", 0f, 0f, ""
         ));
 
-        // 4. Q Skill - Fireball
         nodes.put("fireball", new SkillNode(
                 "fireball",
                 "Fireball",
@@ -125,7 +115,6 @@ public class SkillTree {
                 "Q"
         ));
 
-        // 5. E Skill - Healing Aura
         nodes.put("heal", new SkillNode(
                 "heal",
                 "Healing Aura",
@@ -140,7 +129,6 @@ public class SkillTree {
                 "E"
         ));
 
-        // 6. R Skill - Chain Lightning
         nodes.put("lightning", new SkillNode(
                 "lightning",
                 "Chain Lightning",
@@ -155,7 +143,6 @@ public class SkillTree {
                 "R"
         ));
 
-        // 7. Shield Skill
         nodes.put("shield", new SkillNode(
                 "shield",
                 "Energy Shield",
@@ -167,10 +154,9 @@ public class SkillTree {
                 "shield",
                 100f,
                 10.0f,
-                ""  // Not bound to specific key
+                ""
         ));
 
-        // 8. Double Jump Ability
         nodes.put("double_jump", new SkillNode(
                 "double_jump",
                 "Double Jump",
@@ -182,10 +168,9 @@ public class SkillTree {
                 "ability",
                 0f,
                 0f,
-                ""  // Passive ability
+                ""
         ));
 
-        // 9. Dash Ability
         nodes.put("dash", new SkillNode(
                 "dash",
                 "Dash",
@@ -197,7 +182,7 @@ public class SkillTree {
                 "ability",
                 0f,
                 2.0f,
-                ""  // Bound to Shift
+                ""
         ));
     }
 
@@ -208,8 +193,6 @@ public class SkillTree {
         SkillNode node = nodes.get(skillId);
         if (node == null) return false;
         if (node.unlocked) return false;
-
-        // ▼▼▼ 这里调用 spendExp，只要第一步做对了，这就不会红了 ▼▼▼
         if (expSystem.spendExp(node.cost)) {
             node.unlocked = true;
             applySkillBonuses(node);
@@ -260,7 +243,6 @@ public class SkillTree {
     public boolean canUnlockSkill(String skillId) {
         SkillNode node = nodes.get(skillId);
         if (node == null || node.unlocked) return false;
-        // 只要当前钱够，就能解锁
         return expSystem.getCurrentExp() >= node.cost;
     }
 
@@ -294,19 +276,18 @@ public class SkillTree {
             return null;
         }
 
-        // Set cooldown
         switch (key) {
             case "Q":
                 qCooldownTimer = node.skillCooldown;
-                System.out.println("🔥 Fireball launched! Cooldown: " + node.skillCooldown + "s");
+                System.out.println("Fireball launched! Cooldown: " + node.skillCooldown + "s");
                 break;
             case "E":
                 eCooldownTimer = node.skillCooldown;
-                System.out.println("💚 Healing applied! Cooldown: " + node.skillCooldown + "s");
+                System.out.println("Healing applied! Cooldown: " + node.skillCooldown + "s");
                 break;
             case "R":
                 rCooldownTimer = node.skillCooldown;
-                System.out.println("⚡ Lightning cast! Cooldown: " + node.skillCooldown + "s");
+                System.out.println("Lightning cast! Cooldown: " + node.skillCooldown + "s");
                 break;
         }
 
@@ -316,20 +297,16 @@ public class SkillTree {
     public void updateSkillUnlocks() {
         if (expSystem == null) return;
 
-        // 获取累计获得的总经验 (Total XP)，而不是当前剩余的 XP
         int totalXP = expSystem.getTotalExp();
 
-        // 1. 检查 E 技能 (门槛 120)
         if (totalXP >= 120) {
-            unlockPassive("heal"); // 使用辅助方法解锁，防止重复打印日志
+            unlockPassive("heal");
         }
 
-        // 2. 检查 Q 技能 (门槛 150)
         if (totalXP >= 150) {
             unlockPassive("fireball");
         }
 
-        // 3. 检查 R 技能 (门槛 200)
         if (totalXP >= 200) {
             unlockPassive("lightning");
         }
@@ -339,18 +316,14 @@ public class SkillTree {
         SkillNode node = nodes.get(skillId);
         if (node != null && !node.unlocked) {
             node.unlocked = true;
-            // 因为不需要属性加成(HP/ATK)，只是解锁使用权，所以这里不需要 applySkillBonuses
-            // 但如果你的技能带有特殊效果开关，可以保留 activateSpecialAbilities
             activateSpecialAbilities(node);
-            System.out.println(">>> MILESTONE REACHED: Auto-unlocked " + node.name + "!");
+            System.out.println("MILESTONE REACHED: Auto-unlocked " + node.name + "!");
         }
     }
 
     public void update(float delta) {
-        // 1. 每次循环都检查一下是否达到解锁门槛
         updateSkillUnlocks();
 
-        // 2. 原有的冷却时间更新逻辑保持不变
         if (qCooldownTimer > 0) qCooldownTimer -= delta;
         if (eCooldownTimer > 0) eCooldownTimer -= delta;
         if (rCooldownTimer > 0) rCooldownTimer -= delta;
@@ -383,7 +356,7 @@ public class SkillTree {
         shieldActive = true;
         shieldValue = value;
         shieldTimer = duration;
-        System.out.println("🛡️ Shield activated: " + value + " HP, " + duration + "s");
+        System.out.println("Shield activated: " + value + " HP, " + duration + "s");
     }
 
     /**
@@ -400,7 +373,6 @@ public class SkillTree {
             System.out.println("Shield broken!");
             return Math.max(0, remainingDamage);
         }
-
         return 0;
     }
 
@@ -429,7 +401,7 @@ public class SkillTree {
         System.out.println("Skill tree reset");
     }
 
-    // ===== GETTER METHODS =====
+
     public SkillNode getNode(String id) { return nodes.get(id); }
     public Map<String, SkillNode> getAllNodes() { return nodes; }
     public Map<String, SkillNode> getUnlockedNodes() {
@@ -442,7 +414,6 @@ public class SkillTree {
         return unlocked;
     }
 
-    // Skill cooldown getters
     public float getQCooldown() { return qCooldownTimer; }
     public float getECooldown() { return eCooldownTimer; }
     public float getRCooldown() { return rCooldownTimer; }
@@ -465,30 +436,26 @@ public class SkillTree {
         return Math.min(1.0f, rCooldownTimer / node.skillCooldown);
     }
 
-    // Get specific skill nodes
     public SkillNode getQSkill() { return getSkillByKey("Q"); }
     public SkillNode getESkill() { return getSkillByKey("E"); }
     public SkillNode getRSkill() { return getSkillByKey("R"); }
 
-    // Check skill availability
     public boolean hasQSkill() { return getQSkill() != null; }
     public boolean hasESkill() { return getESkill() != null; }
     public boolean hasRSkill() { return getRSkill() != null; }
 
-    // Total bonuses
     public float getTotalHealthBonus() { return totalHealthBonus; }
     public float getTotalAttackBonus() { return totalAttackBonus; }
     public float getTotalSpeedBonus() { return totalSpeedBonus; }
-    public float getTotalDefenseBonus() { return 0; } // Not used
-    public float getTotalCritChance() { return 0; } // Not used
-    public float getTotalDodgeChance() { return 0; } // Not used
-    public float getTotalCritDamageBonus() { return 0; } // Not used
-    public float getTotalTrapResistance() { return 0; } // Not used
-    public float getTotalFogResistance() { return 0; } // Not used
-    public float getTotalItemEffectBonus() { return 0; } // Not used
-    public int getTotalExtraLives() { return 0; } // Not used
+    public float getTotalDefenseBonus() { return 0; }
+    public float getTotalCritChance() { return 0; }
+    public float getTotalDodgeChance() { return 0; }
+    public float getTotalCritDamageBonus() { return 0; }
+    public float getTotalTrapResistance() { return 0; }
+    public float getTotalFogResistance() { return 0; }
+    public float getTotalItemEffectBonus() { return 0; }
+    public int getTotalExtraLives() { return 0; }
 
-    // Special abilities
     public boolean hasDoubleJump() { return hasDoubleJump; }
     public boolean hasDash() { return hasDash; }
     public boolean hasFireResistance() { return hasFireResistance; }
@@ -544,17 +511,11 @@ public class SkillTree {
         }
     }
 
-    // ==========================================
-    // 🔥 新增：用于存档和读档的方法
-    // ==========================================
-
     /**
-     * 获取所有已解锁技能的 ID 列表 (用于存档)
+     * Obtain the list of IDs for all unlocked skills (for saving progress).
      */
     public java.util.List<String> getUnlockedSkillIds() {
         java.util.List<String> ids = new java.util.ArrayList<>();
-        // 遍历所有技能节点，如果已解锁，就记下它的 ID
-        // getAllNodes() 是你已经有的方法
         for (SkillNode node : getAllNodes().values()) {
             if (node.unlocked) {
                 ids.add(node.id);
@@ -563,25 +524,16 @@ public class SkillTree {
         return ids;
     }
 
-    /**
-     * 强制解锁技能 (用于读档，不扣点数，不检查前置条件)
-     * 这个方法会在加载游戏时被调用，用于恢复玩家之前学的技能
-     */
+
     public void forceUnlock(String skillId) {
-        // 从 Map 中找到这个技能
         SkillNode node = getAllNodes().get(skillId);
         if (node != null) {
             node.unlocked = true;
 
-            // 🔥 重要：解锁后不仅要把 unlocked 设为 true，还要把属性加成加上去！
             applySkillBonuses(node);
             activateSpecialAbilities(node);
 
             System.out.println("Restored skill from save: " + node.name);
         }
     }
-
-
-
-
 }

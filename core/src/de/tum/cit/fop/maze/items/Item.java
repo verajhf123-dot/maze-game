@@ -13,7 +13,6 @@ public abstract class Item {
     protected Texture texture;
     protected Color fallbackColor;
 
-    // 不要 static final 直接 new
     private static Texture pixel;
 
     protected Item(float x, float y, float size, String texturePath, Color fallbackColor) {
@@ -30,7 +29,6 @@ public abstract class Item {
         }
 
 
-        // 加载物品图片（可选）
         if (texturePath != null && Gdx.files.internal(texturePath).exists()) {
             texture = new Texture(texturePath);
         }
@@ -42,21 +40,16 @@ public abstract class Item {
         if (texture != null) {
             System.out.println("Loaded texture size: " + texture.getWidth() + "x" + texture.getHeight());
         }
-
-
-
     }
 
     public void render(SpriteBatch batch) {
         System.out.println("Rendering item at " + bounds.x + "," + bounds.y);
 
 
-        // ⭐ 这里修改为安全加载 pixel
         if (pixel == null) {
             if (Gdx.files.internal("pixel.png").exists()) {
                 pixel = new Texture("pixel.png");
             } else {
-                // 文件不存在就生成 1x1 白色纹理
                 Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
                 pixmap.setColor(Color.WHITE);
                 pixmap.fill();
@@ -88,7 +81,4 @@ public abstract class Item {
     public float getY() {
         return bounds.y;
     }
-
-
-
 }

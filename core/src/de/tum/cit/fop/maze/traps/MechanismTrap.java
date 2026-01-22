@@ -11,16 +11,11 @@ public class MechanismTrap extends Trap {
     private boolean isAnimating;
     private float animTimer;
     private float animDuration = 0.3f;
-
-
-
-
     private static final float TRAP_SIZE = 32f;
     public MechanismTrap(float x, float y) {
         super(x, y, TRAP_SIZE, TRAP_SIZE);
         this.cooldown = 4f;
         this.activationDelay = 0.3f;
-
         loadTextures();
     }
 
@@ -39,8 +34,8 @@ public class MechanismTrap extends Trap {
     public void render(SpriteBatch batch) {
         float drawX = bounds.x;
         float drawY = bounds.y;
-        float drawWidth = bounds.width;   // 使用 bounds 的宽度
-        float drawHeight = bounds.height; // 使用 bounds 的高度
+        float drawWidth = bounds.width;
+        float drawHeight = bounds.height;
 
         if (isAnimating) {
             boolean showActive = ((int)(animTimer / 0.1f)) % 2 == 0;
@@ -56,15 +51,12 @@ public class MechanismTrap extends Trap {
         }
     }
 
-    // 修改后的 activate 方法
     @Override
     public void activate(Player player) {
         int currentLevel = (int) player.getStats().getExpSystem().getCurrentLevel();
         float trapDamage = 10 + (currentLevel * 5);
 
         player.takeDamage(trapDamage);
-
-        // 触发简单动画
         isAnimating = true;
         animTimer = 0;
 
@@ -94,7 +86,7 @@ public class MechanismTrap extends Trap {
 
     @Override
     public boolean hasTexture() {
-        return true;  // 告诉 GameScreen 我们有贴图，不要绘制色块
+        return true;
     }
 
     public void dispose() {

@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class QiongQi extends Enemy {
-    // 动画相关
     private enum Direction {
         UP, DOWN, LEFT, RIGHT
     }
@@ -26,12 +25,10 @@ public class QiongQi extends Enemy {
     private float stateTime = 0f;
     private float animationSpeed = 0.15f;
 
-    // 攻击相关
     private boolean isAttacking = false;
     private float attackCooldown = 1.2f;
     private float currentAttackCooldown = 0f;
 
-    // 冲撞能力
     private boolean isCharging = false;
     private float chargeSpeed = 250f;
     private float normalSpeed;
@@ -44,7 +41,6 @@ public class QiongQi extends Enemy {
     public QiongQi(float x, float y) {
         super(x, y, 30, 30);
 
-        // 敌人数值
         this.normalSpeed = 70f;
         this.speed = normalSpeed;
         this.maxHealth = 100f;
@@ -53,7 +49,6 @@ public class QiongQi extends Enemy {
         this.attackRange = 45f;
         this.detectionRange = 180f;
 
-        // 初始化动画系统
         initializeAnimations();
 
         System.out.println("QiongQi initialized (3 frames per direction)");
@@ -64,11 +59,10 @@ public class QiongQi extends Enemy {
         idleFrames = new HashMap<>();
 
         try {
-            // 加载每个方向的行走动画（3帧）
             TextureRegion[] downFrames = loadDirectionFrames("enemies/qiongqi/down_", 3);
             if (downFrames[0] != null) {
                 walkAnimations.put(Direction.DOWN, new Animation<>(animationSpeed, downFrames));
-                idleFrames.put(Direction.DOWN, downFrames[1]); // 使用第二帧作为待机
+                idleFrames.put(Direction.DOWN, downFrames[1]);
             }
 
             TextureRegion[] upFrames = loadDirectionFrames("enemies/qiongqi/up_", 3);
@@ -76,6 +70,7 @@ public class QiongQi extends Enemy {
                 walkAnimations.put(Direction.UP, new Animation<>(animationSpeed, upFrames));
                 idleFrames.put(Direction.UP, upFrames[1]);
             }
+
 
             TextureRegion[] leftFrames = loadDirectionFrames("enemies/qiongqi/left_", 3);
             if (leftFrames[0] != null) {
@@ -87,18 +82,10 @@ public class QiongQi extends Enemy {
             if (rightFrames[0] != null) {
                 walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, rightFrames));
                 idleFrames.put(Direction.RIGHT, rightFrames[1]);
-            } else if (leftFrames[0] != null) {
-                // 如果没有向右图片，镜像向左图片
-                TextureRegion[] mirroredFrames = mirrorFrames(leftFrames);
-                walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, mirroredFrames));
-                idleFrames.put(Direction.RIGHT, mirroredFrames[1]);
             }
 
-            System.out.println("QiongQi animations loaded successfully (3 frames per direction)");
-
         } catch (Exception e) {
-            System.out.println("Error loading QiongQi animations: " + e.getMessage());
-            loadFallbackTexture();
+            e.printStackTrace();
         }
     }
 
@@ -156,53 +143,44 @@ public class QiongQi extends Enemy {
     }
 
     @Override
-    public void update(float delta, List<Wall> walls) { // 增加 List<Wall> 参数
+    public void update(float delta, List<Wall> walls) {
         super.update(delta, walls);
 
-        // 更新动画计时器
         stateTime += delta;
 
-        // 更新攻击冷却
         if (currentAttackCooldown > 0) {
             currentAttackCooldown -= delta;
         }
 
-        // 更新冲撞冷却
         if (currentChargeCooldown > 0) {
             currentChargeCooldown -= delta;
         }
 
-        // 更新冲撞状态
         if (isCharging) {
             chargeTimer -= delta;
             if (chargeTimer <= 0) {
                 endCharge();
             } else {
-                // 冲撞期间保持方向
                 performCharge(delta);
                 return;
             }
         }
 
-        // 更新移动方向
         updateDirection();
 
-        // 更新目标玩家
         if (targetPlayer != null) {
             Vector2 playerPos = targetPlayer.getPosition();
             Vector2 qiongqiPos = getPosition();
             float distance = qiongqiPos.dst(playerPos);
 
-            // 检查是否在攻击范围内且可以攻击
             if (distance <= attackRange && currentAttackCooldown <= 0) {
                 performMeleeAttack(targetPlayer);
                 isAttacking = true;
                 currentAttackCooldown = attackCooldown;
             }
 
-            // 检查是否可以使用冲撞
             if (!isCharging && currentChargeCooldown <= 0 && distance < 100f) {
-                if (Math.random() < 0.3f) { // 30%几率发动冲撞
+                if (Math.random() < 0.3f) {
                     startCharge(playerPos);
                 }
             }
@@ -245,30 +223,27 @@ public class QiongQi extends Enemy {
         }
 
         if (currentFrame != null) {
-            // 固定大小，不随状态变化
-            float drawWidth = 60f;  // 固定宽度
-            float drawHeight = 60f; // 固定高度
+            float drawWidth = 60f;
+            float drawHeight = 60f;
 
-            // 计算中心偏移
             float offsetX = (bounds.width - drawWidth) / 2;
             float offsetY = (bounds.height - drawHeight) / 2;
 
-            // 充电时的视觉特效（颜色变化而不是大小变化）
             if (isCharging) {
                 batch.setColor(1f, 0.8f, 0.8f, 1f);
                 batch.draw(currentFrame,
                         position.x + offsetX,
                         position.y + offsetY,
-                        drawWidth,  // 强制宽度
-                        drawHeight  // 强制高度
+                        drawWidth,
+                        drawHeight
                 );
                 batch.setColor(1f, 1f, 1f, 1f);
             } else {
                 batch.draw(currentFrame,
                         position.x + offsetX,
                         position.y + offsetY,
-                        drawWidth,  // 强制宽度
-                        drawHeight  // 强制高度
+                        drawWidth,
+                        drawHeight
                 );
             }
         }
@@ -361,7 +336,6 @@ public class QiongQi extends Enemy {
         System.out.println("QiongQi has been defeated!");
     }
 
-    // 添加缺失的方法
     public int getCurrentForm() {
         return 1;
     }

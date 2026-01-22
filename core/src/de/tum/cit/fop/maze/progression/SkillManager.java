@@ -13,23 +13,19 @@ public class SkillManager {
     private SkillTree skillTree;
     private GameScreen gameScreen;
 
-    // Dash cooldown
     private float dashCooldown = 2.0f;
     private float currentDashCooldown = 0f;
     private boolean isDashing = false;
     private float dashDuration = 0.3f;
     private float dashTimer = 0f;
 
-    // Double jump
     private int remainingDoubleJumps = 0;
     private boolean canDoubleJump = false;
 
-    // Skill effect timer
     private float skillEffectTimer = 0f;
     private String currentSkillEffect = "";
     private Vector2 skillEffectPosition = new Vector2();
 
-    // === 🔥 1. 新增变量：防止每帧重复造成伤害 ===
     private boolean hasDealtDamage = false;
 
     public SkillManager(Player player, PlayerStats stats) {
@@ -43,7 +39,6 @@ public class SkillManager {
     }
 
     public void update(float delta) {
-        // Update dash cooldown
         if (currentDashCooldown > 0) {
             currentDashCooldown -= delta;
         }
@@ -55,18 +50,15 @@ public class SkillManager {
             }
         }
 
-        // Update skill tree cooldowns
         if (skillTree != null) {
             skillTree.update(delta);
         }
 
-        // Update skill effect
         if (skillEffectTimer > 0) {
             skillEffectTimer -= delta;
         }
     }
 
-    // ===== Q/E/R SKILL METHODS =====
 
     public boolean useSkill(String key) {
         if (skillTree == null) {
@@ -76,16 +68,12 @@ public class SkillManager {
 
         SkillTree.SkillNode skill = skillTree.useSkill(key);
         if (skill == null) {
-            // System.err.println("Cannot use skill with key: " + key); // 注释掉，防止没学技能时一直报错
             return false;
         }
 
-        // Execute skill effect based on type
         boolean success = false;
         switch (skill.skillType) {
             case "fireball":
-                // 我们在 GameScreen 里处理生成火球，这里只返回 true 表示技能释放成功（进入冷却）
-                // 具体的发射逻辑移交给了 GameScreen
                 success = true;
                 break;
 
@@ -107,15 +95,12 @@ public class SkillManager {
         }
 
         if (success) {
-            // Record skill effect for visual feedback
             currentSkillEffect = skill.skillType;
-            skillEffectTimer = 0.5f; // 特效持续 0.5 秒
+            skillEffectTimer = 0.5f;
 
-            // === 🔥 2. 重置伤害标记：新技能还没造成过伤害 ===
             hasDealtDamage = false;
 
             if (player != null) {
-                // 记录技能释放时的位置（火球从这里发射）
                 skillEffectPosition.set(player.getPosition());
             }
         }
@@ -126,9 +111,8 @@ public class SkillManager {
     /**
      * Q Skill - Fireball
      */
-    public float calculateFireballDamage(float baseDamage) { // 改名并将返回值改为 float
+    public float calculateFireballDamage(float baseDamage) {
         if (player == null) return 0f;
-        // 计算最终伤害（包含天赋加成）
         return baseDamage * (1 + skillTree.getTotalAttackBonus() * 0.1f);
     }
 
@@ -138,11 +122,9 @@ public class SkillManager {
     private boolean castHeal(float healing) {
         if (player == null || stats == null) return false;
 
-        System.out.println("💚 Casting Healing! Base healing: " + healing);
+        System.out.println("Casting Healing! Base healing: " + healing);
 
-        // 治疗不需要 GameScreen 检测碰撞，所以直接在这里生效
-        float actualHealing = healing * (1 + skillTree.getTotalHealthBonus() * 0.02f);
-        stats.heal((int)actualHealing);
+        stats.heal((int)healing);
 
         return true;
     }
@@ -152,11 +134,7 @@ public class SkillManager {
      */
     private boolean castLightning(float damage) {
         if (player == null) return false;
-        System.out.println("⚡ Casting Lightning Chain!");
-
-        // === 🔥 3. 移除直接伤害逻辑 ===
-        // 同样，闪电的 AOE 伤害现在由 GameScreen 的循环来判断。
-        // 这样可以确保视觉特效和伤害发生的位置是一致的。
+        System.out.println("Casting Lightning Chain!");
 
         return true;
     }
@@ -165,12 +143,10 @@ public class SkillManager {
      * Shield Skill
      */
     private boolean castShield(float shieldValue, float duration) {
-        System.out.println("🛡️ Activating Energy Shield! Shield: " + shieldValue + ", Duration: " + duration + "s");
+        System.out.println("Activating Energy Shield! Shield: " + shieldValue + ", Duration: " + duration + "s");
         skillTree.activateShield(shieldValue, duration);
         return true;
     }
-
-    // ===== SPECIAL ABILITIES =====
 
     public boolean canDash() {
         return skillTree.hasDash() && currentDashCooldown <= 0;
@@ -184,9 +160,6 @@ public class SkillManager {
         currentDashCooldown = dashCooldown;
 
         float dashSpeed = 500f * (1 + skillTree.getTotalSpeedBonus());
-        // System.out.println("💨 Dashing with speed: " + dashSpeed);
-
-        // Apply dash effect
         currentSkillEffect = "dash";
         skillEffectTimer = 0.5f;
     }
@@ -199,7 +172,6 @@ public class SkillManager {
         if (!canDoubleJump()) return;
 
         remainingDoubleJumps--;
-        // Apply double jump effect
         currentSkillEffect = "jump";
         skillEffectTimer = 0.3f;
     }
@@ -209,8 +181,6 @@ public class SkillManager {
             remainingDoubleJumps = 1;
         }
     }
-
-    // ===== SKILL BONUS APPLICATIONS =====
 
     public float applySkillBonusesToDamage(float baseDamage) {
         float modifiedDamage = baseDamage;
@@ -223,9 +193,7 @@ public class SkillManager {
     }
 
     public float applySkillBonusesToHealing(float baseHealing) {
-        float modifiedHealing = baseHealing;
-        modifiedHealing *= (1 + skillTree.getTotalHealthBonus() * 0.02f);
-        return modifiedHealing;
+        return baseHealing;
     }
 
     public float applyTrapResistance(float trapDamage) {
@@ -252,12 +220,8 @@ public class SkillManager {
         }
     }
 
-    // ===== GETTER METHODS =====
-
-    // === 🔥 4. 新增 Getter/Setter 供 GameScreen 调用 ===
     public boolean hasDealtDamage() { return hasDealtDamage; }
     public void setHasDealtDamage(boolean val) { this.hasDealtDamage = val; }
-    // =======================================================
 
     public SkillTree getSkillTree() { return skillTree; }
 
@@ -273,7 +237,7 @@ public class SkillManager {
 
     public float getDashCooldown() { return currentDashCooldown; }
 
-    // UI Helpers
+
     public float getQCooldown() { return skillTree != null ? skillTree.getQCooldown() : 0; }
     public float getECooldown() { return skillTree != null ? skillTree.getECooldown() : 0; }
     public float getRCooldown() { return skillTree != null ? skillTree.getRCooldown() : 0; }
@@ -288,11 +252,10 @@ public class SkillManager {
 
     public String getSkillSummary() {
         if (skillTree == null) return "Skill system not initialized";
-        return "Skills Active"; // 简化返回，原逻辑没问题
+        return "Skills Active";
     }
 
     public boolean canUseQSkill() {
-        // 调用 SkillTree 的判断逻辑
         return skillTree != null && skillTree.canUseSkill("Q");
     }
 

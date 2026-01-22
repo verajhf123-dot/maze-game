@@ -34,7 +34,6 @@ public class PlayerStats {
         expSystem = new ExperienceSystem();
         skillTree = new SkillTree(expSystem);
         skillManager = null;
-
         updateStatsFromLevel();
     }
 
@@ -48,24 +47,27 @@ public class PlayerStats {
     public SkillTree getSkillTree() { return skillTree; }
 
     private void updateStatsFromLevel() {
-        // ▼▼▼ 修改：不再获取 expSystem.getHealthBonus()，只看技能树加成 ▼▼▼
         float skillHealthBonus = 0;
         if (skillTree != null) {
             skillHealthBonus = skillTree.getTotalHealthBonus();
         }
 
-        maxHealth = baseMaxHealth + (int)skillHealthBonus;
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        int newMaxHealth = baseMaxHealth + (int)skillHealthBonus;
+
+        if (newMaxHealth != maxHealth) {
+            maxHealth = newMaxHealth;
+        } else {
+            maxHealth = newMaxHealth;
+        }
 
         if (skillTree != null) {
             canDoubleJump = skillTree.hasDoubleJump();
             canDash = skillTree.hasDash();
             fireResistance = skillTree.hasFireResistance();
             poisonResistance = skillTree.hasPoisonResistance();
+            criticalChance = skillTree.getTotalCritChance();
+            dodgeChance = skillTree.getTotalDodgeChance();
         }
-
-        criticalChance = skillTree != null ? skillTree.getTotalCritChance() : 0.0f;
-        dodgeChance = skillTree != null ? skillTree.getTotalDodgeChance() : 0.0f;
 
         if (health > maxHealth) {
             health = maxHealth;
@@ -78,40 +80,30 @@ public class PlayerStats {
         return levelDefense + skillDefense;
     }
 
-    // === 核心逻辑：受伤处理 (护盾/闪避/抗性) ===
     public void takeDamage(float damage, String damageType) {
-        // 1. 闪避
         if (skillManager != null && skillManager.hasSpecialAbility("dodge") && Math.random() < dodgeChance) {
             System.out.println("Dodged!");
             return;
         }
 
         float finalDamage = damage;
-        // 2. 抗性
         if (damageType.equals(DAMAGE_TYPE_FIRE) && fireResistance) finalDamage *= 0.5f;
         if (damageType.equals(DAMAGE_TYPE_POISON) && poisonResistance) finalDamage *= 0.5f;
 
-        // 3. 防御
         finalDamage -= calculateDefenseBonus() * 0.5f;
         if (finalDamage < 1) finalDamage = 1;
 
-        // 4. 🔥 护盾 (Shield) 🔥
         if (skillTree != null && skillTree.hasShieldActive()) {
             finalDamage = skillTree.applyShield(finalDamage);
         }
 
-        // 5. 其他 Buff
         if (skillManager != null) {
             finalDamage = skillManager.applyTrapResistance(finalDamage);
         }
 
-        // 6. 最终结算
         if (finalDamage > 0) {
             health -= (int) finalDamage;
             if (health < 0) health = 0;
-            System.out.println("Damage taken: " + (int)finalDamage + ". Current HP: " + health);
-        } else {
-            System.out.println("Damage blocked by Shield!");
         }
     }
 
@@ -119,10 +111,8 @@ public class PlayerStats {
 
     public float getActualAttackDamage() {
         float baseDamage = 10f;
-        // float levelBonus = expSystem.getAttackBonus(); // <--- 删掉这行
         float skillBonus = skillTree != null ? skillTree.getTotalAttackBonus() : 0;
-
-        float totalDamage = baseDamage + skillBonus; // <--- 这里不加 levelBonus
+        float totalDamage = baseDamage + skillBonus;
 
         if (skillManager != null) {
             totalDamage = skillManager.applySkillBonusesToDamage(totalDamage);
@@ -161,13 +151,12 @@ public class PlayerStats {
         health = maxHealth;
     }
 
-    // === 核心逻辑：更新时钟 ===
     public void update(float delta) {
         if (skillTree != null) skillTree.update(delta);
         if (skillManager != null) skillManager.update(delta);
+        updateStatsFromLevel();
     }
 
-    // Getters/Setters 保持不变
     public int getScore() { return score; }
     public void addScore(int amount) { this.score += amount; }
     public void setScore(int score) { this.score = score; }

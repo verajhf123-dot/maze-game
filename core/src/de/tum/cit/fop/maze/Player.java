@@ -48,12 +48,12 @@ public class Player implements CollidableEntity {
     private static final float ATTACK_COOLDOWN = 0.5f;
 
     private Rectangle attackHitbox;
-    private int facingDirection = 0; // 0=Down, 1=Right, 2=Up, 3=Left
+    private int facingDirection = 0;
 
     public Player(float x, float y, PlayerStats inheritedStats) {
         this.texture = new Texture("character.png");
-        TextureRegion[][] tmpWalk = TextureRegion.split(texture, 16, 32);
-        TextureRegion[][] tmpAttack = TextureRegion.split(texture, 34, 32);
+        TextureRegion[][] tmpWalk = TextureRegion.split(texture, 64, 128);
+        TextureRegion[][] tmpAttack = TextureRegion.split(texture, 136, 128);
 
         if (tmpWalk.length >= 4) {
             walkDownAnim  = new Animation<>(0.15f, tmpWalk[0][0], tmpWalk[0][1], tmpWalk[0][2]);
@@ -94,7 +94,6 @@ public class Player implements CollidableEntity {
     }
 
     public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run, List<Wall> walls) {
-        // === 1. 关键：更新 Stats，让技能冷却时间走动 ===
         if (stats != null) {
             stats.update(delta);
         }
@@ -119,12 +118,10 @@ public class Player implements CollidableEntity {
             if (attackTimer <= 0) isAttacking = false;
         }
 
-        // === 2. 关键：速度加成逻辑 ===
         float totalSpeedMultiplier = 1.0f;
         if (run) totalSpeedMultiplier *= runMultiplier;
         totalSpeedMultiplier *= this.speedBuffMultiplier;
 
-        // 读取技能树的速度加成
         if (stats != null && stats.getSkillTree() != null) {
             totalSpeedMultiplier += stats.getSkillTree().getTotalSpeedBonus();
         }
@@ -187,7 +184,6 @@ public class Player implements CollidableEntity {
         if (position.x < 0) position.x = 0;
         if (position.y < 0) position.y = 0;
         hitbox.setPosition(position.x, position.y);
-
         updateAttackHitboxPosition();
     }
 
@@ -213,8 +209,8 @@ public class Player implements CollidableEntity {
         if (damageColorTimer > 0) batch.setColor(Color.RED);
         else batch.setColor(Color.WHITE);
 
-        float drawWidth = currentFrame.getRegionWidth() * 2f;
-        float drawHeight = currentFrame.getRegionHeight() * 2f;
+        float drawWidth = currentFrame.getRegionWidth() * 0.5f;
+        float drawHeight = currentFrame.getRegionHeight() * 0.5f;
         float drawX = position.x - (drawWidth - hitbox.width) / 2f;
         float drawY = position.y;
 
@@ -222,22 +218,13 @@ public class Player implements CollidableEntity {
         batch.setColor(Color.WHITE);
     }
 
-    // 在 Player.java 中修改这个方法
-
     public void takeDamage(float dmg) {
         if (getHealth() <= 0) return;
         if (isInvincible) return;
         if (damageCooldownTimer > 0f) return;
-
-        // === 修改后 (正确) ===
-        // 显式传递 "物理伤害" 类型
         if (stats != null) {
             int oldHealth = stats.getHealth();
-
-            // ▼▼▼ 重点修改了这一行 ▼▼▼
             stats.takeDamage(dmg, PlayerStats.DAMAGE_TYPE_PHYSICAL);
-
-            // 只有真的掉血了才硬直
             if (stats.getHealth() < oldHealth) {
                 isHurt = true;
                 hurtTimer = 0.25f;

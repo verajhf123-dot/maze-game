@@ -10,19 +10,15 @@ public class SaveManager {
 
     public static void saveGame(int levelMapIndex, PlayerStats stats) {
         Json json = new Json();
-        SaveData data = new SaveData(); // 创建空的 SaveData 容器
+        SaveData data = new SaveData();
 
-        // 1. 填充基础地图信息
         data.setCurrentLevelMap(levelMapIndex);
 
-        // 2. 填充玩家 RPG 属性 (从 stats 提取)
         if (stats != null) {
-            // 血量
             data.setCurrentHealth((int) stats.getHealth());
             data.setMaxHealth((int) stats.getMaxHealth());
-            data.setHasKey(stats.hasKey()); // 记得保存钥匙状态
+            data.setHasKey(stats.hasKey());
 
-            // 经验值系统
             if (stats.getExpSystem() != null) {
                 data.setCurrentExp(stats.getExpSystem().getCurrentExp());
                 data.setCharLevel(stats.getExpSystem().getCurrentLevel());
@@ -45,7 +41,7 @@ public class SaveManager {
     public static SaveData loadGame() {
         FileHandle file = Gdx.files.local(SAVE_FILE);
         if (!file.exists()) {
-            return null; // 没有存档
+            return null;
         }
 
         Json json = new Json();
@@ -56,7 +52,6 @@ public class SaveManager {
             return null;
         }
     }
-
     public static boolean hasSaveFile() {
         return Gdx.files.local(SAVE_FILE).exists();
     }
