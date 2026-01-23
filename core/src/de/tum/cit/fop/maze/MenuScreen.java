@@ -118,7 +118,7 @@ public class MenuScreen implements Screen {
 
     private void showMainMenu() {
         table.clear();
-        table.add(new Label("Maze Runner", game.getSkin(), "title")).padTop(60).padBottom(20).row();
+        table.add(new Label("Spirit Breaker", game.getSkin(), "title")).padTop(60).padBottom(20).row();
 
         if (SaveManager.hasSaveFile()) {
             addMenuButton("Continued", new ChangeListener() {
