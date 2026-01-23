@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.actions.AddAction;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -63,17 +64,17 @@ public class GameScreen implements Screen {
     /**  debug lines and solid shapes  */
     private ShapeRenderer shapeRenderer;
     /** access global resources. */
-    private final MazeRunnerGame game;
+    private  MazeRunnerGame game;
 
     // =================================================================
     // Build Map and Environment.
     // =================================================================
     /** draw */
-    private float mapPixelWidth;
-    private float mapPixelHeight;
+    private float mapWidth;
+    private float mapHeight;
     /** logical */
-    private int mapWidthInTiles;
-    private int mapHeightInTiles;
+    private int mapWidth1;
+    private int mapHeight1;
 
     /** List of wall objects for collision detection. */
     private List<Wall> walls;
@@ -86,8 +87,8 @@ public class GameScreen implements Screen {
 
     private boolean gameWon = false;
     /** Textures for floor*/
-    private Texture[] floorVariants;
-    private byte[][] floorPick;
+    private Texture[] floorTexture;
+    private int[][] floorMap;
 
     // =================================================================
     // Game Entities (Player, Enemies, Items)
@@ -113,7 +114,7 @@ public class GameScreen implements Screen {
     /** Binary map for collision*/
     private int[][] collisionMap;
     /** Boolean grid for AI movement checks. */
-    private boolean[][] walkableGrid;
+    private boolean[][] canWalk;
     /** current level*/
     private int levelNumber;
     /** current map properties file. */
@@ -142,7 +143,7 @@ public class GameScreen implements Screen {
     private boolean isInitialized = false;
     private Texture buttonBg;
     /** Unify the ButtonStyle */
-    private TextButton.TextButtonStyle commonButtonStyle;
+    private TextButton.TextButtonStyle ButtonStyle;
 
     // =================================================================
     // Assets: Textures & Audio
@@ -161,7 +162,7 @@ public class GameScreen implements Screen {
     private Texture keyIconTexture;
     private Texture hudFrameTexture;
     private Animation<TextureRegion> fireballAnimation;
-    //Position to check and find the Positions of the exit and entry;
+    //define Position to check and find the Positions of the exit and entry;
     private Vector2 exitPosition;
     private Vector2 entryPosition;
     // Audio
@@ -179,7 +180,7 @@ public class GameScreen implements Screen {
     private com.badlogic.gdx.audio.Sound swingSound;
     //Timers
     private float fogSoundTimer = 0f;
-    private float spawnInvulnTimer = 0f;
+    private float spawnTimer = 0f;
     private static final float SPAWN_INVULN_DURATION = 1.0f;
 
     // =================================================================
@@ -195,21 +196,48 @@ public class GameScreen implements Screen {
         this(game, 1,null);
     }
 
+    /**
+     * GameScreen with specific level and stats.
+     *
+     * @param game  main game class.
+     * @param levelNumber load level to the game;.
+     * @param prevStats Player stats from previous.
+     */
+
     public GameScreen(MazeRunnerGame game, int levelNumber, PlayerStats prevStats) {
         this.game = game;
         this.levelNumber = levelNumber;
         this.currentMapPath = "maps/level-" + levelNumber + ".properties";
         this.previousStats = prevStats;
-
+//when level change, reset the key.initial it to be 0 ;
         if (this.previousStats != null) {
             this.previousStats.setBonusKey(0);
             this.previousStats.setHasKey(false);
         }
-        initCommon();
+        init();
     }
 
-    private void initCommon() {
+    /**
+     * Constructor for GameScreen with a specific map file path.
+     *
+     * @param game The main game class.
+     * @param mapFilePath to the map file.
+     */
+
+    public GameScreen(MazeRunnerGame game, String mapFilePath) {
+        this.game = game;
+        this.levelNumber = 0;
+        this.currentMapPath = mapFilePath;
+        init();
+    }
+
+    /**
+     * Initializes
+     */
+
+    private void init() {
         settingsManager = new SettingsManager();
+        // camera;
         camera = new OrthographicCamera();
         camera.setToOrtho(false);
         camera.position.set(240, 160, 0);
@@ -222,38 +250,35 @@ public class GameScreen implements Screen {
         uiStage = new Stage(new ScreenViewport(), game.getSpriteBatch());
         currentState = GameState.RUNNING;
 
-        createButtonStyle();
+        ButtonStyle();
         createPauseMenu();
     }
 
-    public GameScreen(MazeRunnerGame game, String mapFilePath) {
-        this.game = game;
-        this.levelNumber = 0;
-        this.currentMapPath = mapFilePath;
-        initCommon();
-    }
+    /**
+     * Creates the button style to make decorate button more easily.
+     */
 
-    private void createButtonStyle() {
-        commonButtonStyle = new TextButton.TextButtonStyle();
+
+    private void ButtonStyle() {
+        ButtonStyle = new TextButton.TextButtonStyle();
         BitmapFont baseFont = game.getSkin().getFont("font");
         if (baseFont == null) baseFont = new BitmapFont();
-        commonButtonStyle.font = baseFont;
-        commonButtonStyle.fontColor = Color.WHITE;
-        commonButtonStyle.downFontColor = Color.LIGHT_GRAY;
+        ButtonStyle.font = baseFont;
+        ButtonStyle.fontColor = Color.WHITE;
+        ButtonStyle.downFontColor = Color.LIGHT_GRAY;
 
-        try {
-            if (buttonBg == null) {
-                buttonBg = new Texture(Gdx.files.internal("button2.png"));
-            }
-            TextureRegionDrawable drawable = new TextureRegionDrawable(buttonBg);
-            commonButtonStyle.up = drawable;
-            commonButtonStyle.down = drawable.tint(Color.LIGHT_GRAY);
-        } catch (Exception e) {
-            Gdx.app.log("GameScreen", "Button texture error: " + e.getMessage());
-            commonButtonStyle = game.getSkin().get(TextButton.TextButtonStyle.class);
-            commonButtonStyle.fontColor = Color.BLACK;
+        if (buttonBg == null) {
+            buttonBg = new Texture(Gdx.files.internal("button2.png"));
         }
+        TextureRegionDrawable drawable = new TextureRegionDrawable(buttonBg);
+        // to show the press effect.
+        ButtonStyle.up = drawable;
+        ButtonStyle.down = drawable.tint(Color.LIGHT_GRAY);
+
     }
+    /**
+     * pause menu UI
+     */
 
     private void createPauseMenu() {
         pauseMenuTable = new Table();
@@ -261,19 +286,21 @@ public class GameScreen implements Screen {
         pauseMenuTable.center();
         pauseMenuTable.setVisible(false);
 
-        Label pauseLable = new Label("Game PAUSED", game.getSkin(), "title");
+        Label pauseLable = new Label("GAME PAUSED", game.getSkin(), "title");
         pauseMenuTable.add(pauseLable).padBottom(40).row();
 
-        TextButton resumeButton = new TextButton("Resume", commonButtonStyle);
+        // Resume Button
+        TextButton resumeButton = new TextButton("Resume", ButtonStyle);
         resumeButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
                 if (buttonSound != null) buttonSound.play();
-                togglePause();
+                toggle();
             }
         });
         pauseMenuTable.add(resumeButton).width(350).height(80).padBottom(15).row();
 
-        TextButton musicButton = new TextButton("Music:ON/OFF", commonButtonStyle);
+        // Music Button(when press it could turn on the background Music).
+        TextButton musicButton = new TextButton("Music:ON/OFF", ButtonStyle);
         musicButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
                 if (buttonSound != null) buttonSound.play();
@@ -285,8 +312,8 @@ public class GameScreen implements Screen {
             }
         });
         pauseMenuTable.add(musicButton).width(350).height(80).padBottom(15).row();
-
-        TextButton quitButton = new TextButton("Exit to Menu", commonButtonStyle);
+        //Quit Button(back to screen menu)
+        TextButton quitButton = new TextButton("Exit to Menu", ButtonStyle);
         quitButton.addListener(new ChangeListener() {
             public void changed(ChangeEvent event, Actor actor) {
                 if (buttonSound != null) buttonSound.play();
@@ -301,23 +328,37 @@ public class GameScreen implements Screen {
         uiStage.addActor(pauseMenuTable);
     }
 
-    private void togglePause() {
+    /**
+     * Toggle the game,switch run to pause.
+     */
+
+    private void toggle() {
         if (currentState == GameState.RUNNING) {
             currentState = GameState.PAUSED;
             pauseMenuTable.setVisible(true);
             Gdx.input.setInputProcessor(uiStage);
+            // at the same time, change music
             if (mapMusic != null) mapMusic.pause();
             if (pauseMusic != null) pauseMusic.play();
         } else {
             currentState = GameState.RUNNING;
             pauseMenuTable.setVisible(false);
+
             Gdx.input.setInputProcessor(null);
+
             if (pauseMusic != null) pauseMusic.stop();
             if (mapMusic != null) mapMusic.play();
         }
     }
 
+    /**
+     *  Handles input,update ,and draws the screen.
+     *
+     * @param delta  loop and speed:second
+     */
+
     public void render(float delta) {
+        // Toggle
         if (Gdx.input.isKeyJustPressed(Input.Keys.GRAVE)) {
             console.toggleConsole();
             if (console.isVisible()) {
@@ -331,18 +372,21 @@ public class GameScreen implements Screen {
             }
         }
 
+        // Escape Key;
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            togglePause();
+            toggle();
         }
 
+        // update game
         if (currentState == GameState.RUNNING && !console.isVisible()) {
             controller.update();
-            handleSkillInput();
+            skillInput();
 
+            //skill use
             if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) useSkill1();
             if (Gdx.input.isKeyJustPressed(Input.Keys.E)) useSkill2();
             if (Gdx.input.isKeyJustPressed(Input.Keys.R)) useSkill3();
-
+            //player attack
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
                 if (player != null) {
                     player.performAttack();
@@ -350,19 +394,31 @@ public class GameScreen implements Screen {
                 }
             }
 
+            // Zooming camera
             if (controller.zoomChange != 0) {
                 camera.zoom += controller.zoomChange;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.2f, 2.0f);
+                if (camera.zoom < 0.2f) {
+                    camera.zoom = 0.2f;
+                }
+                if (camera.zoom > 2.0f) {
+                    camera.zoom = 2.0f;
+                }
             }
 
+            //update , to avoid the music overlapping
             gameTime += delta;
-            if (spawnInvulnTimer > 0f) spawnInvulnTimer -= delta;
+            if (spawnTimer > 0f) spawnTimer -= delta;
             if (fogSoundTimer > 0) fogSoundTimer -= delta;
-
-            updateTraps(delta);
+            //update Entities
+            if (traps != null) {
+                for (int t = 0; t < traps.size; t++) {
+                    Trap currentTrap = traps.get(t);
+                    currentTrap.update(delta);
+                }
+            }
             updateEnemies(delta);
             updatePlayer(delta);
-
+            //update Projectiles.
             if (projectiles != null) {
                 for (int i = projectiles.size - 1; i >= 0; i--) {
                     Projectile p = projectiles.get(i);
@@ -372,7 +428,6 @@ public class GameScreen implements Screen {
                         projectiles.removeIndex(i);
                         continue;
                     }
-
                     if (p.getBounds().width < 40 && !p.isActive()) {
                         projectiles.removeIndex(i);
                     }
@@ -382,13 +437,14 @@ public class GameScreen implements Screen {
                 }
             }
 
+            // check Collisions and some interactions between player and item/enemy/....
             checkCollisions();
             checkTrapActivation();
             checkPlayerAttackHit();
             checkSkillCollisions(delta);
             updateKeys();
             updateItems();
-
+            //update SKill
             SkillManager skillManager = null;
             if (player != null && player.getStats() != null) {
                 skillManager = player.getStats().getSkillManager();
@@ -397,12 +453,7 @@ public class GameScreen implements Screen {
                 }
             }
 
-            String skillEffect = "";
-            if (skillManager != null) {
-                skillEffect = skillManager.getCurrentSkillEffect();
-            }
-
-
+            //fog trap ;
             float visibilityFactor = 1.0f;
             if (traps != null) {
                 for (Trap trap : traps) {
@@ -415,28 +466,36 @@ public class GameScreen implements Screen {
                     }
                 }
             }
+            // the camera for fog .
             if (visibilityFactor < 1.0f) {
                 float targetZoom = 0.2f;
-                camera.zoom = MathUtils.lerp(camera.zoom, targetZoom, 0.05f);
+                camera.zoom = 0.2f;
             }
 
             updateCameraFollowPlayer();
             camera.update();
         }
 
+        // Rendering
+
+
+        // every time need to clear first and then render again
         ScreenUtils.clear(0, 0, 0, 1);
         SpriteBatch batch = game.getSpriteBatch();
         batch.setProjectionMatrix(camera.combined);
-        batch.begin();
 
-        for (int x = 0; x < mapWidthInTiles; x++) {
-            for (int y = 0; y < mapHeightInTiles; y++) {
-                Texture tex = floorVariants[floorPick[x][y]];
+
+        // draw floor
+        batch.begin();
+        for (int x = 0; x < mapWidth1; x++) {
+            for (int y = 0; y < mapHeight1; y++) {
+                Texture tex = floorTexture[floorMap[x][y]];
                 batch.draw(tex, x * Wall.TILE_SIZE, y * Wall.TILE_SIZE, Wall.TILE_SIZE, Wall.TILE_SIZE);
             }
         }
         batch.end();
 
+        //draw Door
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         if (door != null) {
@@ -445,6 +504,7 @@ public class GameScreen implements Screen {
         }
         shapeRenderer.end();
 
+        //draw Game objects
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -478,19 +538,15 @@ public class GameScreen implements Screen {
 
         if (player != null) {
             player.render(batch);
+            // draw the heal skill,
             if (player.getStats() != null) {
                 SkillManager sm = player.getStats().getSkillManager();
                 if (sm != null && "heal".equals(sm.getCurrentSkillEffect()) && sm.getSkillEffectTimer() > 0) {
                     if (healTexture != null) {
-                        float alpha = MathUtils.clamp(sm.getSkillEffectTimer() / 0.5f, 0f, 1f);
-                        batch.setColor(1f, 1f, 1f, alpha);
-                        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE);
-                        float floatOffset = (0.5f - sm.getSkillEffectTimer()) * 40f;
                         float drawX = player.getPosition().x + player.getHitbox().width / 2 - 32;
-                        float drawY = player.getPosition().y + player.getHitbox().height / 2 - 32 + floatOffset;
+                        float drawY = player.getPosition().y + player.getHitbox().height / 2 - 32 ;
                         batch.draw(healTexture, drawX, drawY, 64, 64);
-                        batch.setBlendFunction(Gdx.gl.GL_SRC_ALPHA, Gdx.gl.GL_ONE_MINUS_SRC_ALPHA);
-                        batch.setColor(Color.WHITE);
+
                     }
                 }
             }
@@ -506,12 +562,8 @@ public class GameScreen implements Screen {
 
         batch.end();
 
-        Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.end();
-        Gdx.gl.glDisable(Gdx.gl.GL_BLEND);
 
+        //HUD draw .
         batch.setProjectionMatrix(uiStage.getCamera().combined);
         batch.begin();
         font.getData().setScale(1.5f);
@@ -519,6 +571,7 @@ public class GameScreen implements Screen {
         drawHUD(batch);
         batch.end();
 
+        // draw pause screen
         if (currentState == GameState.PAUSED) {
             Gdx.gl.glEnable(Gdx.gl.GL_BLEND);
             shapeRenderer.setProjectionMatrix(uiStage.getCamera().combined);
@@ -533,9 +586,14 @@ public class GameScreen implements Screen {
         uiStage.draw();
     }
 
+    /**
+     * Condition of  game win and the logic of screen transition.
+      */
+
     private void winGame() {
         if (gameWon) return;
         gameWon = true;
+        // calculate levelBonus
         int levelBonus = 1000 + (int) player.getHealth() * 5 - (int) gameTime;
         if (levelBonus < 0) levelBonus = 0;
         game.globalScore += levelBonus;
@@ -544,34 +602,24 @@ public class GameScreen implements Screen {
         game.setScreen(new ResultScreen(game, true, levelNumber, game.globalScore, currentStats,achievementManager));
     }
 
-    private Enemy findNearestEnemy() {
-        Enemy nearest = null;
-        float minDistance = Float.MAX_VALUE;
-        if (enemies == null) return null;
-        for (Enemy enemy : enemies) {
-            if (enemy.isAlive()) {
-                float distance = player.getPosition().dst(enemy.getPosition());
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearest = enemy;
-                }
-            }
-        }
-        return nearest;
-    }
-
-    private void handleSkillInput() {
+    /**
+     * deal with InputSkill
+     */
+    private void skillInput() {
         if (player == null || player.getStats() == null) return;
+        // press T ,Open skill tree
         if (currentState == GameState.RUNNING && Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             if (player != null && player.getStats() != null) {
                 game.setScreen(new SkillTreeScreen(game, player.getStats(), this));
                 currentState = GameState.PAUSED;
             }
         }
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) useSkill1();
         if (Gdx.input.isKeyJustPressed(Input.Keys.E)) useSkill2();
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) useSkill3();
 
+        // dash
         if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT)) {
             if (player.getStats().getSkillManager() != null && player.getStats().getSkillManager().canDash()) {
                 float dirX = 0, dirY = 0;
@@ -584,7 +632,15 @@ public class GameScreen implements Screen {
                 }
             }
         }
+
     }
+
+
+/**
+ * Updates enemy .like movement and chasing player.
+ *
+ * @param delta Time passed since last frame.
+ */
 
     private void updateEnemies(float delta) {
         for (Enemy enemy : enemies) {
@@ -594,7 +650,7 @@ public class GameScreen implements Screen {
                 float distance = enemy.getPosition().dst(player.getPosition());
                 if (distance <= enemy.getDetectionRange()) {
                     enemy.findPathTo(player.getPosition());
-                    if (distance <= enemy.getAttackRange() && spawnInvulnTimer <= 0f) {
+                    if (distance <= enemy.getAttackRange() && spawnTimer <= 0f) {
                         enemy.attack(player);
                     }
                 } else {
@@ -602,7 +658,9 @@ public class GameScreen implements Screen {
                 }
             }
         }
+        // to avoid enemy overlap
         resolveEnemyOverlaps(delta);
+        // when enemies die , clear it.
         for (int i = enemies.size - 1; i >= 0; i--) {
             if (!enemies.get(i).isAlive()) {
                 if (player != null && player.getStats() != null) {
@@ -616,14 +674,19 @@ public class GameScreen implements Screen {
         }
     }
 
+    /**
+     * Checks  collisions .
+     */
     private void checkCollisions() {
         if (player == null) return;
+        //check Door Collision
         if (door != null && player.getHitbox().overlaps(door.getBounds())) {
             if (player.getStats().hasKey()) {
                 door.tryOpen(player);
-                System.out.println("Door opened! Level Completed!");
+                System.out.println("Door opened!");
                 winGame();
             } else {
+                // player can not go to next level.push back player
                 float delta = Gdx.graphics.getDeltaTime();
                 com.badlogic.gdx.math.Vector2 velocity = player.getVelocity();
                 player.getHitbox().x -= velocity.x * delta;
@@ -631,7 +694,8 @@ public class GameScreen implements Screen {
                 player.syncPositionToHitbox();
             }
         }
-        if (spawnInvulnTimer > 0f) return;
+        if (spawnTimer > 0f) return;
+        //Enemy Collision;
         for (Enemy enemy : enemies) {
             if (enemy.isAlive() && enemy.getBounds().overlaps(player.getHitbox())) {
                 enemy.attack(player);
@@ -639,11 +703,8 @@ public class GameScreen implements Screen {
                 player.triggerDamageVFX();
             }
         }
-        for (Enemy enemy : enemies) {
-            if (enemy instanceof NineTailedFox && enemy.isAlive()) {
-                NineTailedFox fox = (NineTailedFox) enemy;
-            }
-        }
+
+        //check Player Death,when go to the (ResultScreen)failScreen.
         if (player.getHealth() <= 0) {
             if (mapMusic != null) mapMusic.stop();
             HighScoreManager.saveScore(game.globalScore);
@@ -652,27 +713,39 @@ public class GameScreen implements Screen {
         }
     }
 
+    /**
+     * Builds a grid of the map for AI optimization.
+     */
     private void buildWalkableGrid() {
-        int gridWidth = (int) (mapPixelWidth / Wall.TILE_SIZE);
-        int gridHeight = (int) (mapPixelHeight / Wall.TILE_SIZE);
-        walkableGrid = new boolean[gridWidth][gridHeight];
+        int gridWidth = (int) (mapWidth / Wall.TILE_SIZE);
+        int gridHeight = (int) (mapHeight / Wall.TILE_SIZE);
+
+        canWalk = new boolean[gridWidth][gridHeight];
+        // Default (true)
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
-                walkableGrid[x][y] = true;
+                canWalk[x][y] = true;
             }
         }
+        //wall as false;
         for (Wall wall : walls) {
             int gridX = (int) (wall.worldX / Wall.TILE_SIZE);
             int gridY = (int) (wall.worldY / Wall.TILE_SIZE);
+
             if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
-                walkableGrid[gridX][gridY] = false;
+                canWalk[gridX][gridY] = false;
             }
         }
         for (Enemy enemy : enemies) {
-            enemy.setWalkableGrid(walkableGrid);
+            enemy.setWalkableGrid(canWalk);
         }
     }
 
+    /**
+     * Updates the player's movement press w ,a,s,d ,shift so that
+     * realize player move up left,down,run.
+     * @param delta Time passed since last frame.
+     */
     private void updatePlayer(float delta) {
         if (player != null && controller != null) {
             boolean up = controller.up;
@@ -684,6 +757,12 @@ public class GameScreen implements Screen {
         }
     }
 
+    /**
+     * boolean return to check if a rectangle collides any wall;
+     *
+     * @param hb  hitbox help  to check if collision.
+     * @return True if collision detected, false otherwise.
+     */
     private boolean collidesWithAnyWall(Rectangle hb) {
         if (walls == null) return false;
         for (Wall wall : walls) {
@@ -692,6 +771,15 @@ public class GameScreen implements Screen {
         return false;
     }
 
+
+    /**
+     * Draws the player's health bar
+     *
+     * @param batch The sprite batch.
+     * @param x X position .
+     * @param y Y position .
+     * @param totalWidth Width of the bar.
+     */
     private void drawXianxiaHealthBar(SpriteBatch batch, float x, float y, float totalWidth) {
         if (texHpFrame == null || texHpBar == null || texTaiji == null || player == null) return;
         float frameHeight = 50;
@@ -715,6 +803,7 @@ public class GameScreen implements Screen {
             batch.draw(texHpBar, x + barOffsetX, y + barOffsetY, currentBarWidth, barHeight);
         }
 
+        //Draw rotating Taiji symbol.
         float rotation = -gameTime * 80f;
         batch.draw(texTaiji, x + taijiOffsetX, y + taijiOffsetY, taijiSize / 2f, taijiSize / 2f, taijiSize, taijiSize, 1f, 1f, rotation, 0, 0, texTaiji.getWidth(), texTaiji.getHeight(), false, false);
 
@@ -724,6 +813,14 @@ public class GameScreen implements Screen {
         font.getData().setScale(1f);
     }
 
+
+    /**
+     * Draws shadow text for better visibility.
+     * @param batch The sprite batch.
+     * @param text The text to draw.
+     * @param x X position.
+     * @param y Y position.
+     */
     private void drawShadowText(SpriteBatch batch, String text, float x, float y) {
         font.setColor(Color.BLACK);
         font.draw(batch, text, x + 2, y - 2);
@@ -731,12 +828,18 @@ public class GameScreen implements Screen {
         font.draw(batch, text, x, y);
     }
 
+    /**
+     * Draws HUD
+     *
+     * @param batch  sprite batch.
+     */
     private void drawHUD(SpriteBatch batch) {
+        // draw HealthBar
         batch.setColor(Color.WHITE);
         float uiH = uiStage.getViewport().getWorldHeight();
         float uiW = uiStage.getViewport().getWorldWidth();
         drawXianxiaHealthBar(batch, 60, uiH - 70, 300);
-
+        //draw keys; show red when the collect key gets, else show green.
         if (keyIconTexture != null && player != null && player.getStats() != null) {
             float keyIconSize = 48;
             float startX = 75;
@@ -744,6 +847,7 @@ public class GameScreen implements Screen {
             float gap = 60;
             int bonusKeys = player.getStats().getBonusKey();
             boolean hasExitKey = player.getStats().hasKey();
+
             for (int i = 0; i < 3; i++) {
                 if (i < 2) {
                     if (i < bonusKeys) batch.setColor(Color.GREEN);
@@ -757,6 +861,8 @@ public class GameScreen implements Screen {
             batch.setColor(Color.WHITE);
         }
 
+        //draw Scroll as background for better visibility. adjust to find the most suitable position.
+        //and add XP in Bar.
         float frame1W = 260;
         float frame1H = 200;
         float frame1X = uiW - frame1W + 10;
@@ -777,12 +883,15 @@ public class GameScreen implements Screen {
             textY -= lineGap;
         }
 
+        // Control Scroll
         float frame2W = 320;
         float frame2H = 230;
         float frame2X = -10;
         float frame2Y = -10;
         batch.setColor(Color.WHITE);
         drawHUDFrame(batch, frame2X, frame2Y, frame2W, frame2H);
+
+        //draw Scroll for skill prompt. different color represent different stats.
         textX = frame2X + 65;
         textY = (frame2Y + frame2H) - 85;
         font.setColor(0.25f, 0.25f, 0.25f, 1f);
@@ -797,7 +906,7 @@ public class GameScreen implements Screen {
                 if (skillTree.hasQSkill()) {
                     if (skillTree.getQCooldown() > 0) {
                         font.setColor(Color.ORANGE);
-                        font.draw(batch, String.format("Q: Fireball (%.1fs)", skillTree.getQCooldown()), textX, textY);
+                        font.draw(batch, "Q: Fireball (" + (int)skillTree.getQCooldown() + "s)", textX, textY);
                     } else {
                         font.setColor(0f, 0.5f, 0f, 1f);
                         font.draw(batch, "Q: Fireball (READY)", textX, textY);
@@ -810,7 +919,7 @@ public class GameScreen implements Screen {
                 if (skillTree.hasESkill()) {
                     if (skillTree.getECooldown() > 0) {
                         font.setColor(Color.ORANGE);
-                        font.draw(batch, String.format("E: Heal (%.1fs)", skillTree.getECooldown()), textX, textY);
+                        font.draw(batch, "E: Heal (" + (int)skillTree.getECooldown() + "s)", textX, textY);
                     } else {
                         font.setColor(0f, 0.5f, 0f, 1f);
                         font.draw(batch, "E: Heal (READY)", textX, textY);
@@ -823,7 +932,7 @@ public class GameScreen implements Screen {
                 if (skillTree.hasRSkill()) {
                     if (skillTree.getRCooldown() > 0) {
                         font.setColor(Color.ORANGE);
-                        font.draw(batch, String.format("R: Lightning (%.1fs)", skillTree.getRCooldown()), textX, textY);
+                        font.draw(batch, "R: Lightning (" + (int)skillTree.getRCooldown() + "s)", textX, textY);
                     } else {
                         font.setColor(0f, 0.5f, 0f, 1f);
                         font.draw(batch, "R: Lightning (READY)", textX, textY);
@@ -843,6 +952,7 @@ public class GameScreen implements Screen {
             }
         }
 
+        //Draw Exit Arrow/
         if (exitPosition != null && arrowRegion != null && player != null) {
             batch.setColor(Color.WHITE);
             float tx = exitPosition.x * Wall.TILE_SIZE;
@@ -865,19 +975,24 @@ public class GameScreen implements Screen {
         }
     }
 
+
+    /**
+     * drawHUD Frame.(Scroll background)
+     *
+     * @param batch Sprite batch.
+     * @param x X position.
+     * @param y Y position.
+     * @param width Width.
+     * @param height Height.
+     */
+
     private void drawHUDFrame(SpriteBatch batch, float x, float y, float width, float height) {
         if (hudFrameTexture == null) return;
         batch.draw(hudFrameTexture, x, y, width, height);
     }
-
-    private void updateTraps(float delta) {
-        if (traps != null) {
-            for (Trap trap : traps) {
-                trap.update(delta);
-            }
-        }
-    }
-
+    /**
+     * traps attack player..
+     */
     private void checkTrapActivation() {
         if (player != null && traps != null) {
             for (Trap trap : traps) {
@@ -921,11 +1036,13 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         if (!isInitialized) {
+            // load fireball texture.
             if (Gdx.files.internal("fireball.png").exists()) {
                 fireballTexture = new Texture(Gdx.files.internal("fireball.png"));
 
                 int FRAME_COLS = 1;
                 int FRAME_ROWS = 1;
+                //Texture be split for doing animation so that the game because more vivid.
                 TextureRegion[][] tmp = TextureRegion.split(fireballTexture,
                         fireballTexture.getWidth() / FRAME_COLS,
                         fireballTexture.getHeight() / FRAME_ROWS);
@@ -936,6 +1053,7 @@ public class GameScreen implements Screen {
                 System.out.println("Warning: fireball.png not found!");
             }
 
+            // other textures loading.like lighting,wall
             if (Gdx.files.internal("lightning.png").exists()) {
                 lightningTexture = new Texture(Gdx.files.internal("lightning.png"));
             } else {
@@ -943,16 +1061,14 @@ public class GameScreen implements Screen {
             }
             projectiles = new Array<>();
             wallTexture = new Texture(Gdx.files.internal("wall.png"));
-            try {
-                healTexture = new Texture(Gdx.files.internal("heal.png"));
-                hudFrameTexture = new Texture(Gdx.files.internal("scroll_1.png"));
-                keyIconTexture = new Texture(Gdx.files.internal("key.png"));
-            } catch (Exception e) {
-                Gdx.app.log("GameScreen", "Texture load error: " + e.getMessage());
-            }
 
+            healTexture = new Texture(Gdx.files.internal("heal.png"));
+            hudFrameTexture = new Texture(Gdx.files.internal("scroll_1.png"));
+            keyIconTexture = new Texture(Gdx.files.internal("key.png"));
+            // load Map
             MapLoader loader = new MapLoader();
             shapeRenderer = new ShapeRenderer();
+
 
             String actualPathToLoad;
             if (levelNumber > 5 || !Gdx.files.internal("maps/level-" + levelNumber + ".properties").exists()) {
@@ -983,11 +1099,13 @@ public class GameScreen implements Screen {
             this.keys = new ArrayList<>();
             if (data.keys != null) {
                 this.keys.addAll(data.keys);
+                //bonus key.
                 for (int i = 0; i < this.keys.size(); i++) {
                     this.keys.get(i).setBonus(i != this.keys.size() - 1);
                 }
             }
 
+            // to avoid  no exit in the map
             if (this.exitPosition != null) {
                 this.exit = new Exit();
                 door = new Door(
@@ -999,36 +1117,43 @@ public class GameScreen implements Screen {
                 this.exitArea = new Rectangle(door.getX(), door.getY(), door.getWidth(), door.getHeight());
             }
 
+            //map dimension
             int maxX = 0, maxY = 0;
             for (Wall w : walls) {
                 if (w.gridX > maxX) maxX = w.gridX;
                 if (w.gridY > maxY) maxY = w.gridY;
             }
-            mapPixelWidth = (maxX + 1) * Wall.TILE_SIZE;
-            mapPixelHeight = (maxY + 1) * Wall.TILE_SIZE;
-            mapWidthInTiles = maxX + 1;
-            mapHeightInTiles = maxY + 1;
+            mapWidth = (maxX + 1) * Wall.TILE_SIZE;
+            mapHeight = (maxY + 1) * Wall.TILE_SIZE;
+            mapWidth1 = maxX + 1;
+            mapHeight1 = maxY + 1;
 
             buildCollisionMap(maxX + 1, maxY + 1);
             buildWalkableGrid();
             initPathFinder();
 
-            floorVariants = new Texture[]{
+            //floor set up (Randomized)
+            floorTexture = new Texture[]{
                     new Texture(Gdx.files.internal("floor.png")),
                     new Texture(Gdx.files.internal("floor_flower.png")),
                     new Texture(Gdx.files.internal("floor_grass.png"))
             };
-            floorPick = new byte[mapWidthInTiles][mapHeightInTiles];
-            Random rngg = new Random(levelNumber * 99991L);
-            for (int x = 0; x < mapWidthInTiles; x++) {
-                for (int y = 0; y < mapHeightInTiles; y++) {
-                    int idx = 0;
-                    float r = rngg.nextFloat();
-                    if (r < 0.06f) idx = 1; else if (r < 0.12f) idx = 2;
-                    floorPick[x][y] = (byte) idx;
+
+
+            floorMap = new int[mapWidth1][mapHeight1];
+            Random rng = new Random();
+
+            // decorated by flower , grass .
+            for (int x = 0; x < mapWidth1; x++) {
+                for (int y = 0; y < mapHeight1; y++) {
+                    float r = rng.nextFloat();
+                    if (r < 0.06f) floorMap[x][y] = 1;
+                    else if (r < 0.12f) floorMap[x][y] = 2;
+                    else floorMap[x][y] = 0;
                 }
             }
 
+            //loading  items
             this.items = new ArrayList<>();
             if (data.items != null && !data.items.isEmpty()) {
                 this.items.addAll(data.items);
@@ -1037,14 +1162,18 @@ public class GameScreen implements Screen {
                 System.out.println("No items defined in map properties.");
             }
 
+
+            //add arrow
             try {
                 arrowTexture = new Texture(Gdx.files.internal("arrow.png"));
                 arrowRegion = new TextureRegion(arrowTexture);
             } catch (Exception e) {}
 
+            //add player and enemy
             initPlayer();
             initEnemies();
 
+            // show achievementManager and console
             achievementManager = new AchievementManager();
             console = new DeveloperConsole(game.getSkin(), uiStage, player, this);
 
@@ -1052,8 +1181,9 @@ public class GameScreen implements Screen {
                 enemy.setPathFinder(pathFinder);
             }
 
+            // music show
             game.stopMenuMusic();
-            try {
+
                 if (mapMusic != null) { mapMusic.stop(); mapMusic.dispose(); mapMusic = null; }
                 mapMusic = Gdx.audio.newMusic(Gdx.files.internal("Sound/mapbackground.mp3"));
                 mapMusic.setLooping(true); mapMusic.setVolume(0.4f); mapMusic.play();
@@ -1071,13 +1201,12 @@ public class GameScreen implements Screen {
                 lightningSound = Gdx.audio.newSound(Gdx.files.internal("Sound/lightning.mp3"));
                 healSkillSound = Gdx.audio.newSound(Gdx.files.internal("Sound/heal.wav"));
                 swingSound = Gdx.audio.newSound(Gdx.files.internal("Sound/swing.wav"));
-            } catch (Exception e) { System.out.println("Sound load error: " + e.getMessage()); }
 
-            try {
+                // Asset loading
+
                 texHpFrame = new Texture(Gdx.files.internal("HUD/hp_frame.png"));
                 texHpBar = new Texture(Gdx.files.internal("HUD/hp_bar.png"));
                 texTaiji = new Texture(Gdx.files.internal("HUD/taiji_gold.png"));
-            } catch (Exception e) {}
 
             currentState = GameState.RUNNING;
             isInitialized = true;
@@ -1098,48 +1227,34 @@ public class GameScreen implements Screen {
         }
     }
 
+    /**
+     * avoid the enemyOverlaps.
+     * @param delta
+     */
+
     private void resolveEnemyOverlaps(float delta) {
         for (int i = 0; i < enemies.size; i++) {
-            Enemy e1 = enemies.get(i);
-            if (!e1.isAlive()) continue;
             for (int j = i + 1; j < enemies.size; j++) {
+                Enemy e1 = enemies.get(i);
                 Enemy e2 = enemies.get(j);
-                if (!e2.isAlive()) continue;
-                float r1 = e1.getWidth() / 2f;
-                float r2 = e2.getWidth() / 2f;
-                float cx1 = e1.getX() + r1;
-                float cy1 = e1.getY() + e1.getHeight() / 2f;
-                float cx2 = e2.getX() + r2;
-                float cy2 = e2.getY() + e2.getHeight() / 2f;
-                float dst = Vector2.dst(cx1, cy1, cx2, cy2);
-                float minDist = r1 + r2 - 4f;
-                if (dst < minDist) {
-                    if (dst == 0) dst = 0.01f;
-                    float overlap = minDist - dst;
-                    float pushForce = overlap * 0.5f;
-                    float pushX = (cx1 - cx2) / dst * pushForce;
-                    float pushY = (cy1 - cy2) / dst * pushForce;
-                    float nextX1 = e1.getX() + pushX;
-                    float nextY1 = e1.getY() + pushY;
-                    if (!collidesWithAnyWall(new Rectangle(nextX1, nextY1, e1.getWidth(), e1.getHeight()))) {
-                        e1.setPosition(nextX1, nextY1);
-                    }
-                    float nextX2 = e2.getX() - pushX;
-                    float nextY2 = e2.getY() - pushY;
-                    if (!collidesWithAnyWall(new Rectangle(nextX2, nextY2, e2.getWidth(), e2.getHeight()))) {
-                        e2.setPosition(nextX2, nextY2);
-                    }
+                if (e1.isAlive() && e2.isAlive() && e1.getBounds().overlaps(e2.getBounds())) {
+                    e1.setPosition(e1.getX() + 1, e1.getY() + 1);
                 }
             }
         }
     }
 
+
+    /**
+     * init Enemies .make sure is difficulty , location and behavior.
+     */
+
     private void initEnemies() {
         System.out.println("Configuring " + enemies.size + " enemies loaded from map...");
         for (Enemy enemy : enemies) {
             enemy.adjustDifficulty(this.levelNumber);
-            enemy.setMapLimits(mapPixelWidth, mapPixelHeight);
-            enemy.setWalkableGrid(walkableGrid);
+            enemy.setMapLimits(mapWidth, mapHeight);
+            enemy.setWalkableGrid(canWalk);
             enemy.setPathFinder(pathFinder);
             enemy.setTargetPlayer(player);
             if (enemy instanceof ZhuLong) {
@@ -1152,6 +1267,11 @@ public class GameScreen implements Screen {
             }
         }
     }
+
+
+    /**
+     * initPlayer update Player's state
+     */
 
     private void initPlayer() {
         if (player != null) return;
@@ -1178,7 +1298,7 @@ public class GameScreen implements Screen {
                 skillManager.setGameScreen(this);
             }
         }
-        spawnInvulnTimer = SPAWN_INVULN_DURATION;
+        spawnTimer = SPAWN_INVULN_DURATION;
         if (player.getStats() != null) {
             player.getStats().heal(100);
         }
@@ -1188,6 +1308,10 @@ public class GameScreen implements Screen {
     @Override
     public void hide() {}
 
+
+    /**
+     * active the fireball skills .
+     */
     private void useSkill1() {
         if (player == null || player.getStats() == null) return;
         SkillManager skillManager = player.getStats().getSkillManager();
@@ -1225,6 +1349,7 @@ public class GameScreen implements Screen {
                     System.out.println("Fireball shooting in move direction");
                 }
 
+                //using fireballAnimation .
                 if (fireballAnimation != null) {
                     Projectile fireball = new Projectile(
                             player.getPosition().x,
@@ -1252,6 +1377,11 @@ public class GameScreen implements Screen {
         }
     }
 
+    /**
+     * active the Heal skill
+     */
+
+
     private void useSkill2() {
         if (player != null && player.getStats() != null) {
             SkillManager skillManager = player.getStats().getSkillManager();
@@ -1272,6 +1402,10 @@ public class GameScreen implements Screen {
             }
         }
     }
+
+    /**
+     * Active lighting skill.
+     */
 
     private void useSkill3() {
         if (player == null || !player.getStats().getSkillManager().canUseRSkill()) return;
@@ -1313,6 +1447,8 @@ public class GameScreen implements Screen {
         }
     }
 
+
+
     @Override
     public void dispose() {
         if (shapeRenderer != null) shapeRenderer.dispose();
@@ -1347,47 +1483,53 @@ public class GameScreen implements Screen {
         if (swingSound != null) swingSound.dispose();
     }
 
-    public List<Wall> getWalls() { return walls; }
-    public Player getPlayer() { return player; }
-    public void setPlayer(Player player) { this.player = player; }
-    public Array<Enemy> getEnemies() { return enemies; }
-    public List<Enemy> getEnemiesList() {
-        List<Enemy> enemyList = new ArrayList<>();
-        for (int i = 0; i < enemies.size; i++) {
-            enemyList.add(enemies.get(i));
-        }
-        return enemyList;
-    }
-    public AStarPathFinder getPathFinder() { return pathFinder; }
-    public Array<Trap> getTraps() { return traps; }
-    public int[][] getCollisionMap() { return collisionMap; }
+
+    /**
+     * keep the player centered on the screen.
+     * clamps the camera make it doesn't show outside .
+     */
+
     private void updateCameraFollowPlayer() {
         if (player == null) return;
         float targetX = player.getPosition().x;
         float targetY = player.getPosition().y;
+        // bounds
         float halfW = camera.viewportWidth * 0.5f * camera.zoom;
         float halfH = camera.viewportHeight * 0.5f * camera.zoom;
         float newX;
-        if (mapPixelWidth < camera.viewportWidth * camera.zoom) {
-            newX = mapPixelWidth / 2f;
+        // if smaller ,center
+        if (mapWidth < camera.viewportWidth * camera.zoom) {
+            newX = mapWidth / 2f;
         } else {
-            newX = Math.max(halfW, Math.min(targetX, mapPixelWidth - halfW));
+            // clamp to the map edges
+            newX = Math.max(halfW, Math.min(targetX, mapWidth - halfW));
         }
         float newY;
-        if (mapPixelHeight < camera.viewportHeight * camera.zoom) {
-            newY = mapPixelHeight / 2f;
+        if (mapHeight < camera.viewportHeight * camera.zoom) {
+            newY = mapHeight / 2f;
         } else {
-            newY = Math.max(halfH, Math.min(targetY, mapPixelHeight - halfH));
+            newY = Math.max(halfH, Math.min(targetY, mapHeight - halfH));
         }
         camera.position.set(newX, newY, 0);
     }
+
+    /**
+     * Constructs a collision map based on wall positions.
+     *  A* pathfinding algorithm.
+     *
+     * @param width The width of the map in tiles.
+     * @param height The height of the map in tiles.
+     */
+
     private void buildCollisionMap(int width, int height) {
         collisionMap = new int[height][width];
+        //initial grid =0
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 collisionMap[y][x] = 0;
             }
         }
+        // mark wall as 1
         for (Wall wall : walls) {
             if (wall.gridX >= 0 && wall.gridX < width && wall.gridY >= 0 && wall.gridY < height) {
                 collisionMap[wall.gridY][wall.gridX] = 1;
@@ -1395,6 +1537,11 @@ public class GameScreen implements Screen {
         }
         System.out.println("Collision map built: " + width + "x" + height);
     }
+
+    /**
+     * Initializes the pathfinding system if the collision map is ready.
+     */
+
     private void initPathFinder() {
         if (collisionMap != null) {
             pathFinder = new AStarPathFinder(collisionMap);
@@ -1403,24 +1550,11 @@ public class GameScreen implements Screen {
             System.out.println("Warning: Collision map not built, PathFinder not initialized");
         }
     }
-    private Vector2 getRandomEmptyTile() {
-        if (collisionMap == null) return null;
-        List<Vector2> validTiles = new ArrayList<>();
-        int h = collisionMap.length;
-        int w = collisionMap[0].length;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                if (collisionMap[y][x] == 0) {
-                    validTiles.add(new Vector2(x, y));
-                }
-            }
-        }
-        if (!validTiles.isEmpty()) {
-            Random random = new Random();
-            return validTiles.get(random.nextInt(validTiles.size()));
-        }
-        return null;
-    }
+
+    /**
+     * check if the key is picked up or not
+     * Plays a sound effect and updates key status upon collection.
+     */
     private void updateKeys() {
         if (keys == null || player == null) return;
         for (Key k : keys) {
@@ -1433,6 +1567,11 @@ public class GameScreen implements Screen {
             }
         }
     }
+    /**
+     * check if the player attack enemy .
+     * Applies damage to enemies if a hit is detected.
+     */
+
     private void checkPlayerAttackHit() {
         if (player == null || !player.isAttacking()) return;
         Rectangle attackBox = player.getAttackHitbox();
@@ -1444,28 +1583,49 @@ public class GameScreen implements Screen {
             }
         }
     }
+
+    /**
+     * check if the item has been picked up
+     * also handle items' effect and sound
+     */
     private void updateItems() {
-        if (items == null || player == null) return;
-        for (int i = items.size() - 1; i >= 0; i--) {
+        if (items == null ) return;
+        if (player == null) return;
+        for (int i = 0; i < items.size(); i++) {
             Item item = items.get(i);
-            if (player.getHitbox().overlaps(item.getBounds())) {
+            Rectangle itemBounds = item.getBounds();
+            Rectangle playerBounds = player.getHitbox();
+
+            if (playerBounds.overlaps(itemBounds)) {
                 item.onPickup(player);
-                if (bonusSound != null) bonusSound.play();
+                if (bonusSound != null) {
+                    bonusSound.play();
+                }
                 items.remove(i);
+                i--;
                 System.out.println("Item collected!");
             }
         }
     }
+
+    /**
+     * check collisions between active skills (Fireball, Lightning) and enemies.
+     * show damage and visual effects in  enemy.
+     * @param delta The time passed since the last frame.
+     */
+
     private void checkSkillCollisions(float delta) {
         if (player == null || player.getStats() == null) return;
         SkillManager sm = player.getStats().getSkillManager();
         if (sm == null || sm.getSkillEffectTimer() <= 0) return;
-        if (sm.hasDealtDamage()) return;
+        if (sm.hasDealtDamage()) return;//prevent multiple hits;
+
         String currentSkill = sm.getCurrentSkillEffect();
         Vector2 skillPos = sm.getSkillEffectPosition();
         float damage = 0f;
         float range = 0f;
         boolean isAreaEffect = false;
+        // skill properties
         if ("fireball".equals(currentSkill)) {
             damage = 40f + player.getStats().getActualAttackDamage() * 0.5f;
             range = 40f;
@@ -1480,11 +1640,15 @@ public class GameScreen implements Screen {
             return;
         }
         boolean hitAnyone = false;
+
         for (Enemy enemy : enemies) {
             if (!enemy.isAlive()) continue;
             float enemyCenterX = enemy.getX() + enemy.getWidth() / 2f;
             float enemyCenterY = enemy.getY() + enemy.getHeight() / 2f;
-            float dist = Vector2.dst(skillPos.x, skillPos.y, enemyCenterX, enemyCenterY);
+            float diffX = skillPos.x - enemyCenterX;
+            float diffY = skillPos.y - enemyCenterY;
+            // c^2 = a^2 + b^2
+            float dist = (float) Math.sqrt(diffX * diffX + diffY * diffY);
             if (dist <= range) {
                 enemy.takeDamage(damage);
                 if (!enemy.isAlive()) {
@@ -1501,4 +1665,24 @@ public class GameScreen implements Screen {
             sm.setHasDealtDamage(true);
         }
     }
+
+
+    /**
+     * getter and setter
+     */
+
+    public List<Wall> getWalls() { return walls; }
+    public Player getPlayer() { return player; }
+    public void setPlayer(Player player) { this.player = player; }
+    public Array<Enemy> getEnemies() { return enemies; }
+    public List<Enemy> getEnemiesList() {
+        List<Enemy> enemyList = new ArrayList<>();
+        for (int i = 0; i < enemies.size; i++) {
+            enemyList.add(enemies.get(i));
+        }
+        return enemyList;
+    }
+    public AStarPathFinder getPathFinder() { return pathFinder; }
+    public Array<Trap> getTraps() { return traps; }
+    public int[][] getCollisionMap() { return collisionMap; }
 }
