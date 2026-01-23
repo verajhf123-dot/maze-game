@@ -1,0 +1,122 @@
+# README file
+
+## 1. Code Structure & Organization
+
+The project follows a modular architecture within the `de.tum.cit.fop.maze` root package. The code is organized into 5 specialized sub-packages, while the core game loop and managers stay in the root.
+
+* **`de.tum.cit.fop.maze` (Root)**
+    * Contains the main entry point (`MazeRunnerGame`), the Game Loop, and all UI Screens (`MenuScreen`, `GameScreen`, etc.).
+    * Houses central managers (`Input`, `Save`, `Audio`) to handle global game states.
+
+* **`ai`**
+    * Implements the **Strategy Pattern** for NPC behavior.
+    * Separates pathfinding logic (`AStarPathFinder`) from specific behavior states (`Attack`, `Patrol`, `Evade`).
+
+* **`enemies`**
+    * Defines specific enemy types (e.g., `NineTailedFox`, `ZhuLong`).
+
+* **`items`**
+    * Contains all pickable items.
+    * Distinguishes between essential items (`Key`) and power-ups (`Jingangfu`, `Xiandan`, `Yufengfu`).
+
+* **`progression`**
+    * Manages RPG components, including the `ExperienceSystem` and the `SkillTree` data structure.
+
+* **`traps`**
+    * Handles common traps (`MechanismTrap`) and visibility mechanics (`Fog`).
+
+---
+
+## 2. Class Hierarchy
+
+* **`CollidableEntity` (Interface)**
+    * **`Player`**: Implements collision and contains `PlayerStats`, `SkillManager`, and `Inventory` (Managed within the Player class to store `Item` objects).
+    * **`Enemy` (Abstract Class)**: Base class for all mobs.
+        * `NineTailedFox`, `QiongQi`, `ZhuLong`.
+        * Each `Enemy` holds a reference to an `AIBehavior` interface.
+    * **`Item` (Abstract Class)**: Base class for collectibles.
+        * `Key`, `Jingangfu`, `Xiandan`, etc.
+    * **Static Objects**:
+        * `Wall`, `Door`, `Exit`, and `Trap` also implement `CollidableEntity` to interact with the physics system.
+
+---
+
+## 3. System Architecture (UML)
+
+![Maze Game Class Diagram](assets/UMLClassDiagram.png)
+
+---
+
+## 4. How to Run and Use
+
+### Prerequisites (Environment Setup)
+Before running the game, ensure you have the following installed:
+* **Java Development Kit (JDK) 17** or higher.
+* **IntelliJ IDEA** (Recommended) or any Java IDE with Gradle support.
+
+### How to Run the Game
+You can run the game using one of the following methods:
+
+**Option A: Via IntelliJ IDEA (Recommended)**
+1.  Open the project and wait for Gradle sync.
+2.  Locate `desktop/src/de/tum/cit/fop/maze/DesktopLauncher.java`.
+3.  Run the `main` method (**Right-click file -> Run 'DesktopLauncher.main()'**).
+    * *Tip: Once run successfully, you can simply use the Run button (▶) in the top toolbar.*
+
+**Option B: Via Command Line (Gradle)**
+Open your terminal in the project root directory and run:
+* **Windows:** `gradlew desktop:run`
+* **Mac/Linux:** `./gradlew desktop:run`
+
+---
+
+## 5. How to Play
+
+**Goal:**
+Explore the maze, defeat enemies to gain XP, collect the **Key**, and reach the **Exit**. Avoid traps and ensure your HP does not drop to zero.
+
+### Controls
+
+| Key | Action | Note |
+| :--- | :--- | :--- |
+| **W / A / S / D** | Movement | Move Up, Left, Down, Right |
+| **SHIFT** | Sprint / Dash | Hold to run faster (Requires Stamina/Skill) |
+| **SPACE** | Attack | Omnidirectional melee attack |
+| **Q** | Skill: Fireball | Ranged damage (Requires unlock) |
+| **E** | Skill: Heal | Restore HP (Requires unlock) |
+| **R** | Skill: Lightning | AOE Damage (Requires unlock) |
+| **T** | Skill Tree | Open/Close the Skill Tree Menu |
+| **ESC** | Pause Menu | Pause game, Save, or Exit |
+| **~ (Grave)** | Developer Console| Enter debug commands (e.g., `heal`) |
+| **I / O** | Camera Zoom | Zoom In / Zoom Out |
+
+### Game Mechanics
+* **Combat**: Enemies (`NineTailedFox`, `QiongQi`, `ZhuLong`) have different behaviors. Use `SPACE` to attack or skills (`Q`/`R`) to defeat them.
+* **Progression**: Killing enemies grants **XP**. Press `T` to spend XP and unlock skills.
+* **Items**: Look for **Xiandan** (Heal), **Yufengfu** (Speed), and **Jingangfu** (Shield).
+* **Victory**: You must find the **Key** to open the door.
+
+---
+
+## 6. Advanced Game Mechanics (Beyond Minimal Requirements)
+
+This project implements several advanced features extending the base requirements:
+
+### RPG Progression & Skill Tree
+Instead of static stats, the player earns **XP** by defeating enemies. Press `T` to access the **Skill Tree**, where players can spend XP to upgrade base stats (Health, Speed, Attack Damage). When players gain enough experience points, they can unlock Active Skills (**Fireball**, **Healing**, **Lightning**).
+
+### Complex Enemy AI (Strategy Pattern)
+Enemies are not just random movers; they have unique behaviors based on state machines:
+* **Nine-Tailed Fox**: High mobility, uses melee attacks.
+* **Qiong Qi**: Locks onto the player and charges at high speed.
+* **Zhu Long**: Switches between different modes (Speed/Attack) every 5 seconds.
+
+### Interactive Environment & Traps
+* **Fog**: Reduces player's vision in specific areas.
+* **Mechanism Traps**: Activate when touched by the player.
+* **Interactive Items**: Includes **Xiandan** (Heal), **Yufengfu** (Speed Buff), and **Jingangfu** (Shield).
+
+### Data Persistence & Achievements
+* **Save/Load System**: The game state (Player Stats, Level, Unlocked Skills) can be saved to JSON and reloaded later.
+* **Achievements**: An event-driven system tracks milestones like "First Blood".
+* **High Scores**: Local leaderboard records the best performance.
