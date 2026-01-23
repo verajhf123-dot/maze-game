@@ -22,6 +22,12 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.audio.Sound;
+/**
+ * Screen for game settings.
+ *
+ * Provides UI to adjust audio volume and rebind keys. Settings are stored via SettingsManager
+ * (LibGDX Preferences). The UI is built with Scene2D (Stage + Table).
+ */
 
 public class SettingsScreen implements Screen {
 
@@ -33,6 +39,12 @@ public class SettingsScreen implements Screen {
     private Texture menuBg;
     private Texture buttonBg;
     private TextButton.TextButtonStyle commonButtonStyle;
+    /**
+     * Creates the settings screen.
+     *
+     * @param game main game instance used for shared resources and screen navigation
+     * @param settings settings manager used to read and store preferences
+     */
 
     public SettingsScreen(MazeRunnerGame game, SettingsManager settings) {
         this.game = game;
@@ -43,6 +55,11 @@ public class SettingsScreen implements Screen {
             Gdx.app.log("SettingsScreen", "Button sound not found!");
         }
     }
+
+    /**
+     * Creates a shared TextButton style for this screen (font + colors + background texture).
+     * Falls back to the default skin style if custom assets are missing.
+     */
 
     private void createButtonStyle() {
         commonButtonStyle = new TextButton.TextButtonStyle();
@@ -66,6 +83,11 @@ public class SettingsScreen implements Screen {
             commonButtonStyle.fontColor = Color.BLACK;
         }
     }
+
+    /**
+     * Builds the settings UI and sets the Stage as the active input processor.
+     * This method creates volume controls and key binding buttons.
+     */
 
     @Override
     public void show() {
@@ -127,8 +149,13 @@ public class SettingsScreen implements Screen {
     }
 
     /**
-     * update volume logic
+     * Updates the stored volume by a small step, clamps it to [0,1],
+     * applies it to background music, and refreshes the UI label.
+     *
+     * @param changeAmount volume delta (e.g. +0.1 or -0.1)
+     * @param displayLabel label showing the current volume percentage
      */
+
     private void updateVolume(float changeAmount, Label displayLabel) {
         float currentVol = settings.getVolume();
         float newVol = Math.max(0f, Math.min(1f, currentVol + changeAmount));
@@ -140,6 +167,14 @@ public class SettingsScreen implements Screen {
 
         displayLabel.setText(String.format("%.0f%%", newVol * 100));
     }
+    /**
+     * Adds a row to the table for rebinding a single action.Change the preferences.
+     * When the user clicks the button, the next pressed key is stored in SettingsManager.
+     *
+     * @param table table to add UI elements to
+     * @param displayName label shown in the UI (e.g. "Move Up")
+     * @param keyName internal action name used in SettingsManager (e.g. "move_up")
+     */
 
     private void addKeyBindingRow(Table table, String displayName, final String keyName) {
         table.add(new Label(displayName + ":", game.getSkin())).right().padRight(20).padBottom(10);
@@ -168,6 +203,9 @@ public class SettingsScreen implements Screen {
         });
         table.add(keyButton).width(160).height(50).padBottom(10).colspan(2).left().row();
     }
+    /**
+     * Renders the background image and draws the Scene2D stage.
+     */
 
     @Override
     public void render(float delta) {
@@ -178,6 +216,9 @@ public class SettingsScreen implements Screen {
         stage.act(delta);
         stage.draw();
     }
+    /**
+     * Updates the viewport on window resize.
+     */
 
     @Override
     public void resize(int width, int height) {
@@ -187,6 +228,10 @@ public class SettingsScreen implements Screen {
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
+
+    /**
+     * Disposes UI and assets used by this screen.
+     */
 
     @Override
     public void dispose() {

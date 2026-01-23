@@ -8,6 +8,11 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
+/**
+ * Represents a locked door in the game world.
+ * The door blocks the player until a key is used to open it.
+ * It handles collision checks, open state, and rendering when closed.
+ */
 
 public class Door {
 
@@ -15,6 +20,11 @@ public class Door {
     private boolean open = false;
     private Texture doorTexture;
     private TextureRegion closedDoorRegion;
+    /**
+     * Creates a door with collision bounds and a closed-door texture.
+     * It tries to load the door image file; if it is missing, a fallback texture is used instead.
+     */
+
 
     public Door(float x, float y, float width, float height) {
         bounds = new Rectangle(x, y, width, height);
@@ -34,6 +44,10 @@ public class Door {
             createFallbackTexture();
         }
     }
+
+    /**
+     * Creates a simple fallback texture(blue box)if the door texture is missing.
+     */
     private void createFallbackTexture() {
         Pixmap pixmap = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.BLUE);
@@ -43,6 +57,11 @@ public class Door {
         pixmap.dispose();
     }
 
+    /**
+     * check the logic whether the door can be opened.
+     * The door opens only if the player overlaps the door and has a key.
+     * @param player the player trying to open the door.
+     */
     public void tryOpen(Player player) {
         if (!open && bounds.overlaps(player.getHitbox())
                  && player.getStats().hasKey()) {
@@ -52,6 +71,10 @@ public class Door {
         }
     }
 
+    /**
+     * Renders the closwd door(only when the door is not open)
+     * @param batch SpriteBach used to draw the door texture region.
+     */
     public void render(SpriteBatch batch) {
         if (!open && closedDoorRegion != null) {
             float drawWidth = 48f;
@@ -74,6 +97,9 @@ public class Door {
         return bounds;
     }
 
+    /**
+     * dispose texture to free GPU resources.
+     */
     public void dispose() {
         if (doorTexture != null) {
             doorTexture.dispose();

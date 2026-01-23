@@ -64,10 +64,13 @@ public class MazeRunnerGame extends Game {
             System.out.println("Error loading menu music: " + e.getMessage());
         }
 
-        // ✅ 启动时先进入故事背景
+
         setScreen(new StoryScreen(this));
     }
 
+    /**
+     * control the background music.
+     */
     public void playMenuMusic() {
         if (backgroundMusic != null && !backgroundMusic.isPlaying()) {
             backgroundMusic.play();

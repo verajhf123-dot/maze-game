@@ -17,6 +17,11 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.audio.Sound;
 
+/**
+ * Screen that displays the top 5 high scores.
+ * It reads scores from HighScoreManager and shows them in a simple UI with a back button.
+ */
+
 
 public class HighScoreScreen implements Screen {
     private Stage stage;
@@ -28,6 +33,12 @@ public class HighScoreScreen implements Screen {
     private Texture ButtonBg;
 
 
+    /**
+     * Builds the UI for the high score screen.
+     * Scores are loaded once here and added as labels to the table.
+     *
+     * @param game main game
+     */
 
     public HighScoreScreen(MazeRunnerGame game) {
         this.game = game;
@@ -48,7 +59,7 @@ public class HighScoreScreen implements Screen {
         Label titleLabel = new Label("Top 5 Records", game.getSkin(), "title");
         titleLabel.setFontScale(0.75f);
         scrollTable.add(titleLabel).padBottom(25).row();
-
+//score->Label->add to Label-> stage.draw()
         String[] scores = HighScoreManager.getTopScores();
         if (scores.length == 0) {
             Label noRec = new Label("No records yet, go play!", game.getSkin());
@@ -106,15 +117,23 @@ public class HighScoreScreen implements Screen {
 
         rootTable.add(scrollTable).width(500).height(650);
     }
-
+    /**
+     * Called when this screen becomes active.
+     * Sets the input processor and loads the background texture.
+     */
     @Override public void show() {
         Gdx.input.setInputProcessor(stage);
 
         batch = new SpriteBatch();
         menuBg = new Texture(Gdx.files.internal("menu_bg.png"));
-
-
     }
+
+    /**
+     * Draws the background and the stage every frame.
+     *
+     * @param delta time since last frame
+     */
+
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);

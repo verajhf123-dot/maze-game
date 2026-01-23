@@ -3,6 +3,10 @@ package de.tum.cit.fop.maze;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Simple data container for saving and loading game progress.
+ * This class only stores data and does not contain any game logic.
+ */
 
 public class SaveData {
 
@@ -18,7 +22,10 @@ public class SaveData {
 
     private List<String> unlockedSkillIds = new ArrayList<>();
 
-
+    /**
+     * Creates an empty SaveData object.
+     * Values are filled later when saving the game.
+     */
     public SaveData() {}
 
 
