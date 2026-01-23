@@ -3,20 +3,39 @@ package de.tum.cit.fop.maze;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 
+/**
+ * Handles keyboard input and converts it into simple movement states.
+ *
+ * InputController reads raw keyboard input every frame and translates it into
+ * boolean flags such as up, down, left, right and run. These flags describe the
+ * player's intention for the current frame and are used by GameScreen and
+ * Player logic.
+ *
+ * Key bindings are loaded from SettingsManager. If no custom bindings are set,
+ * default keys (WASD, Shift) are used.
+ */
+
+
 public class InputController {
     public boolean up, down, left, right;
     public boolean run;
     public float zoomChange = 0;
     private final SettingsManager settingsManager;
-    private int keyUp, keyDown, keyLeft, keyRight, keyRun;
+    private int keyUp, keyDown, keyLeft, keyRight, keyRun;//from SettingsManager
 
-
+    /**
+     *Creates an InputController using key bindings from the settings manager.
+     * @param settingsManager used to load key bindings
+     */
 
     public InputController(SettingsManager settingsManager) {
         this.settingsManager = settingsManager;
         updateKeyBindings();
     }
 
+    /**
+     *Reloads key bindings from the settings manager.
+     */
 
     public void updateKeyBindings() {
         keyUp = settingsManager.getKey("move_up");
@@ -26,7 +45,10 @@ public class InputController {
         keyRun = settingsManager.getKey("run");
     }
 
-
+    /**
+     * Updates the input state for the current frame by reading keyboard input.
+     * All movement flags are reset and recalculated each frame.
+     */
     public void update() {
         up = false;
         down = false;

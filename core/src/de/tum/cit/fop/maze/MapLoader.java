@@ -20,12 +20,21 @@ import java.util.List;
 import java.util.Properties;
 import com.badlogic.gdx.graphics.Texture;
 
+/**
+ * Loads a level from a .properties map file and converts it into game objects.
+ * It reads tile codes (0..8) and creates walls, enemies, traps, keys, items, and decorations.
+ */
 
 public class MapLoader {
     public int minX = Integer.MAX_VALUE;
     public int maxX = Integer.MIN_VALUE;
     public int minY = Integer.MAX_VALUE;
     public int maxY = Integer.MIN_VALUE;
+
+    /**
+     * Container class that stores everything created from one level file.
+     * GameScreen can use this to spawn objects.
+     */
 
     public static class LevelData {
         public List<Wall> walls = new ArrayList<>();
@@ -41,6 +50,13 @@ public class MapLoader {
 
     }
 
+    /**
+     * Loads a level file and creates objects based on tile values.
+     *
+     * @param internalPath internal asset path to the map file (e.g. "assets/maps/level-1.properties")
+     * @param levelNumber current level number (used to choose enemy types)
+     * @return LevelData containing all loaded objects and positions
+     */
 
     public LevelData loadLevel(String internalPath,int levelNumber) {
         System.out.println("[MapLoader] levelNumber=" + levelNumber + " path=" + internalPath);
@@ -140,11 +156,14 @@ public class MapLoader {
                             break;
 
                         case 7:
+                            System.out.println(">>> HIT DECORATION 7 at " + x + "," + y);
                             data.decorations.add(new Decoration(
+
                                     pixelX, pixelY,
                                     lishu(),
                                     Wall.TILE_SIZE * 2f,
                                     Wall.TILE_SIZE * 3f
+
                             ));
                             break;
 
@@ -167,6 +186,12 @@ public class MapLoader {
         }
         return data;
     }
+
+    /**
+     * Loads and returns the first decoration texture (lazy loading).
+     *
+     * @return texture for lishu decoration
+     */
 
     private static Texture LISHU;
     private static Texture LISHU2;

@@ -18,6 +18,11 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.audio.Sound;
 
+/**
+ * Help screen that shows the game controls and basic gameplay instructions.
+ * It uses a Stage + Table UI and has a button to go back to the main menu.
+ */
+
 public class HelpScreen implements Screen {
 
     private final MazeRunnerGame game;
@@ -40,6 +45,11 @@ public class HelpScreen implements Screen {
             Gdx.app.log("HelpScreen", "Sound file not found!");
         }
     }
+
+    /**
+     * Creates the button style used on this screen.
+     * Uses "button2.png" as background, otherwise falls back to skin default.
+     */
 
     private void createButtonStyle() {
         buttonStyle = new TextButton.TextButtonStyle();
@@ -66,6 +76,10 @@ public class HelpScreen implements Screen {
             buttonStyle.fontColor = Color.BLACK;
         }
     }
+    /**
+     * Builds the help UI once when the screen is shown.
+     * Loads background, sets input to stage, and creates labels/buttons.
+     */
 
     @Override
     public void show() {
@@ -129,6 +143,11 @@ public class HelpScreen implements Screen {
         scrollTable.add(backButton).width(350).height(100).padBottom(50);
         rootTable.add(scrollTable).width(1150).height(1300);
     }
+    /**
+     * Draws the background and the UI every frame.
+     *
+     * @param delta time since last frame
+     */
 
     @Override
     public void render(float delta) {
@@ -141,12 +160,17 @@ public class HelpScreen implements Screen {
         stage.act(delta);
         stage.draw();
     }
+    /**
+     * Updates the viewport when the window size changes.
+     */
 
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
     }
-
+    /**
+     * Disposes resources created by this screen.
+     */
     @Override
     public void dispose() {
         stage.dispose();

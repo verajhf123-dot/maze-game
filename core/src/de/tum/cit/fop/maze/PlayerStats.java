@@ -4,6 +4,10 @@ import de.tum.cit.fop.maze.progression.ExperienceSystem;
 import de.tum.cit.fop.maze.progression.SkillTree;
 import de.tum.cit.fop.maze.progression.SkillManager;
 
+/**
+ * Stores all player-related stats.
+ */
+
 public class PlayerStats {
 
     public static final String DAMAGE_TYPE_PHYSICAL = "physical";
@@ -30,12 +34,23 @@ public class PlayerStats {
     private int baseMaxHealth = 100;
     private Player player;
 
+    /**
+     * Creates default stats and initializes the progression systems.
+     * Stats are updated once based on the starting level/skills.
+     */
     public PlayerStats() {
         expSystem = new ExperienceSystem();
         skillTree = new SkillTree(expSystem);
         skillManager = null;
         updateStatsFromLevel();
     }
+
+    /**
+     * Connects this stats object to a specific Player and creates the SkillManager.
+     * Call this after the Player is created.
+     *
+     * @param player the player entity that uses these stats
+     */
 
     public void setPlayer(Player player) {
         this.player = player;
@@ -45,6 +60,11 @@ public class PlayerStats {
 
     public SkillManager getSkillManager() { return skillManager; }
     public SkillTree getSkillTree() { return skillTree; }
+
+    /**
+     * Recalculates stats that depend on level and unlocked skills.
+     * This updates maxHealth, resistances, and chance values, and clamps current health.
+     */
 
     private void updateStatsFromLevel() {
         float skillHealthBonus = 0;
@@ -74,11 +94,22 @@ public class PlayerStats {
         }
     }
 
+/**
+ * Calculates total defense bonus from level + skills.
+ */
     private float calculateDefenseBonus() {
         float levelDefense = expSystem.getDefenseBonus();
         float skillDefense = skillTree != null ? skillTree.getTotalDefenseBonus() : 0;
         return levelDefense + skillDefense;
     }
+
+    /**
+     * Applies damage to the player, including resistances, defense, shield and trap resistance.
+     * Can also dodge if the dodge ability is active and the random check succeeds.
+     *
+     * @param damage raw incoming damage
+     * @param damageType type of damage (physical/fire/poison)
+     */
 
     public void takeDamage(float damage, String damageType) {
         if (skillManager != null && skillManager.hasSpecialAbility("dodge") && Math.random() < dodgeChance) {
@@ -106,9 +137,18 @@ public class PlayerStats {
             if (health < 0) health = 0;
         }
     }
+    /**
+     * Convenience overload: treats the damage as physical damage.
+     *
+     * @param damage incoming damage amount
+     */
 
     public void takeDamage(int damage) { takeDamage((float)damage, DAMAGE_TYPE_PHYSICAL); }
-
+    /**
+     * Calculates the player's current attack damage based on base damage and skill bonuses.
+     *
+     * @return attack damage value used for hits/projectiles
+     */
     public float getActualAttackDamage() {
         float baseDamage = 10f;
         float skillBonus = skillTree != null ? skillTree.getTotalAttackBonus() : 0;
@@ -127,13 +167,25 @@ public class PlayerStats {
         expSystem.gainExp(amount);
     }
 
+    /**
+     * Tries to unlock a skill and refreshes stats if unlocking succeeded.
+     *
+     * @param skillId skill identifier
+     * @return true if the skill was unlocked
+     */
+
     public boolean unlockSkill(String skillId) {
         if (skillTree == null) return false;
         boolean s = skillTree.unlockSkill(skillId);
         if (s) applySkillEffects();
         return s;
     }
-
+    /**
+     * Heals the player and clamps health to maxHealth.
+     * Skill bonuses may increase healing.
+     *
+     * @param value heal amount
+     */
     public void heal(int value) {
         if (skillManager != null) {
             float v = skillManager.applySkillBonusesToHealing(value);
@@ -144,12 +196,22 @@ public class PlayerStats {
         if (health > maxHealth) health = maxHealth;
     }
 
+    /**
+     * Resets exp and skill tree progression, then restores health to max.
+     */
+
     public void resetProgression() {
         expSystem.setCurrentExp(0);
         if (skillTree != null) skillTree.reset();
         updateStatsFromLevel();
         health = maxHealth;
     }
+
+    /**
+     * Updates time-based systems (skills, cooldowns) and refreshes derived stats.
+     *
+     * @param delta time since last frame
+     */
 
     public void update(float delta) {
         if (skillTree != null) skillTree.update(delta);

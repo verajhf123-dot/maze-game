@@ -10,13 +10,24 @@ import com.badlogic.gdx.math.Vector2;
 
 import java.util.List;
 
+/**
+ * Represents the player character.
+ *
+ * The player stores movement state (position, velocity, facing) and combat state
+ * (health/stats, attack and hurt flags, cooldown timers). Each frame it updates
+ * its animation frame and collision/attack hitboxes, and it can be rendered with SpriteBatch.
+ *
+ * The player is updated by GameScreen and interacts with walls, enemies, items and skills.
+ */
+
+
 public class Player implements CollidableEntity {
 
     private Texture texture;
     private TextureRegion currentFrame;
 
-    private Animation<TextureRegion> walkDownAnim, walkUpAnim, walkLeftAnim, walkRightAnim;
-    private Animation<TextureRegion> attackDownAnim, attackUpAnim, attackLeftAnim, attackRightAnim;
+    private Animation<TextureRegion> walkDown, walkUp, walkLeft, walkRight;
+    private Animation<TextureRegion> attackDown, attackUp, attackLeft, attackRight;
 
     private float stateTime = 0f;
     private Vector2 position;
@@ -37,8 +48,8 @@ public class Player implements CollidableEntity {
     private float speedBuffTimer = 0f;
     private float speedBuffMultiplier = 1.0f;
 
-    private boolean isInvincible = false;
-    private float invincibleTimer = 0f;
+    private boolean invulnerable = false;
+    private float invulnTime = 0f;
 
     private boolean isAttacking = false;
     private float attackTimer = 0f;
@@ -50,36 +61,44 @@ public class Player implements CollidableEntity {
     private Rectangle attackHitbox;
     private int facingDirection = 0;
 
+    /**
+     * Create a player at the given start position and initializes animations.
+     * The texture is split into walk and attack frames.If splitting fails,a default frame is used.
+     * @param x start x position in world coordinates
+     * @param y start y position in world coordinates
+     * @param inheritedStats optional stats carried over from a previous level
+     */
+
     public Player(float x, float y, PlayerStats inheritedStats) {
         this.texture = new Texture("character.png");
         TextureRegion[][] tmpWalk = TextureRegion.split(texture, 64, 128);
         TextureRegion[][] tmpAttack = TextureRegion.split(texture, 136, 128);
 
         if (tmpWalk.length >= 4) {
-            walkDownAnim  = new Animation<>(0.15f, tmpWalk[0][0], tmpWalk[0][1], tmpWalk[0][2]);
-            walkRightAnim = new Animation<>(0.15f, tmpWalk[1][0], tmpWalk[1][1], tmpWalk[1][2]);
-            walkUpAnim    = new Animation<>(0.15f, tmpWalk[2][0], tmpWalk[2][1], tmpWalk[2][2]);
-            walkLeftAnim  = new Animation<>(0.15f, tmpWalk[3][0], tmpWalk[3][1], tmpWalk[3][2]);
-            walkDownAnim.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
-            walkRightAnim.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
-            walkUpAnim.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
-            walkLeftAnim.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
+            walkDown = new Animation<>(0.15f, tmpWalk[0][0], tmpWalk[0][1], tmpWalk[0][2]);
+            walkRight = new Animation<>(0.15f, tmpWalk[1][0], tmpWalk[1][1], tmpWalk[1][2]);
+            walkUp = new Animation<>(0.15f, tmpWalk[2][0], tmpWalk[2][1], tmpWalk[2][2]);
+            walkLeft = new Animation<>(0.15f, tmpWalk[3][0], tmpWalk[3][1], tmpWalk[3][2]);
+            walkDown.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
+            walkRight.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
+            walkUp.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
+            walkLeft.setPlayMode(Animation.PlayMode.LOOP_PINGPONG);
         }
 
         if (tmpAttack.length >= 8) {
-            attackDownAnim  = new Animation<>(0.1f, tmpAttack[4][0], tmpAttack[4][1], tmpAttack[4][2], tmpAttack[4][3]);
-            attackRightAnim = new Animation<>(0.1f, tmpAttack[5][0], tmpAttack[5][1], tmpAttack[5][2], tmpAttack[5][3]);
-            attackUpAnim    = new Animation<>(0.1f, tmpAttack[6][0], tmpAttack[6][1], tmpAttack[6][2], tmpAttack[6][3]);
-            attackLeftAnim  = new Animation<>(0.1f, tmpAttack[7][0], tmpAttack[7][1], tmpAttack[7][2], tmpAttack[7][3]);
+            attackDown  = new Animation<>(0.1f, tmpAttack[4][0], tmpAttack[4][1], tmpAttack[4][2], tmpAttack[4][3]);
+            attackRight = new Animation<>(0.1f, tmpAttack[5][0], tmpAttack[5][1], tmpAttack[5][2], tmpAttack[5][3]);
+            attackUp = new Animation<>(0.1f, tmpAttack[6][0], tmpAttack[6][1], tmpAttack[6][2], tmpAttack[6][3]);
+            attackLeft = new Animation<>(0.1f, tmpAttack[7][0], tmpAttack[7][1], tmpAttack[7][2], tmpAttack[7][3]);
         }
 
-        if (walkDownAnim == null) {
+        if (walkDown == null) {
             Animation<TextureRegion> def = new Animation<>(0.1f, new TextureRegion(texture));
-            walkDownAnim = def; walkRightAnim = def; walkUpAnim = def; walkLeftAnim = def;
-            attackDownAnim = def; attackRightAnim = def; attackUpAnim = def; attackLeftAnim = def;
+            walkDown = def; walkRight = def; walkUp = def; walkLeft = def;
+            attackDown = def; attackRight = def; attackUp = def; attackLeft = def;
         }
 
-        this.currentFrame = walkDownAnim.getKeyFrame(0);
+        this.currentFrame = walkDown.getKeyFrame(0);
         this.position = new Vector2(x, y);
         this.velocity = new Vector2(0, 0);
         this.hitbox = new Rectangle(x, y, 14, 14);
@@ -93,6 +112,21 @@ public class Player implements CollidableEntity {
         this.stats.setPlayer(this);
     }
 
+    /**
+     *update the player for one frame:movement,timers(hurt/invuln/buffs/attack),and animation state.
+     * Also resolves basic wall collisions by reverting x/y movement if the hitbox overlaps a wall.
+     *params all from the GameScreen
+     *  @param delta time passed since the last frame (seconds)
+     *  @param up whether the player is moving up
+     *  @param down whether the player is moving down
+     *  @param left whether the player is moving left
+     *  @param right whether the player is moving right
+     *  @param run whether the run key is held (applies runMultiplier)
+     *  @param walls list of walls used for simple collision checks (can be null)
+     *
+     *
+     */
+
     public void update(float delta, boolean up, boolean down, boolean left, boolean right, boolean run, List<Wall> walls) {
         if (stats != null) {
             stats.update(delta);
@@ -104,9 +138,9 @@ public class Player implements CollidableEntity {
             hurtTimer -= delta;
             if (hurtTimer <= 0) isHurt = false;
         }
-        if (isInvincible) {
-            invincibleTimer -= delta;
-            if (invincibleTimer <= 0) isInvincible = false;
+        if (invulnerable) {
+            invulnTime -= delta;
+            if (invulnTime <= 0) invulnerable = false;
         }
         if (speedBuffTimer > 0) {
             speedBuffTimer -= delta;
@@ -148,18 +182,18 @@ public class Player implements CollidableEntity {
         Animation<TextureRegion> currentAnim;
         if (isAttacking) {
             switch (facingDirection) {
-                case 1: currentAnim = attackRightAnim; break;
-                case 2: currentAnim = attackUpAnim; break;
-                case 3: currentAnim = attackLeftAnim; break;
-                default: currentAnim = attackDownAnim; break;
+                case 1: currentAnim = attackRight; break;
+                case 2: currentAnim = attackUp; break;
+                case 3: currentAnim = attackLeft; break;
+                default: currentAnim = attackDown; break;
             }
             currentFrame = currentAnim.getKeyFrame(stateTime, true);
         } else {
             switch (facingDirection) {
-                case 1: currentAnim = walkRightAnim; break;
-                case 2: currentAnim = walkUpAnim; break;
-                case 3: currentAnim = walkLeftAnim; break;
-                default: currentAnim = walkDownAnim; break;
+                case 1: currentAnim = walkRight; break;
+                case 2: currentAnim = walkUp; break;
+                case 3: currentAnim = walkLeft; break;
+                default: currentAnim = walkDown; break;
             }
             currentFrame = currentAnim.getKeyFrame(stateTime, true);
         }
@@ -187,6 +221,11 @@ public class Player implements CollidableEntity {
         updateAttackHitboxPosition();
     }
 
+    /**Stats an attack if the player is not already attacking and the attack
+     * has finished.
+     *
+     */
+
     public void performAttack() {
         if (attackCooldownTimer <= 0 && !isAttacking) {
             isAttacking = true;
@@ -195,6 +234,11 @@ public class Player implements CollidableEntity {
         }
     }
 
+    /**Updates the attack hitbox position so
+     * it is centered around the player.
+     *
+     */
+
     private void updateAttackHitboxPosition() {
         float range = 60f;
         float pX = hitbox.x + hitbox.width / 2;
@@ -202,7 +246,21 @@ public class Player implements CollidableEntity {
         attackHitbox.set(pX - range / 2, pY - range / 2, range, range);
     }
 
-    public void triggerDamageVFX() { this.damageColorTimer = 1.0f; }
+    /**
+     *Triggers the damage visual
+     * effect by resetting the damage color timer.
+     *
+     */
+
+    public void triggerDamageVFX() {
+        this.damageColorTimer = 1.0f;
+    }
+
+    /**Renders the Player using the current animation frame.
+     * If the player was recently damaged, the sprite is drawn red for a short time.
+     *
+     * @param batch SpriteBach used to draw the player texture region.
+     */
 
     public void render(SpriteBatch batch) {
         if (currentFrame == null) return;
@@ -218,9 +276,17 @@ public class Player implements CollidableEntity {
         batch.setColor(Color.WHITE);
     }
 
+    /**
+     *Check whether damage is allowed,
+     * ignored when player is dead,invulnerable and still in cooldowntime,
+     * if successful,updates the state(hurTimer,cooldownTimer and VFX)
+     *
+     * @param dmg amount of damage to apply
+     */
+
     public void takeDamage(float dmg) {
         if (getHealth() <= 0) return;
-        if (isInvincible) return;
+        if (invulnerable) return;
         if (damageCooldownTimer > 0f) return;
         if (stats != null) {
             int oldHealth = stats.getHealth();
@@ -234,19 +300,84 @@ public class Player implements CollidableEntity {
         }
     }
 
-    public void heal(float amount) { if (stats != null) stats.heal((int) amount); }
-    public void healByPercentage(float percentage) { if (stats != null) heal(stats.getMaxHealth() * percentage); }
-    public void applySpeedBuff(float multiplier, float duration) { this.speedBuffMultiplier = multiplier; this.speedBuffTimer = duration; }
-    public void enableFatalProtection() { this.isInvincible = true; this.invincibleTimer = 10.0f; }
+    /**
+     *Heals the player by a fixed amount
+     * @param amount heal amount
+     */
 
-    public float getHealth() { return stats != null ? stats.getHealth() : 0; }
-    public float getMaxHealth() { return stats != null ? stats.getMaxHealth() : 100; }
-    public Vector2 getVelocity() { return velocity; }
-    public void syncPositionToHitbox() { this.position.set(hitbox.x, hitbox.y); }
-    public Rectangle getHitbox() { return hitbox; }
-    public PlayerStats getStats() { return stats; }
-    public com.badlogic.gdx.math.Vector2 getPosition() { return position; }
-    public void dispose() { texture.dispose(); }
-    public boolean isAttacking() { return isAttacking; }
-    public Rectangle getAttackHitbox() { return attackHitbox; }
+    public void heal(float amount) {
+        if (stats != null) stats.heal((int) amount);
+    }
+
+    /**
+     * Heals the player by a percentage of max health.
+     * @param percentage
+     */
+
+    public void healByPercentage(float percentage) {
+        if (stats != null) heal(stats.getMaxHealth() * percentage);
+    }
+
+    /**
+     * Applies a temporary speed multiplier.
+     * @param multiplier speed factor
+     * @param duration duration in seconds
+     */
+
+    public void applySpeedBuff(float multiplier, float duration) {
+        this.speedBuffMultiplier = multiplier;
+        this.speedBuffTimer = duration;
+    }
+
+    /**
+     * Enable a temporary invulnerability period(fatal protection).
+     * uses a fixed duration.
+     */
+
+    public void enableFatalProtection() {
+        this.invulnerable = true; this.invulnTime = 10.0f;
+    }
+
+    public float getHealth() {
+        return stats != null ? stats.getHealth() : 0;
+    }
+    public float getMaxHealth() {
+        return stats != null ? stats.getMaxHealth() : 100;
+    }
+    public Vector2 getVelocity() {
+        return velocity;
+    }
+
+    /**
+     * Syncs the visual position to match the hitbox position after collision adjustments.
+     */
+    public void syncPositionToHitbox() {
+        this.position.set(hitbox.x, hitbox.y);
+    }
+
+    public Rectangle getHitbox() {
+        return hitbox;
+    }
+    public PlayerStats getStats() {
+        return stats;
+    }
+
+    public com.badlogic.gdx.math.Vector2 getPosition() {
+        return position;
+    }
+
+    /**
+     * Disposes texture owned vy player to free GPU resources.
+     */
+
+    public void dispose() {
+        texture.dispose();
+    }
+
+    public boolean isAttacking() {
+        return isAttacking;
+    }
+    public Rectangle getAttackHitbox() {
+        return attackHitbox;
+    }
 }

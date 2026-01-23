@@ -109,6 +109,12 @@ public class MenuScreen implements Screen {
 
         table.add(button).width(400).height(110).padBottom(10).row();
     }
+    /**
+     * Builds the main menu layout.
+     *
+     * This method clears the table and adds title + buttons.
+     * The "Continue" button is only shown if a save file exists.
+     */
 
     private void showMainMenu() {
         table.clear();
@@ -183,6 +189,10 @@ public class MenuScreen implements Screen {
             }
         });
     }
+    /**
+     * Continue game: load save data and enter the saved level.
+     * If loading fails, stay in the menu and print a log message.
+     */
 
     private void handleContinueGame() {
         SaveData data = SaveManager.loadGame();
@@ -212,6 +222,11 @@ public class MenuScreen implements Screen {
             Gdx.app.log("MenuScreen", "Error loading save file.");
         }
     }
+
+    /**
+     * Show a simple level selection menu (Level 1..maxNumber).
+     * Click a level to start, or click Back to return to main menu.
+     */
 
     private void showLevelSelection(int maxNumber) {
         table.clear();
@@ -245,7 +260,9 @@ public class MenuScreen implements Screen {
             }
         });
     }
-
+    /**
+     * Draw background + draw UI stage every frame.
+     */
     @Override
     public void render(float delta) {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -260,6 +277,10 @@ public class MenuScreen implements Screen {
         stage.draw();
     }
 
+    /**
+     * Update viewport when window size changes.
+     */
+
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
@@ -273,6 +294,10 @@ public class MenuScreen implements Screen {
         if (buttonSound != null) buttonSound.dispose();
     }
 
+    /**
+     * Called when entering this screen: load background, setup button style,
+     * set input to stage, play menu music, and build the main menu UI.
+     */
     @Override
     public void show() {
         batch = new SpriteBatch();
@@ -296,6 +321,11 @@ public class MenuScreen implements Screen {
     @Override
     public void hide() {
     }
+
+    /**
+     * Let the user pick a custom map file (.map or .properties) on desktop.
+     * If file chooser is not available, just log and do nothing.
+     */
 
     private void chooseMapFile() {
         var fileChooser = game.getFileChooser();

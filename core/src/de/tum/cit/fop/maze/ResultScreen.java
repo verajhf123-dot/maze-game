@@ -22,6 +22,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import de.tum.cit.fop.maze.AchievementManager;
 
+/**
+ * Result screen shown after a level ends (victory or game over).
+ * It displays the result, score (and optional achievement stats),
+ * and gives buttons to continue or return to menu.
+ */
 
 public class ResultScreen implements Screen {
     private final MazeRunnerGame game;
@@ -40,6 +45,17 @@ public class ResultScreen implements Screen {
     private SpriteBatch batch;
     private Texture menuBg;
 
+    /**
+     * Creates a result screen for either victory or defeat.
+     *
+     * @param game main game instance (used for switching screens and shared batch)
+     * @param isVictory true = victory screen, false = game over screen
+     * @param currentLevel current level number
+     * @param score total score to display
+     * @param stats player stats that should be carried to the next level
+     * @param achievementManager provides extra end-screen stats
+     */
+
     public ResultScreen(MazeRunnerGame game, boolean isVictory, int currentLevel, int score, PlayerStats stats, AchievementManager achievementManager) {
         this.game = game;
         this.isVictory = isVictory;
@@ -52,6 +68,8 @@ public class ResultScreen implements Screen {
 
     /**
      * createButtonStyle
+     * Uses "button2.png" as background, and falls back to skin default if missing.
+     *
      */
     private void createButtonStyle() {
         commonButtonStyle = new TextButton.TextButtonStyle();
@@ -78,6 +96,11 @@ public class ResultScreen implements Screen {
             commonButtonStyle.fontColor = Color.BLACK;
         }
     }
+
+    /**
+     * Builds the UI, loads background, music, and sets input to this stage.
+     * Shows "Next Level" on victory, and "Retry Level" on defeat, plus "Back to Menu".
+     */
 
     @Override
     public void show() {
@@ -180,12 +203,20 @@ public class ResultScreen implements Screen {
         table.add(menuBtn).width(350).height(100).row();
     }
 
+    /**
+     * Plays the button click sound (if available) and stops the result music.
+     * This is called before switching screens.
+     */
 
     private void playClickAndStopMusic() {
         if (buttonSound != null) buttonSound.play();
         if (resultMusic != null) resultMusic.stop();
     }
-
+    /**
+     * Clears the screen, draws the background image, then renders the stage UI.
+     *
+     * @param delta time since last frame
+     */
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
@@ -199,7 +230,9 @@ public class ResultScreen implements Screen {
         stage.act(delta);
         stage.draw();
     }
-
+    /**
+     * Updates the viewport on resize.
+     */
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);

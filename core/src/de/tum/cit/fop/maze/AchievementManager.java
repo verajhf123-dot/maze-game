@@ -30,7 +30,7 @@ public class AchievementManager {
     }
 
     /**
-     * Loads achievement definitions from an external JSON file[cite: 75, 88].
+     * Loads achievement definitions from an external JSON file.
      */
     private void loadAchievements() {
         Json json = new Json();
@@ -55,13 +55,16 @@ public class AchievementManager {
     }
 
     /**
-     * Tracks gained experience and checks for milestones[cite: 84].
+     * Tracks gained experience and checks for milestones
      */
     public void trackExp(int exp) {
         totalExpGained += exp;
         checkMilestones();
     }
 
+    /**
+     * Check whether the Achievements could be unlocked.See the conditions
+     */
     private void checkMilestones() {
         if (totalKills >= 1) unlock("FIRST_BLOOD");
         if (achievementMap.containsKey("MONSTER_SLAYER") &&
@@ -73,6 +76,13 @@ public class AchievementManager {
             unlock("EXP_MASTER");
         }
     }
+
+    /**
+     * Unlocks an achievement if it has not been unlocked before.
+     * Updates the unlock status and prints a notification message.
+     *
+     * @param id the achievement identifier
+     */
 
     private void unlock(String id) {
         if (unlockedStatus.containsKey(id) && !unlockedStatus.get(id)) {

@@ -7,6 +7,12 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Simple in-game developer console for testing.
+ * It shows a TextField, accepts a command, and executes
+ * a predefined action on the player/game.
+ */
+
 public class DeveloperConsole {
     private TextField inputField;
     private boolean isVisible = false;
@@ -18,6 +24,14 @@ public class DeveloperConsole {
 
 
     private Map<String, ConsoleCommand> commandMap;
+    /**
+     * Creates the console input field, registers commands, and adds the input to the stage.
+     *
+     * @param skin UI skin used for the TextField
+     * @param stage stage that renders the console input
+     * @param player player object affected by commands
+     * @param gameScreen game screen used for commands that affect the level (e.g. killall)
+     */
 
     public DeveloperConsole(Skin skin, Stage stage, Player player, GameScreen gameScreen) {
         this.player = player;
@@ -43,6 +57,11 @@ public class DeveloperConsole {
         stage.addActor(inputField);
     }
 
+    /**
+     * Registers all supported commands and connects them to actions.
+     * Commands are typed in the TextField .
+     */
+
     private void registerCommands() {
         commandMap.put("heal", () -> {
             player.getStats().heal(1000);
@@ -67,7 +86,11 @@ public class DeveloperConsole {
             System.out.println(" Command executed: Level Up!");
         });
     }
-
+    /**
+     * Parses a text command and executes it if it exists.
+     *
+     * @param command raw input text from the console
+     */
     private void handleCommand(String command) {
         System.out.println("Console input: " + command);
         String key = command.trim().toLowerCase();
@@ -78,6 +101,12 @@ public class DeveloperConsole {
             System.out.println(" Unknown command: " + key);
         }
     }
+
+
+    /**
+     * Toggles console visibility and keyboard focus.
+     * When opened, the TextField gets focus so the user can type immediately.
+     */
 
     public void toggleConsole() {
         isVisible = !isVisible;

@@ -182,6 +182,8 @@ public class GameScreen implements Screen {
     private float fogSoundTimer = 0f;
     private float spawnTimer = 0f;
     private static final float SPAWN_INVULN_DURATION = 1.0f;
+    //Decorations
+    private List<Decoration>decorations;
 
     // =================================================================
     // Constructors
@@ -513,6 +515,14 @@ public class GameScreen implements Screen {
                 batch.draw(wallTexture, wall.worldX, wall.worldY, Wall.TILE_SIZE, Wall.TILE_SIZE);
             }
         }
+
+        if (decorations != null) {
+            for (Decoration d : decorations) {
+                d.render(batch);
+            }
+        }
+
+
         if (traps != null) {
             for (Trap trap : traps) {
                 if (trap.hasTexture()) trap.render(batch);
@@ -715,6 +725,9 @@ public class GameScreen implements Screen {
 
     /**
      * Builds a grid of the map for AI optimization.
+     *<p>
+     * Each cell correspnds to a tile and indicates whether it can be traversed.
+     * This grid is mainly used by enemy AI for pathfinding.
      */
     private void buildWalkableGrid() {
         int gridWidth = (int) (mapWidth / Wall.TILE_SIZE);
@@ -1085,6 +1098,8 @@ public class GameScreen implements Screen {
             this.walls = data.walls;
             this.entryPosition = data.entryPosition;
             this.exitPosition = data.exitPosition;
+            this.decorations = data.decorations;
+
 
             this.enemies = new Array<>();
             if (data.enemies != null) {
