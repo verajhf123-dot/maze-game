@@ -1,13 +1,15 @@
 package de.tum.cit.fop.maze.ai;
 
 import com.badlogic.gdx.math.Vector2;
-import de.tum.cit.fop.maze.enemies.Enemy;
 import de.tum.cit.fop.maze.Player;
+import de.tum.cit.fop.maze.enemies.Enemy;
 
 public class AttackBehavior extends AIBehavior {
+
     private Player player;
-    private float attackCooldown = 1f;
-    private float currentCooldown = 0;
+
+    private float cooldown = 1f;
+    private float cooldownTimer = 0f;
 
     public AttackBehavior(Enemy enemy, Player player) {
         super(enemy);
@@ -16,39 +18,39 @@ public class AttackBehavior extends AIBehavior {
 
     @Override
     protected void updateAI() {
-        if (currentCooldown > 0) {
-            currentCooldown -= updateInterval;
+        if (cooldownTimer > 0f) {
+            cooldownTimer -= updateInterval;
         }
 
-        Vector2 playerPos = player.getPosition();
         Vector2 enemyPos = enemy.getPosition();
-        float distance = enemyPos.dst(playerPos);
+        Vector2 playerPos = player.getPosition();
 
-        if (distance <= enemy.getAttackRange()) {
-            enemy.setVelocity(0, 0);
+        float dist = enemyPos.dst(playerPos);
 
-            if (currentCooldown <= 0) {
-                performAttack();
-                currentCooldown = attackCooldown;
+        if (dist <= enemy.getAttackRange()) {
+            enemy.setVelocity(0f, 0f);
+
+            if (cooldownTimer <= 0f) {
+                enemy.attack();
+                cooldownTimer = cooldown;
             }
         } else {
             enemy.findPathTo(playerPos);
         }
     }
 
-    private void performAttack() {
-        enemy.attack();
-    }
-
     @Override
     public void onPlayerSpotted() {
+        // not needed for this behavior
     }
 
     @Override
     public void onPlayerLost() {
+        // not needed for this behavior
     }
 
     @Override
     public void onAttack() {
+        // handled in updateAI
     }
 }
