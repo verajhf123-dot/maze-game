@@ -1,18 +1,22 @@
 package de.tum.cit.fop.maze.ai;
 
-import de.tum.cit.fop.maze.enemies.Enemy;
-import de.tum.cit.fop.maze.Player;
 import com.badlogic.gdx.math.Vector2;
+import de.tum.cit.fop.maze.Player;
+import de.tum.cit.fop.maze.enemies.Enemy;
 
 public class EvadeBehavior extends AIBehavior {
-    private float evadeDistance = 150f;
-    private float evadeSpeedMultiplier = 1.8f;
+
+    private float evadeRange = 150f;
+    private float speedMultiplier = 1.8f;
+
     private int evadeCooldown = 60;
-    private int cooldownTimer = 0;
-    private boolean isEvading = false;
-    private int evadeDuration = 30;
-    private int evadeTimer = 0;
-    private Player targetPlayer;
+    private int cooldown = 0;
+
+    private boolean evading = false;
+    private int evadeTime = 30;
+    private int evadeLeft = 0;
+
+    private Player player;
 
     public EvadeBehavior(Enemy enemy) {
         super(enemy);
@@ -20,91 +24,87 @@ public class EvadeBehavior extends AIBehavior {
 
     @Override
     protected void updateAI() {
-        if (targetPlayer == null) return;
+        if (player == null) return;
 
-        if (cooldownTimer > 0) {
-            cooldownTimer--;
+        if (cooldown > 0) {
+            cooldown--;
         }
 
-        float distanceToPlayer = calculateDistance();
+        float dist = distanceToPlayer();
 
-        if (!isEvading &&
-                cooldownTimer <= 0 &&
-                distanceToPlayer < evadeDistance) {
-
+        if (!evading && cooldown <= 0 && dist < evadeRange) {
             startEvade();
         }
 
-        if (isEvading) {
-            if (evadeTimer > 0) {
-                Vector2 enemyPos = enemy.getPosition();
-                Vector2 playerPos = targetPlayer.getPosition();
+        if (!evading) return;
 
-                float dx = enemyPos.x - playerPos.x;
-                float dy = enemyPos.y - playerPos.y;
-                float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        if (evadeLeft > 0) {
+            Vector2 enemyPos = enemy.getPosition();
+            Vector2 playerPos = player.getPosition();
 
-                if (distance > 0) {
-                    dx /= distance;
-                    dy /= distance;
+            float dx = enemyPos.x - playerPos.x;
+            float dy = enemyPos.y - playerPos.y;
+            float len = (float) Math.sqrt(dx * dx + dy * dy);
 
-                    float speed = enemy.getSpeed() * evadeSpeedMultiplier;
-                    enemy.setVelocity(dx * speed, dy * speed);
-                }
+            if (len > 0f) {
+                dx /= len;
+                dy /= len;
 
-                evadeTimer--;
+                float speed = enemy.getSpeed() * speedMultiplier;
+                enemy.setVelocity(dx * speed, dy * speed);
+            }
 
-                if (evadeTimer <= 0) {
-                    stopEvade();
-                }
+            evadeLeft--;
+
+            if (evadeLeft <= 0) {
+                stopEvade();
             }
         }
     }
 
     private void startEvade() {
-        isEvading = true;
-        evadeTimer = evadeDuration;
-        cooldownTimer = evadeCooldown;
+        evading = true;
+        evadeLeft = evadeTime;
+        cooldown = evadeCooldown;
 
-        System.out.println("Enemy evades attack! Distance: " + calculateDistance());
+        System.out.println("Enemy evades! dist=" + distanceToPlayer());
     }
 
     private void stopEvade() {
-        isEvading = false;
-        enemy.setVelocity(0, 0);
+        evading = false;
+        enemy.setVelocity(0f, 0f);
     }
 
-    private float calculateDistance() {
-        if (targetPlayer == null) return Float.MAX_VALUE;
-
+    private float distanceToPlayer() {
         Vector2 enemyPos = enemy.getPosition();
-        Vector2 playerPos = targetPlayer.getPosition();
+        Vector2 playerPos = player.getPosition();
 
         float dx = enemyPos.x - playerPos.x;
         float dy = enemyPos.y - playerPos.y;
+
         return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
     @Override
     public void onPlayerSpotted() {
-        System.out.println("Player spotted - evade behavior activated");
+        System.out.println("Player spotted, enemy ready to evade");
     }
 
     @Override
     public void onPlayerLost() {
-        if (isEvading) {
+        if (evading) {
             stopEvade();
         }
-        targetPlayer = null;
-        System.out.println("Player lost - stop evading");
+        player = null;
+        System.out.println("Player lost");
     }
 
     @Override
     public void onAttack() {
-        System.out.println("Evade behavior: enemy preparing to attack");
+        // nothing special here
     }
 
     public void setTargetPlayer(Player player) {
-        this.targetPlayer = player;
+        this.player = player;
     }
 }

@@ -15,7 +15,13 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.MazeRunnerGame;
 import de.tum.cit.fop.maze.PlayerStats;
 
+/**
+ * SkillTreeScreen displays the player's skill tree UI,
+ * allows upgrading HP, Speed, and Attack stats,
+ * and integrates with Q/E/R skill system.
+ */
 public class SkillTreeScreen implements Screen {
+
     private final MazeRunnerGame game;
     private final Stage stage;
     private final SkillTree skillTree;
@@ -36,6 +42,7 @@ public class SkillTreeScreen implements Screen {
 
     private static final Color MINT_COLOR = new Color(0.96f, 1.0f, 0.98f, 1.0f);
 
+    // ------------------- Constructor -------------------
     public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats, Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
@@ -44,124 +51,98 @@ public class SkillTreeScreen implements Screen {
         this.previousScreen = previousScreen;
         this.stage = new Stage(new ScreenViewport(), game.getSpriteBatch());
 
-        this.skillPointsLabel = new Label("", game.getSkin());
+        skillPointsLabel = new Label("", game.getSkin());
     }
 
+    // ------------------- Show / UI Setup -------------------
     @Override
     public void show() {
         batch = new SpriteBatch();
-        menuBg = new Texture(Gdx.files.internal("sktbg3.png"));
 
+        // Load textures for menu background and stat icons
+        menuBg = new Texture(Gdx.files.internal("sktbg3.png"));
         hpIcon = new Texture(Gdx.files.internal("SkillTree/HP.png"));
         speedIcon = new Texture(Gdx.files.internal("SkillTree/speed.png"));
         atkIcon = new Texture(Gdx.files.internal("SkillTree/attack.png"));
 
         Gdx.input.setInputProcessor(stage);
 
+        // Main table to organize UI
         Table mainTable = new Table();
         mainTable.setFillParent(true);
         mainTable.center();
         stage.addActor(mainTable);
 
+        // Title label
         Label title = new Label("SKILL TREE", game.getSkin(), "title");
         title.setColor(new Color(0.96f, 0.96f, 0.86f, 1f));
         title.setFontScale(1.2f);
         mainTable.add(title).padBottom(40).row();
 
+        // XP / skill points label
         updateSkillPointsLabel();
         skillPointsLabel.setFontScale(1.2f);
         mainTable.add(skillPointsLabel).padBottom(40).row();
 
+        // Stats table: HP, Speed, Attack
         Table statsTable = new Table();
         statsTable.defaults().pad(30);
-
         float iconSize = 120f;
 
-        Table hpContainer = new Table();
-        Image hpImage = new Image(hpIcon);
-        hpImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
-        hpImage.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                attemptUpgrade("HP");
-            }
-        });
-        hpContainer.add(hpImage).size(iconSize, iconSize).row();
+        // HP stat
+        hpLabel = createStatColumn(statsTable, hpIcon, "HP", Color.RED, iconSize);
 
-        Label clickHint1 = new Label("Click to Add", game.getSkin());
-        clickHint1.setFontScale(0.8f);
-        hpContainer.add(clickHint1).padTop(10).row();
+        // Speed stat
+        speedLabel = createStatColumn(statsTable, speedIcon, "SPEED", MINT_COLOR, iconSize);
 
-        hpLabel = new Label("", game.getSkin());
-        hpLabel.setColor(Color.RED);
-        hpLabel.setFontScale(1.2f);
-        hpContainer.add(hpLabel).padTop(5);
-        statsTable.add(hpContainer);
-
-        Table speedContainer = new Table();
-        Image speedImage = new Image(speedIcon);
-        speedImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
-        speedImage.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                attemptUpgrade("SPEED");
-            }
-        });
-        speedContainer.add(speedImage).size(iconSize, iconSize).row();
-
-        Label clickHint2 = new Label("Click to Add", game.getSkin());
-        clickHint2.setFontScale(0.8f);
-        speedContainer.add(clickHint2).padTop(10).row();
-
-        speedLabel = new Label("", game.getSkin());
-        speedLabel.setColor(MINT_COLOR);
-        speedLabel.setFontScale(1.2f);
-        speedContainer.add(speedLabel).padTop(5);
-        statsTable.add(speedContainer);
-
-        Table atkContainer = new Table();
-        Image atkImage = new Image(atkIcon);
-        atkImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
-        atkImage.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                attemptUpgrade("ATK");
-            }
-        });
-        atkContainer.add(atkImage).size(iconSize, iconSize).row();
-
-        Label clickHint3 = new Label("Click to Add", game.getSkin());
-        clickHint3.setFontScale(0.8f);
-        atkContainer.add(clickHint3).padTop(10).row();
-
-        atkLabel = new Label("", game.getSkin());
-        atkLabel.setColor(Color.ORANGE);
-        atkLabel.setFontScale(1.2f);
-        atkContainer.add(atkLabel).padTop(5);
-        statsTable.add(atkContainer);
+        // Attack stat
+        atkLabel = createStatColumn(statsTable, atkIcon, "ATK", Color.ORANGE, iconSize);
 
         mainTable.add(statsTable).padBottom(30).row();
 
         updateAllStatsLabels();
 
+        // Hint label
         Label hintLabel = new Label("Press T or ESC to return", game.getSkin());
         hintLabel.setFontScale(1.0f);
         mainTable.add(hintLabel).padTop(20);
     }
 
-    private void attemptUpgrade(String type) {
-        String skillId = "";
+    /**
+     * Helper method to create a stat column (icon + click hint + value label)
+     */
+    private Label createStatColumn(Table parentTable, Texture iconTexture, String type, Color valueColor, float iconSize) {
+        Table container = new Table();
+        Image icon = new Image(iconTexture);
+        icon.setScaling(com.badlogic.gdx.utils.Scaling.fit);
+        icon.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                attemptUpgrade(type);
+            }
+        });
+        container.add(icon).size(iconSize, iconSize).row();
 
+        Label clickHint = new Label("Click to Add", game.getSkin());
+        clickHint.setFontScale(0.8f);
+        container.add(clickHint).padTop(10).row();
+
+        Label valueLabel = new Label("", game.getSkin());
+        valueLabel.setColor(valueColor);
+        valueLabel.setFontScale(1.2f);
+        container.add(valueLabel).padTop(5);
+
+        parentTable.add(container);
+        return valueLabel;
+    }
+
+    // ------------------- Skill Upgrade Logic -------------------
+    private void attemptUpgrade(String type) {
+        String skillId;
         switch (type) {
-            case "HP":
-                skillId = "health_boost";
-                break;
-            case "SPEED":
-                skillId = "speed_boost";
-                break;
-            case "ATK":
-                skillId = "attack_boost";
-                break;
+            case "HP": skillId = "health_boost"; break;
+            case "SPEED": skillId = "speed_boost"; break;
+            case "ATK": skillId = "attack_boost"; break;
             default:
                 System.out.println("Unknown upgrade type: " + type);
                 return;
@@ -178,36 +159,35 @@ public class SkillTreeScreen implements Screen {
         }
     }
 
+    // Update the stat labels with current totals from skill tree
     private void updateAllStatsLabels() {
         if (skillTree != null) {
-            hpLabel.setText("HP +" + (int)skillTree.getTotalHealthBonus());
-            speedLabel.setText("Speed +" + (int)(skillTree.getTotalSpeedBonus() * 100) + "%");
-            atkLabel.setText("ATK +" + (int)skillTree.getTotalAttackBonus());
+            hpLabel.setText("HP +" + (int) skillTree.getTotalHealthBonus());
+            speedLabel.setText("Speed +" + (int) (skillTree.getTotalSpeedBonus() * 100) + "%");
+            atkLabel.setText("ATK +" + (int) skillTree.getTotalAttackBonus());
         }
     }
 
+    // Update XP / skill points label
     private void updateSkillPointsLabel() {
         if (expSystem != null) {
-            String text = "Current XP: " + expSystem.getCurrentExp();
-            skillPointsLabel.setText(text);
+            skillPointsLabel.setText("Current XP: " + expSystem.getCurrentExp());
         } else {
             skillPointsLabel.setText("XP System not available");
         }
     }
 
+    // ------------------- Return / Navigation -------------------
     private void returnToGame() {
         if (previousScreen != null) {
-            if (previousScreen instanceof de.tum.cit.fop.maze.GameScreen) {
-            }
-
             game.setScreen(previousScreen);
-            this.dispose();
+            dispose();
         } else {
             game.goToGame(1, playerStats);
         }
     }
 
-
+    // ------------------- Screen Methods -------------------
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
@@ -222,6 +202,7 @@ public class SkillTreeScreen implements Screen {
             batch.draw(menuBg, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         }
         batch.end();
+
         stage.act(delta);
         stage.draw();
     }

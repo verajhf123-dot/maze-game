@@ -22,9 +22,8 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
-
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.enemies.Enemy;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.enemies.NineTailedFox;
 import de.tum.cit.fop.maze.enemies.QiongQi;
 import de.tum.cit.fop.maze.enemies.ZhuLong;
@@ -733,27 +732,29 @@ public class GameScreen implements Screen {
         int gridWidth = (int) (mapWidth / Wall.TILE_SIZE);
         int gridHeight = (int) (mapHeight / Wall.TILE_SIZE);
 
-        canWalk = new boolean[gridWidth][gridHeight];
-        // Default (true)
+        // Initialize grid, default all cells to walkable
+        boolean[][] walkable = new boolean[gridWidth][gridHeight];
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
-                canWalk[x][y] = true;
+                walkable[x][y] = true;
             }
         }
-        //wall as false;
+
+        // Mark wall positions as non-walkable
         for (Wall wall : walls) {
             int gridX = (int) (wall.worldX / Wall.TILE_SIZE);
             int gridY = (int) (wall.worldY / Wall.TILE_SIZE);
 
             if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
-                canWalk[gridX][gridY] = false;
+                walkable[gridX][gridY] = false;
             }
         }
+
+        // Assign the walkable grid to all enemies
         for (Enemy enemy : enemies) {
-            enemy.setWalkableGrid(canWalk);
+            enemy.setWalkableGrid(walkable);
         }
     }
-
     /**
      * Updates the player's movement press w ,a,s,d ,shift so that
      * realize player move up left,down,run.
@@ -914,57 +915,94 @@ public class GameScreen implements Screen {
         font.getData().setScale(0.7f);
 
         if (player != null && player.getStats() != null) {
-            SkillTree skillTree = player.getStats().getSkillTree();
-            if (skillTree != null) {
-                if (skillTree.hasQSkill()) {
-                    if (skillTree.getQCooldown() > 0) {
+            SkillManager sm = player.getStats().getSkillManager();
+            SkillTree st = player.getStats().getSkillTree();
+            if (sm != null && st != null) {
+
+                // -------- Q 技能 --------
+                if (sm.hasQSkill()) {
+                    float cooldown = sm.getQCooldown();
+                    if (cooldown > 0) {
                         font.setColor(Color.ORANGE);
-                        font.draw(batch, "Q: Fireball (" + (int)skillTree.getQCooldown() + "s)", textX, textY);
+                        font.draw(batch, "Q: Fireball (" + (int) cooldown + "s)", textX, textY);
                     } else {
-                        font.setColor(0f, 0.5f, 0f, 1f);
+                        font.setColor(0f, 0.5f, 0f, 1f); // 深绿 READY
                         font.draw(batch, "Q: Fireball (READY)", textX, textY);
                     }
                 } else {
                     font.setColor(Color.GRAY);
-                    font.draw(batch, "Q: Locked (Req. 150 XP)", textX, textY);
+                    font.draw(batch, "Q: Locked (Req. 100 XP)", textX, textY);
                 }
                 textY -= lineGap;
-                if (skillTree.hasESkill()) {
-                    if (skillTree.getECooldown() > 0) {
+
+                // -------- E 技能 --------
+                if (sm.hasESkill()) {
+                    float cooldown = sm.getECooldown();
+                    if (cooldown > 0) {
                         font.setColor(Color.ORANGE);
-                        font.draw(batch, "E: Heal (" + (int)skillTree.getECooldown() + "s)", textX, textY);
+                        font.draw(batch, "E: Heal (" + (int) cooldown + "s)", textX, textY);
                     } else {
                         font.setColor(0f, 0.5f, 0f, 1f);
                         font.draw(batch, "E: Heal (READY)", textX, textY);
                     }
                 } else {
                     font.setColor(Color.GRAY);
-                    font.draw(batch, "E: Locked (Req. 120 XP)", textX, textY);
+                    font.draw(batch, "E: Locked (Req. 300 XP)", textX, textY);
                 }
                 textY -= lineGap;
-                if (skillTree.hasRSkill()) {
-                    if (skillTree.getRCooldown() > 0) {
+
+                // -------- R 技能 --------
+                if (sm.hasRSkill()) {
+                    float cooldown = sm.getRCooldown();
+                    if (cooldown > 0) {
                         font.setColor(Color.ORANGE);
-                        font.draw(batch, "R: Lightning (" + (int)skillTree.getRCooldown() + "s)", textX, textY);
+                        font.draw(batch, "R: Lightning (" + (int) cooldown + "s)", textX, textY);
                     } else {
                         font.setColor(0f, 0.5f, 0f, 1f);
                         font.draw(batch, "R: Lightning (READY)", textX, textY);
                     }
                 } else {
                     font.setColor(Color.GRAY);
-                    font.draw(batch, "R: Locked (Req. 200 XP)", textX, textY);
+                    font.draw(batch, "R: Locked (Req. 500 XP)", textX, textY);
                 }
                 textY -= lineGap;
+
+                // -------- 基本攻击 --------
                 font.setColor(0.25f, 0.25f, 0.25f, 1f);
                 font.draw(batch, "SPACE - Attack", textX, textY);
                 textY -= lineGap;
-                if (skillTree.hasDash()) {
+
+                // -------- Dash / Double Jump --------
+                if (sm.hasSpecialAbility("dash")) {
                     font.draw(batch, "SHIFT - Dash", textX, textY);
+                    textY -= lineGap;
+                }
+                if (sm.hasSpecialAbility("doubleJump")) {
+                    font.draw(batch, "Double Jump Enabled", textX, textY);
+                    textY -= lineGap;
+                }
+
+                // -------- Resistances --------
+                if (st.hasFireResistance()) {
+                    font.draw(batch, "Fire Resistance Active", textX, textY);
+                    textY -= lineGap;
+                }
+                if (st.hasPoisonResistance()) {
+                    font.draw(batch, "Poison Resistance Active", textX, textY);
+                    textY -= lineGap;
+                }
+
+                // -------- Crit / Dodge --------
+                if (st.getTotalCritChance() > 0) {
+                    font.draw(batch, "Crit Chance: +" + (int)(st.getTotalCritChance()*100) + "%", textX, textY);
+                    textY -= lineGap;
+                }
+                if (st.getTotalDodgeChance() > 0) {
+                    font.draw(batch, "Dodge Chance: +" + (int)(st.getTotalDodgeChance()*100) + "%", textX, textY);
                     textY -= lineGap;
                 }
             }
         }
-
         //Draw Exit Arrow/
         if (exitPosition != null && arrowRegion != null && player != null) {
             batch.setColor(Color.WHITE);
@@ -1253,7 +1291,8 @@ public class GameScreen implements Screen {
                 Enemy e1 = enemies.get(i);
                 Enemy e2 = enemies.get(j);
                 if (e1.isAlive() && e2.isAlive() && e1.getBounds().overlaps(e2.getBounds())) {
-                    e1.setPosition(e1.getX() + 1, e1.getY() + 1);
+                    Vector2 pos = e1.getPosition();
+                    e1.setPosition(pos.x + 1, pos.y + 1);
                 }
             }
         }
@@ -1658,8 +1697,9 @@ public class GameScreen implements Screen {
 
         for (Enemy enemy : enemies) {
             if (!enemy.isAlive()) continue;
-            float enemyCenterX = enemy.getX() + enemy.getWidth() / 2f;
-            float enemyCenterY = enemy.getY() + enemy.getHeight() / 2f;
+            Vector2 pos = enemy.getPosition();
+            float enemyCenterX = pos.x + enemy.getBounds().width / 2f;
+            float enemyCenterY = pos.y + enemy.getBounds().height / 2f;
             float diffX = skillPos.x - enemyCenterX;
             float diffY = skillPos.y - enemyCenterY;
             // c^2 = a^2 + b^2
