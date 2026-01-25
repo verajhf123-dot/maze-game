@@ -1,20 +1,16 @@
 package de.tum.cit.fop.maze.ai;
 
-import com.badlogic.gdx.math.Vector2;
-import de.tum.cit.fop.maze.Player;
 import de.tum.cit.fop.maze.enemies.Enemy;
+import de.tum.cit.fop.maze.Player;
+import com.badlogic.gdx.math.Vector2;
 
 public class RetreatBehavior extends AIBehavior {
-
-    private float healthLimit = 0.3f;
-    private float speedMultiplier = 1.5f;
-
-    private int retreatTime = 120;
-    private int timeLeft = 0;
-
-    private boolean retreating = false;
-
-    private Player player;
+    private float retreatThreshold = 0.3f;
+    private float retreatSpeedMultiplier = 1.5f;
+    private int retreatDuration = 120;
+    private int retreatTimer = 0;
+    private boolean isRetreating = false;
+    private Player targetPlayer;
 
     public RetreatBehavior(Enemy enemy) {
         super(enemy);
@@ -22,76 +18,72 @@ public class RetreatBehavior extends AIBehavior {
 
     @Override
     protected void updateAI() {
-        if (player == null) return;
+        if (targetPlayer == null) return;
 
-        float hpRatio = (float) enemy.getHealth() / enemy.getMaxHealth();
+        float healthRatio = (float) enemy.getHealth() / enemy.getMaxHealth();
 
-        if (!retreating && hpRatio < healthLimit) {
+        if (!isRetreating && healthRatio < retreatThreshold) {
             startRetreat();
         }
 
-        if (!retreating) return;
+        if (isRetreating) {
+            if (retreatTimer > 0) {
+                Vector2 enemyPos = enemy.getPosition();
+                Vector2 playerPos = targetPlayer.getPosition();
 
-        if (timeLeft > 0) {
-            Vector2 enemyPos = enemy.getPosition();
-            Vector2 playerPos = player.getPosition();
+                float dx = enemyPos.x - playerPos.x;
+                float dy = enemyPos.y - playerPos.y;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
 
-            float dx = enemyPos.x - playerPos.x;
-            float dy = enemyPos.y - playerPos.y;
-            float len = (float) Math.sqrt(dx * dx + dy * dy);
+                if (distance > 0) {
+                    dx /= distance;
+                    dy /= distance;
 
-            if (len > 0f) {
-                dx /= len;
-                dy /= len;
+                    float speed = enemy.getSpeed() * retreatSpeedMultiplier;
+                    enemy.setVelocity(dx * speed, dy * speed);
+                }
 
-                float speed = enemy.getSpeed() * speedMultiplier;
-                enemy.setVelocity(dx * speed, dy * speed);
-            }
+                retreatTimer--;
 
-            timeLeft--;
-
-            if (timeLeft <= 0) {
-                stopRetreat();
+                if (retreatTimer <= 0) {
+                    stopRetreat();
+                }
             }
         }
     }
 
     private void startRetreat() {
-        retreating = true;
-        timeLeft = retreatTime;
-
-        System.out.println(
-                "Enemy retreating (" +
-                        enemy.getHealth() + "/" + enemy.getMaxHealth() + ")"
-        );
+        isRetreating = true;
+        retreatTimer = retreatDuration;
+        System.out.println("Enemy starts retreating! Health: " + enemy.getHealth() + "/" + enemy.getMaxHealth());
     }
 
     private void stopRetreat() {
-        retreating = false;
-        enemy.setVelocity(0f, 0f);
-        System.out.println("Enemy stopped retreating");
+        isRetreating = false;
+        enemy.setVelocity(0, 0);
+        System.out.println("Enemy stops retreating");
     }
 
     @Override
     public void onPlayerSpotted() {
-        System.out.println("Player spotted, retreat behavior active");
+        System.out.println("Player spotted - retreat behavior activated");
     }
 
     @Override
     public void onPlayerLost() {
-        if (retreating) {
+        if (isRetreating) {
             stopRetreat();
         }
-        player = null;
-        System.out.println("Player lost");
+        targetPlayer = null;
+        System.out.println("Player lost - stop retreating");
     }
 
     @Override
     public void onAttack() {
-        // retreat does not react to attacks
+        System.out.println("Retreat behavior: enemy is attacking");
     }
 
     public void setTargetPlayer(Player player) {
-        this.player = player;
+        this.targetPlayer = player;
     }
 }
