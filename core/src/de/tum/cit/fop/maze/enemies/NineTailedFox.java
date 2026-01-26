@@ -13,10 +13,15 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * NineTailedFox enemy type.
+ * Handles movement, AI updates, animations, melee attacks,
+ * and interactions with the player.
+ */
 public class NineTailedFox extends Enemy {
-    private enum Direction {
-        UP, DOWN, LEFT, RIGHT
-    }
+
+    /** Movement directions for animation purposes. */
+    private enum Direction { UP, DOWN, LEFT, RIGHT }
 
     private Map<Direction, Animation<TextureRegion>> walkAnimations;
     private Map<Direction, TextureRegion> idleFrames;
@@ -29,6 +34,7 @@ public class NineTailedFox extends Enemy {
     private float attackCooldown = 1.0f;
     private float currentAttackCooldown = 0f;
 
+    /** Constructor initializes stats and animations. */
     public NineTailedFox(float x, float y) {
         super(x, y, 30, 30);
 
@@ -41,15 +47,16 @@ public class NineTailedFox extends Enemy {
         this.attackCooldown = 0.8f;
 
         initializeAnimations();
-
         System.out.println("NineTailedFox initialized with melee attack");
     }
 
+    /** Loads walking and idle animations for all directions. */
     private void initializeAnimations() {
         walkAnimations = new HashMap<>();
         idleFrames = new HashMap<>();
 
         try {
+            // Load frames for each direction
             TextureRegion[] downFrames = loadDirectionFrames("enemies/nine_tailed_fox/down_", 3);
             if (downFrames[0] != null) {
                 walkAnimations.put(Direction.DOWN, new Animation<>(animationSpeed, downFrames));
@@ -73,39 +80,36 @@ public class NineTailedFox extends Enemy {
                 walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, rightFrames));
                 idleFrames.put(Direction.RIGHT, rightFrames[1]);
             } else if (leftFrames[0] != null) {
+                // Mirror left frames if right frames are missing
                 TextureRegion[] mirroredFrames = mirrorFrames(leftFrames);
                 walkAnimations.put(Direction.RIGHT, new Animation<>(animationSpeed, mirroredFrames));
                 idleFrames.put(Direction.RIGHT, mirroredFrames[1]);
             }
 
             System.out.println("Animations loaded successfully");
-
         } catch (Exception e) {
             System.out.println("Error loading NineTailedFox animations: " + e.getMessage());
             loadFallbackTexture();
         }
     }
 
+    /** Loads frames for a single direction. */
     private TextureRegion[] loadDirectionFrames(String basePath, int frameCount) {
         TextureRegion[] frames = new TextureRegion[frameCount];
-
         for (int i = 0; i < frameCount; i++) {
             try {
                 String path = basePath + (i + 1) + ".png";
                 if (Gdx.files.internal(path).exists()) {
-                    Texture texture = new Texture(Gdx.files.internal(path));
-                    frames[i] = new TextureRegion(texture);
-                } else {
-                    frames[i] = null;
-                }
+                    frames[i] = new TextureRegion(new Texture(Gdx.files.internal(path)));
+                } else frames[i] = null;
             } catch (Exception e) {
                 frames[i] = null;
             }
         }
-
         return frames;
     }
 
+    /** Mirrors frames horizontally. */
     private TextureRegion[] mirrorFrames(TextureRegion[] originalFrames) {
         TextureRegion[] mirrored = new TextureRegion[originalFrames.length];
         for (int i = 0; i < originalFrames.length; i++) {
@@ -117,21 +121,17 @@ public class NineTailedFox extends Enemy {
         return mirrored;
     }
 
+    /** Loads a fallback static texture if animations fail. */
     private void loadFallbackTexture() {
         try {
             Texture fallback = new Texture(Gdx.files.internal("enemies/nine_tailed_fox.png"));
             TextureRegion singleFrame = new TextureRegion(fallback);
             Animation<TextureRegion> singleAnim = new Animation<>(1f, singleFrame);
 
-            walkAnimations.put(Direction.DOWN, singleAnim);
-            walkAnimations.put(Direction.UP, singleAnim);
-            walkAnimations.put(Direction.LEFT, singleAnim);
-            walkAnimations.put(Direction.RIGHT, singleAnim);
-
-            idleFrames.put(Direction.DOWN, singleFrame);
-            idleFrames.put(Direction.UP, singleFrame);
-            idleFrames.put(Direction.LEFT, singleFrame);
-            idleFrames.put(Direction.RIGHT, singleFrame);
+            for (Direction dir : Direction.values()) {
+                walkAnimations.put(dir, singleAnim);
+                idleFrames.put(dir, singleFrame);
+            }
 
             System.out.println("Using fallback texture");
         } catch (Exception e) {
@@ -139,23 +139,20 @@ public class NineTailedFox extends Enemy {
         }
     }
 
+    /** Updates position, AI, cooldowns, and attack logic. */
     @Override
     public void update(float delta, List<Wall> walls) {
         super.update(delta, walls);
 
         stateTime += delta;
 
-        if (currentAttackCooldown > 0) {
-            currentAttackCooldown -= delta;
-        }
+        if (currentAttackCooldown > 0) currentAttackCooldown -= delta;
 
         updateDirection();
 
+        // Perform melee attack if player is in range
         if (targetPlayer != null) {
-            Vector2 playerPos = targetPlayer.getPosition();
-            Vector2 foxPos = getPosition();
-            float distance = foxPos.dst(playerPos);
-
+            float distance = getPosition().dst(targetPlayer.getPosition());
             if (distance <= attackRange && currentAttackCooldown <= 0) {
                 performMeleeAttack(targetPlayer);
                 isAttacking = true;
@@ -164,85 +161,60 @@ public class NineTailedFox extends Enemy {
         }
     }
 
+    /** Updates facing direction based on velocity. */
     private void updateDirection() {
         if (velocity.len() > 0.1f) {
             float angle = (float) Math.atan2(velocity.y, velocity.x) * 180f / (float) Math.PI;
-
-            if (Math.abs(angle) <= 45f) {
-                currentDirection = Direction.RIGHT;
-            } else if (angle > 45f && angle <= 135f) {
-                currentDirection = Direction.UP;
-            } else if (angle < -45f && angle >= -135f) {
-                currentDirection = Direction.DOWN;
-            } else {
-                currentDirection = Direction.LEFT;
-            }
+            if (Math.abs(angle) <= 45f) currentDirection = Direction.RIGHT;
+            else if (angle > 45f && angle <= 135f) currentDirection = Direction.UP;
+            else if (angle < -45f && angle >= -135f) currentDirection = Direction.DOWN;
+            else currentDirection = Direction.LEFT;
         }
     }
 
+    /** Renders current frame based on movement and direction. */
     @Override
     public void render(SpriteBatch batch) {
         if (!isAlive()) return;
 
         boolean isMoving = velocity.len() > 0.1f;
 
-        TextureRegion currentFrame = null;
-
         Animation<TextureRegion> walkAnim = walkAnimations.get(currentDirection);
         TextureRegion idleFrame = idleFrames.get(currentDirection);
-
-        if (walkAnim != null && idleFrame != null) {
-            if (isMoving) {
-                currentFrame = walkAnim.getKeyFrame(stateTime, true);
-            } else {
-                currentFrame = idleFrame;
-            }
-        }
+        TextureRegion currentFrame = (isMoving && walkAnim != null) ? walkAnim.getKeyFrame(stateTime, true) : idleFrame;
 
         if (currentFrame != null) {
             float drawWidth = 50f;
             float drawHeight = 50f;
-
             float offsetX = (bounds.width - drawWidth) / 2;
             float offsetY = (bounds.height - drawHeight) / 2;
 
-            batch.draw(currentFrame,
-                    position.x + offsetX,
-                    position.y + offsetY,
-                    drawWidth,
-                    drawHeight);
+            batch.draw(currentFrame, position.x + offsetX, position.y + offsetY, drawWidth, drawHeight);
         }
     }
 
+    /** Triggers melee attack on the target player. */
     @Override
     public void attack() {
-        if (targetPlayer != null) {
-            performMeleeAttack(targetPlayer);
-        }
+        if (targetPlayer != null) performMeleeAttack(targetPlayer);
     }
 
+    /** Handles the actual melee attack and damage calculation. */
     private void performMeleeAttack(Player player) {
-        if (player != null) {
-            float distance = position.dst(player.getPosition());
-            if (distance <= attackRange) {
-                float finalDamage = attackDamage;
-
-                if (Math.random() < 0.1f) {
-                    finalDamage *= 1.5f;
-                    System.out.println("NINE-TAILED FOX CRITICAL HIT!");
-                }
-
-                player.takeDamage(finalDamage);
-
-                System.out.println("[MELEE] NineTailedFox attacks player for " + finalDamage + " damage");
-
-                if (currentBehavior != null) {
-                    currentBehavior.onAttack();
-                }
+        float distance = position.dst(player.getPosition());
+        if (distance <= attackRange) {
+            float finalDamage = attackDamage;
+            if (Math.random() < 0.1f) {
+                finalDamage *= 1.5f; // Critical hit
+                System.out.println("NINE-TAILED FOX CRITICAL HIT!");
             }
+            player.takeDamage(finalDamage);
+            System.out.println("[MELEE] NineTailedFox attacks player for " + finalDamage + " damage");
+            if (currentBehavior != null) currentBehavior.onAttack();
         }
     }
 
+    /** Adjusts stats based on difficulty level. */
     @Override
     public void adjustDifficulty(int level) {
         this.maxHealth = 30 + (level * 8);
@@ -257,41 +229,27 @@ public class NineTailedFox extends Enemy {
                 ", Attack Speed=" + (1/attackCooldown) + "/sec");
     }
 
+    /** Handles death of the enemy. */
     @Override
     protected void onDeath() {
         System.out.println("NineTailedFox has been defeated!");
     }
 
-    public int getCurrentForm() {
-        return 1;
-    }
+    /** Utility methods for game logic or encounter management. */
+    public int getCurrentForm() { return 1; }
+    public boolean hasEncounteredPlayer() { return targetPlayer != null; }
+    public void resetEncounterState() { System.out.println("NineTailedFox encounter state reset"); }
+    public boolean isAttacking() { return isAttacking; }
 
-    public boolean hasEncounteredPlayer() {
-        return targetPlayer != null;
-    }
-
-    public void resetEncounterState() {
-        System.out.println("NineTailedFox encounter state reset");
-    }
-
-    public boolean isAttacking() {
-        return isAttacking;
-    }
-
-
+    /** Dispose textures to prevent memory leaks. */
     public void dispose() {
         for (Animation<TextureRegion> anim : walkAnimations.values()) {
             for (TextureRegion frame : anim.getKeyFrames()) {
-                if (frame != null && frame.getTexture() != null) {
-                    frame.getTexture().dispose();
-                }
+                if (frame != null && frame.getTexture() != null) frame.getTexture().dispose();
             }
         }
-
         for (TextureRegion idleFrame : idleFrames.values()) {
-            if (idleFrame != null && idleFrame.getTexture() != null) {
-                idleFrame.getTexture().dispose();
-            }
+            if (idleFrame != null && idleFrame.getTexture() != null) idleFrame.getTexture().dispose();
         }
     }
 }

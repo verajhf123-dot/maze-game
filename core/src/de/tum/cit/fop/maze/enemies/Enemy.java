@@ -2,7 +2,6 @@ package de.tum.cit.fop.maze.enemies;
 
 import de.tum.cit.fop.maze.Wall;
 import java.util.List;
-
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -12,7 +11,14 @@ import de.tum.cit.fop.maze.Player;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 
+/**
+ * Abstract base class for all enemy types.
+ * Handles movement, AI behavior switching, pathfinding, combat,
+ * state management, and interactions with the player and environment.
+ */
 public abstract class Enemy {
+
+    /** Possible enemy states for AI behavior. */
     public enum EnemyState {
         PATROL,
         CHASE,
@@ -21,40 +27,42 @@ public abstract class Enemy {
         EVADE,
         STUNNED
     }
-    protected Vector2 position;
-    protected Vector2 velocity;
-    protected Rectangle bounds;
-    protected float speed;
-    protected float health;
-    protected float maxHealth;
-    protected float attackDamage;
-    protected float attackRange;
-    protected float detectionRange;
-    protected Texture texture;
-    protected AIBehavior currentBehavior;
-    protected AStarPathFinder pathFinder;
-    protected List<Vector2> currentPath;
-    protected int currentPathIndex;
 
-    protected EnemyState currentState = EnemyState.PATROL;
-    protected float stateTimer = 0f;
-    protected float retreatHealthThreshold = 0.3f;
-    protected float evadeCooldown = 3f;
-    protected float currentEvadeCooldown = 0f;
-    protected Player targetPlayer;
+    protected Vector2 position;          // Current world position
+    protected Vector2 velocity;          // Current movement velocity
+    protected Rectangle bounds;          // Collision rectangle
+    protected float speed;               // Movement speed
+    protected float health;              // Current health
+    protected float maxHealth;           // Maximum health
+    protected float attackDamage;        // Damage dealt per attack
+    protected float attackRange;         // Attack range
+    protected float detectionRange;      // Player detection range
+    protected Texture texture;           // Enemy sprite texture
+    protected AIBehavior currentBehavior; // Current active AI behavior
+    protected AStarPathFinder pathFinder; // Pathfinding system
+    protected List<Vector2> currentPath; // Current path to follow
+    protected int currentPathIndex;      // Index in the path list
 
-    protected float attackCooldown = 0.5f;
-    protected float attackTimer = 0f;
-    private static final float ATTACK_COOLDOWN_TIME = 0.8f;
+    protected EnemyState currentState = EnemyState.PATROL; // Current AI state
+    protected float stateTimer = 0f;       // Timer for current state
+    protected float retreatHealthThreshold = 0.3f; // Health ratio to retreat
+    protected float evadeCooldown = 3f;    // Cooldown between evades
+    protected float currentEvadeCooldown = 0f; // Remaining evade cooldown
+    protected Player targetPlayer;         // Player this enemy targets
 
-    protected float pathfindingCooldown = 0.5f;
+    protected float attackCooldown = 0.5f; // Time between attacks
+    protected float attackTimer = 0f;      // Remaining attack cooldown
+
+    protected float pathfindingCooldown = 0.5f; // Time between path updates
     protected float currentPathfindingCooldown = 0f;
-    protected float damageCooldown = 0f;
+    protected float damageCooldown = 0f;   // Invulnerability timer after taking damage
 
-
-    protected float mapWidthLimit = 2000f;
+    protected float mapWidthLimit = 2000f;  // Map boundary limits
     protected float mapHeightLimit = 2000f;
 
+    /**
+     * Creates a new enemy at the given position and size.
+     */
     public Enemy(float x, float y, float width, float height) {
         this.position = new Vector2(x, y);
         this.velocity = new Vector2();
@@ -62,9 +70,10 @@ public abstract class Enemy {
         this.currentPathIndex = 0;
     }
 
-    public Texture getTexture() {return texture;}
+    /** Returns the enemy's texture for rendering. */
+    public Texture getTexture() { return texture; }
 
-
+    /** Safely loads a texture, returns null if the file does not exist. */
     protected Texture safeLoadTexture(String path) {
         if (Gdx.files.internal(path).exists()) {
             return new Texture(Gdx.files.internal(path));
@@ -73,22 +82,28 @@ public abstract class Enemy {
         }
     }
 
+    /** Checks if the enemy is alive. */
     public boolean isAlive() {
         return health > 0;
     }
 
+    /** Clears the current path and stops movement. */
     public void clearPath() {
         currentPath = null;
         currentPathIndex = 0;
         velocity.set(0, 0);
     }
 
+    /** Placeholder to set walkable grid for pathfinding. */
     public void setWalkableGrid(boolean[][] grid) {
     }
 
+    /**
+     * Performs an attack on the given player if in range
+     * and attack cooldown allows it.
+     */
     public void attack(Player player) {
         if (player == null) return;
-
         if (attackTimer > 0f) return;
 
         float distance = position.dst(player.getPosition());
@@ -100,7 +115,7 @@ public abstract class Enemy {
         float finalDamage = attackDamage;
 
         if (Math.random() < 0.1f) {
-            finalDamage *= 1.5f;
+            finalDamage *= 1.5f; // Critical hit
             System.out.println("ENEMY CRITICAL HIT!");
         }
 
@@ -113,12 +128,18 @@ public abstract class Enemy {
         }
     }
 
+    /** Abstract attack method for subclasses to implement. */
     public abstract void attack();
 
+    /** Sets a target position and calculates a path to it. */
     public void setTargetPosition(Vector2 target) {
         findPathTo(target);
     }
 
+    /**
+     * Updates enemy logic, including state, AI, movement,
+     * collisions, path following, and keeping in bounds.
+     */
     public void update(float delta, List<Wall> walls) {
         if (!isAlive()) return;
 
@@ -134,11 +155,10 @@ public abstract class Enemy {
             currentBehavior.update(delta);
         }
 
-
+        // Move and handle collisions with walls
         float oldX = position.x;
         position.x += velocity.x * delta;
         bounds.x = position.x;
-
         boolean collisionX = false;
         if (walls != null) {
             for (Wall wall : walls) {
@@ -156,7 +176,6 @@ public abstract class Enemy {
         float oldY = position.y;
         position.y += velocity.y * delta;
         bounds.y = position.y;
-
         boolean collisionY = false;
         if (walls != null) {
             for (Wall wall : walls) {
@@ -171,13 +190,16 @@ public abstract class Enemy {
             bounds.y = oldY;
         }
 
+        // Follow path if exists
         if (currentPath != null && !currentPath.isEmpty()) {
             followPath(delta);
         }
 
+        // Keep enemy inside map bounds
         keepInBounds();
     }
 
+    /** Updates AI state machine based on distance, health, and cooldowns. */
     private void updateState(float delta) {
         if (targetPlayer == null) return;
 
@@ -190,7 +212,6 @@ public abstract class Enemy {
                     changeState(EnemyState.CHASE);
                 }
                 break;
-
             case CHASE:
                 if (distanceToPlayer <= attackRange) {
                     changeState(EnemyState.ATTACK);
@@ -198,7 +219,6 @@ public abstract class Enemy {
                     changeState(EnemyState.PATROL);
                 }
                 break;
-
             case ATTACK:
                 if (distanceToPlayer > attackRange) {
                     changeState(EnemyState.CHASE);
@@ -206,7 +226,6 @@ public abstract class Enemy {
                     changeState(EnemyState.RETREAT);
                 }
                 break;
-
             case RETREAT:
                 if (stateTimer > 5f || distanceToPlayer > detectionRange * 2) {
                     changeState(EnemyState.PATROL);
@@ -214,7 +233,6 @@ public abstract class Enemy {
                     changeState(EnemyState.ATTACK);
                 }
                 break;
-
             case EVADE:
                 if (stateTimer > 1f) {
                     changeState(previousState);
@@ -222,6 +240,7 @@ public abstract class Enemy {
                 break;
         }
 
+        // Chance to evade if close to player and cooldown finished
         if (currentEvadeCooldown <= 0 && distanceToPlayer < 50f && currentState != EnemyState.EVADE) {
             if (Math.random() < 0.3f) {
                 changeState(EnemyState.EVADE);
@@ -232,6 +251,7 @@ public abstract class Enemy {
 
     private EnemyState previousState;
 
+    /** Changes the enemy's AI state and sets corresponding behavior. */
     private void changeState(EnemyState newState) {
         if (currentState == newState) return;
 
@@ -267,6 +287,7 @@ public abstract class Enemy {
         }
     }
 
+    /** Moves along the current path using velocity. */
     private void followPath(float delta) {
         if (currentPathIndex >= currentPath.size()) {
             clearPath();
@@ -284,21 +305,22 @@ public abstract class Enemy {
         }
     }
 
+    /** Prevents enemy from leaving map boundaries. */
     private void keepInBounds() {
         if (position.x < 0) position.x = 0;
         if (position.y < 0) position.y = 0;
         if (position.x > mapWidthLimit - bounds.width) position.x = mapWidthLimit - bounds.width;
         if (position.y > mapHeightLimit - bounds.height) position.y = mapHeightLimit - bounds.height;
-
     }
 
+    /** Sets the pathfinder for this enemy. */
     public void setPathFinder(AStarPathFinder pathFinder) {
         this.pathFinder = pathFinder;
     }
 
+    /** Finds a path to the target position. */
     public void findPathTo(Vector2 target) {
         if (currentPathfindingCooldown > 0) return;
-
         if (pathFinder != null) {
             currentPath = pathFinder.findPath(position, target);
             currentPathIndex = 0;
@@ -306,10 +328,12 @@ public abstract class Enemy {
         }
     }
 
+    /** Sets the current AI behavior. */
     public void setBehavior(AIBehavior behavior) {
         this.currentBehavior = behavior;
     }
 
+    /** Applies damage to the enemy and handles death or evasion. */
     public void takeDamage(float damage) {
         if (damageCooldown > 0) return;
         health -= damage;
@@ -324,9 +348,13 @@ public abstract class Enemy {
         }
     }
 
+    /** Abstract render method to draw the enemy. */
     public abstract void render(SpriteBatch batch);
+
+    /** Abstract method for handling death. */
     protected abstract void onDeath();
 
+    // ----- Getters and setters for position, stats, and target -----
     public Vector2 getPosition() { return position; }
     public Rectangle getBounds() { return bounds; }
     public float getSpeed() { return speed; }
@@ -334,63 +362,25 @@ public abstract class Enemy {
     public float getAttackRange() { return attackRange; }
     public float getDetectionRange() { return detectionRange; }
     public void setVelocity(float x, float y) { velocity.set(x, y); }
-
-    public float getX() {
-        return bounds.x;
-    }
-
-    public float getY() {
-        return bounds.y;
-    }
-
-    public float getWidth() {
-        return bounds.width;
-    }
-
-    public float getHeight() {
-        return bounds.height;
-    }
-
-    public float getMaxHealth() {
-        return maxHealth;
-    }
+    public float getX() { return bounds.x; }
+    public float getY() { return bounds.y; }
+    public float getWidth() { return bounds.width; }
+    public float getHeight() { return bounds.height; }
+    public float getMaxHealth() { return maxHealth; }
     public float getAttackDamage() { return attackDamage; }
+    public void setTargetPlayer(Player player) { this.targetPlayer = player; }
+    public Player getTargetPlayer() { return targetPlayer; }
+    public EnemyState getCurrentState() { return currentState; }
+    public boolean isInAttackRange() { return targetPlayer != null && position.dst(targetPlayer.getPosition()) <= attackRange; }
+    public boolean isInDetectionRange() { return targetPlayer != null && position.dst(targetPlayer.getPosition()) <= detectionRange; }
+    public float getHealthRatio() { return health / maxHealth; }
 
-    public void setTargetPlayer(Player player) {
-        this.targetPlayer = player;
-    }
-
-    public Player getTargetPlayer() {
-        return targetPlayer;
-    }
-
-    public EnemyState getCurrentState() {
-        return currentState;
-    }
-
-    public boolean isInAttackRange() {
-        if (targetPlayer == null) return false;
-        float distance = position.dst(targetPlayer.getPosition());
-        return distance <= attackRange;
-    }
-
-    public boolean isInDetectionRange() {
-        if (targetPlayer == null) return false;
-        float distance = position.dst(targetPlayer.getPosition());
-        return distance <= detectionRange;
-    }
-
-    public float getHealthRatio() {
-        return health / maxHealth;
-    }
-
+    /** Adjusts enemy stats based on difficulty level. */
     public void adjustDifficulty(int level) {
-
         this.maxHealth = 30 + (level * 15);
         this.health = this.maxHealth;
         this.attackDamage = 6 + (level * 2.5f);
         this.speed = 90f + (level * 2f);
-
         this.retreatHealthThreshold = Math.max(0.1f, 0.3f - (level * 0.02f));
 
         System.out.println(this.getClass().getSimpleName() +
@@ -399,13 +389,13 @@ public abstract class Enemy {
                 ", Retreat at " + (retreatHealthThreshold * 100) + "%");
     }
 
-
-
+    /** Sets the enemy position and updates bounds. */
     public void setPosition(float x, float y) {
         this.position.set(x, y);
         this.bounds.setPosition(x, y);
     }
 
+    /** Sets map boundaries for this enemy. */
     public void setMapLimits(float width, float height) {
         this.mapWidthLimit = width;
         this.mapHeightLimit = height;

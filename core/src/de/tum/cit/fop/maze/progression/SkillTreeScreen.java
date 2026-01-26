@@ -15,7 +15,13 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import de.tum.cit.fop.maze.MazeRunnerGame;
 import de.tum.cit.fop.maze.PlayerStats;
 
+/**
+ * Screen for displaying and interacting with the skill tree UI.
+ * Allows the player to upgrade stats using experience points.
+ */
 public class SkillTreeScreen implements Screen {
+
+    // Core game and data references
     private final MazeRunnerGame game;
     private final Stage stage;
     private final SkillTree skillTree;
@@ -23,19 +29,25 @@ public class SkillTreeScreen implements Screen {
     private final ExperienceSystem expSystem;
     private final Screen previousScreen;
 
+    // UI labels for displaying values
     private Label skillPointsLabel;
     private Label hpLabel;
     private Label speedLabel;
     private Label atkLabel;
 
+    // Rendering resources
     private SpriteBatch batch;
     private Texture menuBg;
     private Texture hpIcon;
     private Texture speedIcon;
     private Texture atkIcon;
 
+    // Custom UI color
     private static final Color MINT_COLOR = new Color(0.96f, 1.0f, 0.98f, 1.0f);
 
+    /**
+     * Creates the skill tree screen.
+     */
     public SkillTreeScreen(MazeRunnerGame game, PlayerStats playerStats, Screen previousScreen) {
         this.game = game;
         this.playerStats = playerStats;
@@ -49,34 +61,42 @@ public class SkillTreeScreen implements Screen {
 
     @Override
     public void show() {
+        // Initialize rendering resources
         batch = new SpriteBatch();
         menuBg = new Texture(Gdx.files.internal("sktbg3.png"));
 
+        // Load stat icons
         hpIcon = new Texture(Gdx.files.internal("SkillTree/HP.png"));
         speedIcon = new Texture(Gdx.files.internal("SkillTree/speed.png"));
         atkIcon = new Texture(Gdx.files.internal("SkillTree/attack.png"));
 
+        // Set stage as input processor
         Gdx.input.setInputProcessor(stage);
 
+        // Main layout table
         Table mainTable = new Table();
         mainTable.setFillParent(true);
         mainTable.center();
         stage.addActor(mainTable);
 
+        // Title label
         Label title = new Label("SKILL TREE", game.getSkin(), "title");
         title.setColor(new Color(0.96f, 0.96f, 0.86f, 1f));
         title.setFontScale(1.2f);
         mainTable.add(title).padBottom(40).row();
 
+        // XP display
         updateSkillPointsLabel();
         skillPointsLabel.setFontScale(1.2f);
         mainTable.add(skillPointsLabel).padBottom(40).row();
 
+        // Table for stat upgrade icons
         Table statsTable = new Table();
         statsTable.defaults().pad(30);
 
         float iconSize = 120f;
 
+        // HP upgrade icon and click handler
         Table hpContainer = new Table();
         Image hpImage = new Image(hpIcon);
         hpImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
@@ -98,6 +118,7 @@ public class SkillTreeScreen implements Screen {
         hpContainer.add(hpLabel).padTop(5);
         statsTable.add(hpContainer);
 
+        // Speed upgrade icon and click handler
         Table speedContainer = new Table();
         Image speedImage = new Image(speedIcon);
         speedImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
@@ -119,6 +140,7 @@ public class SkillTreeScreen implements Screen {
         speedContainer.add(speedLabel).padTop(5);
         statsTable.add(speedContainer);
 
+        // Attack upgrade icon and click handler
         Table atkContainer = new Table();
         Image atkImage = new Image(atkIcon);
         atkImage.setScaling(com.badlogic.gdx.utils.Scaling.fit);
@@ -142,13 +164,18 @@ public class SkillTreeScreen implements Screen {
 
         mainTable.add(statsTable).padBottom(30).row();
 
+        // Initialize displayed stat values
         updateAllStatsLabels();
 
+        // Hint label for returning to game
         Label hintLabel = new Label("Press T or ESC to return", game.getSkin());
         hintLabel.setFontScale(1.0f);
         mainTable.add(hintLabel).padTop(20);
     }
 
+    /**
+     * Attempts to unlock a stat upgrade using the skill tree.
+     */
     private void attemptUpgrade(String type) {
         String skillId = "";
 
@@ -170,14 +197,14 @@ public class SkillTreeScreen implements Screen {
         boolean success = skillTree.unlockSkill(skillId);
 
         if (success) {
-            System.out.println("Successfully upgraded: " + type);
             updateAllStatsLabels();
             updateSkillPointsLabel();
-        } else {
-            System.out.println("Cannot upgrade " + type + " (Not enough XP or already unlocked)");
         }
     }
 
+    /**
+     * Updates all displayed stat labels.
+     */
     private void updateAllStatsLabels() {
         if (skillTree != null) {
             hpLabel.setText("HP +" + (int)skillTree.getTotalHealthBonus());
@@ -186,20 +213,20 @@ public class SkillTreeScreen implements Screen {
         }
     }
 
+    /**
+     * Updates the XP display label.
+     */
     private void updateSkillPointsLabel() {
         if (expSystem != null) {
-            String text = "Current XP: " + expSystem.getCurrentExp();
-            skillPointsLabel.setText(text);
-        } else {
-            skillPointsLabel.setText("XP System not available");
+            skillPointsLabel.setText("Current XP: " + expSystem.getCurrentExp());
         }
     }
 
+    /**
+     * Returns to the previous screen or the game screen.
+     */
     private void returnToGame() {
         if (previousScreen != null) {
-            if (previousScreen instanceof de.tum.cit.fop.maze.GameScreen) {
-            }
-
             game.setScreen(previousScreen);
             this.dispose();
         } else {
@@ -207,21 +234,24 @@ public class SkillTreeScreen implements Screen {
         }
     }
 
-
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0, 1);
 
+        // Handle return input
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             returnToGame();
             return;
         }
 
+        // Draw background
         batch.begin();
         if (menuBg != null) {
             batch.draw(menuBg, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         }
         batch.end();
+
+        // Update and render UI
         stage.act(delta);
         stage.draw();
     }
