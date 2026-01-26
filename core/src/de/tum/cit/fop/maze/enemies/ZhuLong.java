@@ -16,19 +16,21 @@ import java.util.Map;
 
 public class ZhuLong extends Enemy {
 
+    // Enum for movement directions
     private enum Direction {
         UP, DOWN, LEFT, RIGHT
     }
 
-    private Map<Direction, Animation<TextureRegion>> walkAnimations;
-    private Direction currentDirection = Direction.DOWN;
-    private float stateTime = 0f;
-    private float animationSpeed = 0.2f;
+    private Map<Direction, Animation<TextureRegion>> walkAnimations; // Animations for each direction
+    private Direction currentDirection = Direction.DOWN; // Current movement direction
+    private float stateTime = 0f; // Timer for animation
+    private float animationSpeed = 0.2f; // Speed of animation
 
-    private boolean eyesOpen = true;
-    private float dayNightTimer = 0f;
-    private Vector2 targetPosition;
+    private boolean eyesOpen = true; // Whether ZhuLong's eyes are open
+    private float dayNightTimer = 0f; // Timer for day/night cycle (eye open/close)
+    private Vector2 targetPosition; // Current target position to move toward
 
+    // Constructor
     public ZhuLong(float x, float y) {
         super(x, y, 31, 31);
 
@@ -44,6 +46,7 @@ public class ZhuLong extends Enemy {
         System.out.println("ZhuLong initialized (Directional Animations)");
     }
 
+    // Load all directional animations
     private void initializeAnimations() {
         walkAnimations = new HashMap<>();
 
@@ -60,7 +63,7 @@ public class ZhuLong extends Enemy {
 
             TextureRegion[] rightFrames = loadDirectionFrames("enemies/zhulong/right_", 3);
             if (rightFrames[0] == null && leftFrames[0] != null) {
-                rightFrames = mirrorFrames(leftFrames);
+                rightFrames = mirrorFrames(leftFrames); // Mirror left frames for right
                 System.out.println("ZhuLong: Mirrored left frames for right direction.");
             }
             if (rightFrames[0] != null) {
@@ -87,6 +90,7 @@ public class ZhuLong extends Enemy {
         }
     }
 
+    // Load frames from files for a given direction
     private TextureRegion[] loadDirectionFrames(String basePath, int frameCount) {
         TextureRegion[] frames = new TextureRegion[frameCount];
         for (int i = 0; i < frameCount; i++) {
@@ -106,6 +110,7 @@ public class ZhuLong extends Enemy {
         return frames;
     }
 
+    // Mirror frames horizontally (for right direction)
     private TextureRegion[] mirrorFrames(TextureRegion[] originalFrames) {
         TextureRegion[] mirrored = new TextureRegion[originalFrames.length];
         for (int i = 0; i < originalFrames.length; i++) {
@@ -117,17 +122,18 @@ public class ZhuLong extends Enemy {
         return mirrored;
     }
 
+    // Update ZhuLong logic each frame
     @Override
     public void update(float delta, List<Wall> walls) {
         if (!isAlive()) return;
 
-        stateTime += delta;
+        stateTime += delta; // Update animation timer
 
-        updateDayNightCycle(delta);
+        updateDayNightCycle(delta); // Toggle eyes open/close
 
-        updateDirection();
+        updateDirection(); // Update facing direction
 
-        float currentSpeed = eyesOpen ? speed : speed * 0.5f;
+        float currentSpeed = eyesOpen ? speed : speed * 0.5f; // Half speed if eyes closed
 
         if (targetPosition != null) {
             Vector2 direction = new Vector2(
@@ -142,9 +148,10 @@ public class ZhuLong extends Enemy {
             }
         }
 
-        super.update(delta, walls);
+        super.update(delta, walls); // Call parent update for movement/collision
     }
 
+    // Toggle eyes open/close every 5 seconds
     private void updateDayNightCycle(float delta) {
         dayNightTimer += delta;
         if (dayNightTimer >= 5.0f) {
@@ -154,6 +161,7 @@ public class ZhuLong extends Enemy {
         }
     }
 
+    // Update movement direction based on velocity
     private void updateDirection() {
         if (velocity.len() > 0.1f) {
             float angle = (float) Math.atan2(velocity.y, velocity.x) * 180f / (float) Math.PI;
@@ -169,6 +177,7 @@ public class ZhuLong extends Enemy {
         }
     }
 
+    // Render ZhuLong on screen
     @Override
     public void render(SpriteBatch batch) {
         if (!isAlive()) return;
@@ -177,7 +186,7 @@ public class ZhuLong extends Enemy {
         TextureRegion currentFrame = null;
 
         if (anim != null) {
-            currentFrame = anim.getKeyFrame(stateTime, true);
+            currentFrame = anim.getKeyFrame(stateTime, true); // Get current animation frame
         }
 
         if (currentFrame != null) {
@@ -195,15 +204,17 @@ public class ZhuLong extends Enemy {
         }
     }
 
+    // Attack method
     @Override
     public void attack() {
-        float damageMultiplier = eyesOpen ? 1.5f : 0.8f;
+        float damageMultiplier = eyesOpen ? 1.5f : 0.8f; // Stronger if eyes open
         System.out.println("ZhuLong attacks! Damage multiplier: " + damageMultiplier);
         if (targetPlayer != null && isInAttackRange()) {
-            targetPlayer.takeDamage(attackDamage * damageMultiplier);
+            targetPlayer.takeDamage(attackDamage * damageMultiplier); // Apply damage
         }
     }
 
+    // Adjust stats according to difficulty
     @Override
     public void adjustDifficulty(int level) {
         this.maxHealth = 200 + (level * 40);
@@ -212,11 +223,13 @@ public class ZhuLong extends Enemy {
         this.speed = 40f + (level * 2f);
     }
 
+    // Called when ZhuLong dies
     @Override
     protected void onDeath() {
         System.out.println("ZhuLong Defeated!");
     }
 
+    // Dispose textures to free memory
     public void dispose() {
         if (walkAnimations != null) {
             for (Animation<TextureRegion> anim : walkAnimations.values()) {
@@ -225,6 +238,7 @@ public class ZhuLong extends Enemy {
                     if (frameObj instanceof TextureRegion) {
                         TextureRegion tr = (TextureRegion) frameObj;
                         if (tr.getTexture() != null) {
+                            // Texture dispose can be added if needed
                         }
                     }
                 }
@@ -232,8 +246,15 @@ public class ZhuLong extends Enemy {
         }
     }
 
+    // Set target position to move toward
     public void setTargetPosition(Vector2 target) { this.targetPosition = target; }
+
+    // Check if eyes are open
     public boolean isEyesOpen() { return eyesOpen; }
+
+    // Manually set eyes open/close
     public void setEyesOpen(boolean open) { this.eyesOpen = open; }
+
+    // Current form (for bosses with multiple phases)
     public int getCurrentForm() { return 0; }
 }

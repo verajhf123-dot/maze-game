@@ -9,29 +9,28 @@ import com.badlogic.gdx.graphics.Pixmap;
 
 public abstract class Item {
 
-    protected Rectangle bounds;
-    protected Texture texture;
-    protected Color fallbackColor;
+    protected Rectangle bounds; // Item's position and size
+    protected Texture texture; // Texture of the item
+    protected Color fallbackColor; // Color to use if texture is missing
 
-    private static Texture pixel;
+    private static Texture pixel; // Single pixel texture used as fallback
 
+    // Constructor to create an item
     protected Item(float x, float y, float size, String texturePath, Color fallbackColor) {
-        this.bounds = new Rectangle(x, y, size, size);
+        this.bounds = new Rectangle(x, y, size, size); // Set position and size
         this.fallbackColor = fallbackColor;
 
         if (texturePath != null) {
-            texturePath = texturePath.trim();
+            texturePath = texturePath.trim(); // Remove whitespace
         }
 
+        // Load texture if path is valid and exists
         if (texturePath != null && !texturePath.isEmpty()
                 && Gdx.files.internal(texturePath).exists()) {
             texture = new Texture(texturePath);
         }
 
-
-        if (texturePath != null && Gdx.files.internal(texturePath).exists()) {
-            texture = new Texture(texturePath);
-        }
+        // Debug prints
         System.out.println("Item created: " + texturePath + " exists="
                 + (texturePath != null && Gdx.files.internal(texturePath).exists())
                 + " bounds=" + bounds);
@@ -42,10 +41,11 @@ public abstract class Item {
         }
     }
 
+    // Render the item on screen
     public void render(SpriteBatch batch) {
         System.out.println("Rendering item at " + bounds.x + "," + bounds.y);
 
-
+        // Create pixel texture if needed
         if (pixel == null) {
             if (Gdx.files.internal("pixel.png").exists()) {
                 pixel = new Texture("pixel.png");
@@ -58,26 +58,30 @@ public abstract class Item {
             }
         }
 
+        // Draw actual texture if available, otherwise draw fallback color
         if (texture != null) {
             batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
         } else {
             batch.setColor(fallbackColor);
             batch.draw(pixel, bounds.x, bounds.y, bounds.width, bounds.height);
-            batch.setColor(Color.WHITE);
+            batch.setColor(Color.WHITE); // Reset batch color
         }
-
     }
 
+    // Get the bounding rectangle for collision
     public Rectangle getBounds() {
         return bounds;
     }
 
+    // Abstract method: define what happens when the item is picked up
     public abstract void onPickup(Object entity);
 
+    // Get X position
     public float getX() {
         return bounds.x;
     }
 
+    // Get Y position
     public float getY() {
         return bounds.y;
     }
